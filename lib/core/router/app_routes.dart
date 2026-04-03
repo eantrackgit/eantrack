@@ -4,6 +4,9 @@
 ///   context.go(AppRoutes.login)
 ///   context.push(AppRoutes.register)
 abstract final class AppRoutes {
+  // --- Splash ---
+  static const splash = '/';
+
   // --- Auth (public) ---
   static const login = '/login';
   static const register = '/register';

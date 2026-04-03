@@ -16,6 +16,7 @@ import '../../features/onboarding/presentation/screens/company_data_screen.dart'
 import '../../features/onboarding/presentation/screens/individual_placeholder_screen.dart';
 import '../../features/onboarding/presentation/screens/legal_representative_screen.dart';
 import '../../features/regions/presentation/screens/region_list_screen.dart';
+import '../../features/splash/presentation/splash_screen.dart';
 import 'app_routes.dart';
 
 // ---------------------------------------------------------------------------
@@ -44,8 +45,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     debugLogDiagnostics: false,
     refreshListenable: notifier,
     redirect: notifier.redirect,
-    initialLocation: AppRoutes.login,
+    initialLocation: AppRoutes.splash,
     routes: [
+      // --- Splash ---
+      GoRoute(
+        path: AppRoutes.splash,
+        pageBuilder: (_, state) => _fadePage(state, const SplashScreen()),
+      ),
+
       // --- Auth (public) ---
       GoRoute(
         path: AppRoutes.login,
@@ -145,6 +152,9 @@ class _RouterNotifier extends ChangeNotifier {
     final authAsync = _ref.read(authUserStreamProvider);
     final isLoggedIn = authAsync.valueOrNull != null;
     final path = state.matchedLocation;
+
+    // Splash manages its own navigation — never redirect away from it.
+    if (path == AppRoutes.splash) return null;
 
     final isPublicRoute = path == AppRoutes.login ||
         path == AppRoutes.register ||
