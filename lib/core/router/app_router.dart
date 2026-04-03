@@ -8,6 +8,7 @@ import '../../features/auth/presentation/screens/email_verification_screen.dart'
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/recover_password_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
+import '../../features/auth/presentation/screens/update_password_screen.dart';
 import '../../features/flow/presentation/screens/flow_page.dart';
 import '../../features/hub/presentation/screens/hub_screen.dart';
 import '../../features/onboarding/presentation/screens/choose_mode_screen.dart';
@@ -71,6 +72,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.recoverPassword,
         pageBuilder: (_, state) =>
             _fadePage(state, const RecoverPasswordScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.updatePassword,
+        pageBuilder: (_, state) =>
+            _fadePage(state, const UpdatePasswordScreen()),
       ),
 
       // --- Hub (protected) ---
@@ -159,6 +165,7 @@ class _RouterNotifier extends ChangeNotifier {
     final isPublicRoute = path == AppRoutes.login ||
         path == AppRoutes.register ||
         path == AppRoutes.recoverPassword ||
+        path == AppRoutes.updatePassword ||
         path == AppRoutes.termsOfUse ||
         path == AppRoutes.privacyPolicy;
 

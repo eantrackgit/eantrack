@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
 
 import '../theme/app_colors.dart';
-import '../theme/app_text_styles.dart';
 
 /// Wraps a widget and shows a semi-transparent loading overlay when [isLoading].
 class AppLoadingOverlay extends StatelessWidget {
@@ -25,25 +23,16 @@ class AppLoadingOverlay extends StatelessWidget {
         if (isLoading)
           Positioned.fill(
             child: ColoredBox(
-              color: Colors.black54,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Lottie.asset(
-                    'assets/jsons/Insider-loading.json',
-                    width: 120,
-                    height: 120,
+              color: Colors.black.withValues(alpha: 0.25),
+              child: const Center(
+                child: SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: Colors.white,
                   ),
-                  if (message != null && message!.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      message!,
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.info,
-                      ),
-                    ),
-                  ],
-                ],
+                ),
               ),
             ),
           ),
@@ -59,17 +48,14 @@ class AppLoadingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Lottie.asset('assets/jsons/Insider-loading.json', width: 120),
-          if (message != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Text(message!, style: AppTextStyles.bodyMedium),
-            ),
-        ],
+    return const Center(
+      child: SizedBox(
+        width: 32,
+        height: 32,
+        child: CircularProgressIndicator(
+          strokeWidth: 2.5,
+          color: AppColors.secondary,
+        ),
       ),
     );
   }

@@ -165,6 +165,21 @@ class AuthRepository {
     }
   }
 
+  Future<void> updatePassword(String newPassword) async {
+    try {
+      await _client.auth.updateUser(
+        UserAttributes(password: newPassword),
+      );
+    } on AuthException catch (e) {
+      throw AuthAppException(_mapAuthError(e.message));
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw const ServerException(
+        'Erro ao atualizar senha. Tente novamente.',
+      );
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Email availability (used by register screen debounce)
   // ---------------------------------------------------------------------------
