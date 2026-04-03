@@ -1,0 +1,9 @@
+
+
+
+analyzer:
+  exclude:
+    - lib/custom_code/**
+    - lib/flutter_flow/custom_functions.dart
+    - lib/app_state.dart
+    - lib/index.dart

@@ -1,0 +1,70 @@
+
+# Flutter
+build/
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+*.log
+
+# Dart
+.pub-cache/
+.pub/
+doc/api/
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Runner.xcworkspace/xcuserdata/
+
+# Android
+android/.gradle/
+android/local.properties
+android/captures/
+android/key.properties
+
+# macOS
+macos/Pods/
+macos/.symlinks/
+
+# IDE
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# FVM
+.fvm/
+
+# Ambiente / Secrets
+.env
+.env.*
+*.env
+secrets.json
+*.key
+*.pem
+*.p12
+*.keystore
+google-services.json
+GoogleService-Info.plist
+**/ios/Runner/GoogleService-Info.plist
+**/android/app/google-services.json
+
+# Firebase
+.firebase/
+firebase.json
+firestore.rules
+firestore.indexes.json
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Coverage / Test outputs
+coverage/
+*.lcov

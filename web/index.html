@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    Alternatively, build your application passing the --base-href parameter
+    specifying the new root path of your web app.
+
+    Fore more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="EANTRACK">
+
+  <!-- ========================================================= -->
+<!-- ✅ CUSTOM HEAD — EANTRACK (PWA) -->
+<!-- - PWA / SEO / Social / Theme OK -->
+<!-- - Fix definitivo do “keyboard ghost space” (Android PWA) -->
+<!-- - Sem VisualViewport inset / sem loops / sem resize hacks -->
+<!-- ========================================================= -->
+
+<!-- ========================== -->
+<!-- 🔥 ICONES & PWA MANIFEST -->
+<!-- ========================== -->
+<link rel="icon" type="image/png" sizes="32x32" href="https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/feedbackacademy-xq9i65/assets/3bbcso6lb59t/unnamed.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/feedbackacademy-xq9i65/assets/3bbcso6lb59t/unnamed.png">
+<link rel="manifest" href="/manifest.json">
+
+<!-- ========================== -->
+<!-- 🔥 VIEWPORT (ÚNICO / CRÍTICO) -->
+<!-- ========================== -->
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+
+<!-- ========================== -->
+<!-- ✅ FIX TECLADO (Android/Chrome PWA) -->
+<!-- ========================== -->
+<script>
+(function () {
+  try {
+    if ('virtualKeyboard' in navigator) {
+      navigator.virtualKeyboard.overlaysContent = true;
+    }
+  } catch (e) {
+    console.warn('virtualKeyboard failed', e);
+  }
+})();
+</script>
+
+<!-- ========================== -->
+<!-- 🔥 PWA DEFINIÇÕES -->
+<!-- ========================== -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="EANTrack">
+<meta name="application-name" content="EANTrack">
+
+<!-- ========================== -->
+<!-- 🔥 SEO + SOCIAL TAGS -->
+<!-- ========================== -->
+<meta name="description" content="EANTrack — Plataforma inteligente para leitura e rastreamento de códigos EAN.">
+<meta property="og:title" content="EANTrack">
+<meta property="og:description" content="Plataforma inteligente para leitura e rastreamento de códigos EAN.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="EANTrack">
+<meta property="og:url" content="https://seu-dominio.com">
+<meta property="og:image" content="https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/feedbackacademy-xq9i65/assets/3bbcso6lb59t/unnamed.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="EANTrack">
+<meta name="twitter:description" content="Plataforma inteligente para leitura e rastreamento de códigos EAN.">
+<meta name="twitter:image" content="https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/feedbackacademy-xq9i65/assets/3bbcso6lb59t/unnamed.png">
+
+<!-- ========================== -->
+<!-- 🔥 TEMAS (LIGHT / DARK) -->
+<!-- ========================== -->
+<meta name="theme-color" content="#0e0a36">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#0e0a36">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0e0a36">
+
+<!-- ========================== -->
+<!-- 🔥 CSS GLOBAL -->
+<!-- ========================== -->
+<style>
+  /* Fundo consistente no splash / load */
+  body { background-color: #0e0a36 !important; }
+
+  /* Evita “bounce” e gestos que causam scroll estranho no PWA */
+  html, body { overscroll-behavior-y: contain; touch-action: manipulation; }
+</style>
+
+<!-- ========================== -->
+<!-- 📌 PERMISSÃO DE CÂMERA (opcional) -->
+<!-- ========================== -->
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  if (navigator.permissions && navigator.mediaDevices) {
+    try {
+      const result = await navigator.permissions.query({ name: 'camera' });
+      console.log('📸 Permissão da câmera:', result.state);
+    } catch (e) {
+      console.warn('⚠️ Permissão da câmera não disponível:', e);
+    }
+  }
+});
+</script>
+
+
+  <meta name="robots" content="noindex" />
+
+  <!-- Favicon -->
+  <link rel="icon" href="ChatGPT_Image_6_de_fev._de_2026,_09_34_40_(1).png" sizes="any"/>
+  
+
+  <!-- Open Graph & SEO tags -->
+  <meta property="og:title" content="EANTRACK" />
+  <meta property="og:description" content="SMART TRACKING SOLUTION" />
+  <meta property="og:image" content="/assets/assets/images/unnamed.png" /> 
+  <meta name="twitter:title" content="EANTRACK" />
+  <meta name="twitter:description" content="SMART TRACKING SOLUTION" />
+  <meta name="twitter:image" content="/assets/assets/images/unnamed.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <title> EANTRACK </title>
+  <meta name="description" content="SMART TRACKING SOLUTION" />
+    
+
+  
+
+  <link rel="manifest" href="manifest.json">
+  
+</head>
+<body>
+  
+  
+  
+  
+  
+  <script>
+    {{flutter_bootstrap_js}}
+  </script>
+</body>
+</html>

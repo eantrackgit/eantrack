@@ -1,0 +1,266 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../../core/router/app_routes.dart';
+import '../../../../shared/shared.dart';
+import '../../domain/auth_state.dart';
+import '../providers/auth_provider.dart';
+
+class LoginScreen extends ConsumerStatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends ConsumerState<LoginScreen>
+    with FormStateMixin<LoginScreen> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _passwordFocus = FocusNode();
+  AsyncAction<void> _action = const ActionIdle();
+  AsyncAction<void> _googleAction = const ActionIdle();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _passwordFocus.dispose();
+    super.dispose();
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() => _googleAction = const ActionLoading());
+    try {
+      await ref.read(authNotifierProvider.notifier).signInWithGoogle();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _googleAction = ActionFailure(e.toString()));
+    }
+  }
+
+  Future<void> _submit() async {
+    if (!validateAndSubmit()) return;
+    setState(() => _action = const ActionLoading());
+    try {
+      await ref.read(authNotifierProvider.notifier).signIn(
+            email: _emailController.text,
+            password: _passwordController.text,
+          );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _action = ActionFailure(e.toString()));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen<AuthState>(authNotifierProvider, (_, next) {
+      if (!mounted) return;
+      switch (next) {
+        case AuthLoading():
+          setState(() => _action = const ActionLoading());
+        case AuthAuthenticated(:final redirectPath):
+          setState(() => _action = const ActionSuccess(null));
+          context.go(redirectPath);
+        case AuthEmailUnconfirmed():
+          setState(() => _action = const ActionSuccess(null));
+          context.go(AppRoutes.emailVerification);
+        case AuthError(:final message):
+          setState(() => _action = ActionFailure(message));
+        default:
+          break;
+      }
+    });
+
+    return AuthScaffold(
+      isLoading: _action.isLoading,
+      loadingMessage: _action.isLoading ? 'Entrando...' : null,
+      child: Form(
+        key: formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Align(
+              alignment: Alignment.centerRight,
+              child: IconButton(
+                onPressed: () {},
+                icon: const Icon(
+                  Icons.headset_mic_outlined,
+                  size: 20,
+                  color: AppColors.secondaryText,
+                ),
+              ),
+            ),
+            Center(
+              child: SvgPicture.asset(
+                'assets/images/eantrack.svg',
+                width: 180,
+                height: 60,
+                fit: BoxFit.contain,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Center(
+              child: Text(
+                'Smart Tracking',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.secondaryText,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            AppTextField(
+              label: 'E-mail',
+              hint: 'usuario@email.com',
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
+              autofillHints: const [AutofillHints.email],
+              validator: emailValidator,
+              onFieldSubmitted: (_) =>
+                  FocusScope.of(context).requestFocus(_passwordFocus),
+            ),
+            const SizedBox(height: 12),
+            AppTextField(
+              label: 'Senha',
+              hint: 'Digite sua senha',
+              controller: _passwordController,
+              focusNode: _passwordFocus,
+              isPassword: true,
+              textInputAction: TextInputAction.done,
+              autofillHints: const [AutofillHints.password],
+              validator: (value) {
+                if (!submitted) return null;
+                if (value == null || value.isEmpty) {
+                  return 'Informe a senha.';
+                }
+                if (value.length < 8) {
+                  return 'M\u00EDnimo 8 caracteres.';
+                }
+                return null;
+              },
+              onFieldSubmitted: (_) => _submit(),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            if (_action.isFailure) ...[
+              AppErrorBox(_action.errorMessage!),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            if (_googleAction.isFailure) ...[
+              AppErrorBox(_googleAction.errorMessage!),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            AppButton(
+              label: 'Entrar',
+              onPressed: (_action.isLoading || _googleAction.isLoading) ? null : _submit,
+              isLoading: _action.isLoading,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _DividerOu(),
+            const SizedBox(height: AppSpacing.md),
+            AppButton(
+              label: 'Entrar com Google',
+              variant: AppButtonVariant.social,
+              isLoading: _googleAction.isLoading,
+              onPressed: (_action.isLoading || _googleAction.isLoading)
+                  ? null
+                  : _signInWithGoogle,
+              leadingIcon: const FaIcon(
+                FontAwesomeIcons.squareGooglePlus,
+                size: 20,
+                color: AppColors.info,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                onPressed: () => context.push(AppRoutes.recoverPassword),
+                child: RichText(
+                  text: TextSpan(
+                    style: AppTextStyles.labelMedium,
+                    children: const [
+                      TextSpan(
+                        text: 'Esqueceu sua senha? ',
+                        style: TextStyle(
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
+                      TextSpan(
+                        text: 'Clique aqui',
+                        style: TextStyle(
+                          color: AppColors.actionBlue,
+                          decoration: TextDecoration.underline,
+                          decorationColor: AppColors.actionBlue,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            AppButton(
+              label: 'Criar conta',
+              variant: AppButtonVariant.outlined,
+              onPressed: _action.isLoading
+                  ? null
+                  : () => context.push(AppRoutes.register),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Column(
+              children: [
+                const Icon(
+                  Icons.fingerprint,
+                  size: 32,
+                  color: AppColors.secondaryText,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Entre com biometria',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.secondaryText,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Private widgets
+// ---------------------------------------------------------------------------
+
+class _DividerOu extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Expanded(child: Divider(color: AppColors.accent1)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          child: Text(
+            'ou',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.secondaryText,
+            ),
+          ),
+        ),
+        const Expanded(child: Divider(color: AppColors.accent1)),
+      ],
+    );
+  }
+}
