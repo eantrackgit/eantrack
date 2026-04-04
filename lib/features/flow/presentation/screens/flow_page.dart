@@ -4,11 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 
 import '../../../../core/router/app_routes.dart';
-import '../../../../features/auth/domain/auth_state.dart';
+import '../../../../features/auth/domain/auth_flow_state.dart';
 import '../../../../features/auth/presentation/providers/auth_provider.dart';
 
-/// Tela transitória pós-confirmação de e-mail.
-/// Lê o estado do usuário e decide para onde ir — nunca permanece visível.
+/// Tela transitória central de decisão do fluxo de auth.
+/// Lê [AuthFlowState] e encaminha automaticamente o usuário.
 class FlowPage extends ConsumerStatefulWidget {
   const FlowPage({super.key});
 
@@ -20,42 +20,36 @@ class _FlowPageState extends ConsumerState<FlowPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _decide());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _decide(ref.read(authFlowStateProvider));
+    });
   }
 
-  void _decide() {
+  void _decide(AuthFlowState flowState) {
     if (!mounted) return;
-    final authState = ref.read(authNotifierProvider);
 
-    if (authState is! AuthAuthenticated) {
-      context.go(AppRoutes.login);
-      return;
+    switch (flowState) {
+      case AuthFlowState.unauthenticated:
+        context.go(AppRoutes.login);
+        return;
+      case AuthFlowState.recovery:
+        context.go(AppRoutes.updatePassword);
+        return;
+      case AuthFlowState.onboardingRequired:
+        context.go(AppRoutes.onboarding);
+        return;
+      case AuthFlowState.authenticated:
+        context.go(AppRoutes.hub);
+        return;
     }
-
-    final flowState = authState.flowState;
-
-    // Mode not yet chosen — always start at mode selection.
-    if (flowState == null || flowState.userMode == null) {
-      context.go(AppRoutes.onboarding);
-      return;
-    }
-
-    if (!flowState.isOnboardingComplete) {
-      // Mode defined but onboarding incomplete — resume at correct step.
-      context.go(
-        flowState.userMode == 'agencia'
-            ? AppRoutes.onboardingCnpj
-            : AppRoutes.onboardingIndividual,
-      );
-      return;
-    }
-
-    // Onboarding complete — enter the app.
-    context.go(AppRoutes.hub);
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AuthFlowState>(authFlowStateProvider, (_, next) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _decide(next));
+    });
+
     return Scaffold(
       backgroundColor: const Color(0xFF0A0E27),
       body: Center(

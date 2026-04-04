@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/domain/auth_flow_state.dart';
 import '../../features/auth/domain/auth_state.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/auth/presentation/screens/email_verification_screen.dart';
@@ -41,6 +42,7 @@ CustomTransitionPage<void> _fadePage(GoRouterState state, Widget child) {
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final notifier = _RouterNotifier(ref);
+  ref.read(authRecoveryContextProvider);
 
   return GoRouter(
     debugLogDiagnostics: false,
@@ -149,44 +151,65 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 /// Bridges Riverpod auth state -> GoRouter refresh + redirect.
 class _RouterNotifier extends ChangeNotifier {
   _RouterNotifier(this._ref) {
-    _ref.listen(authUserStreamProvider, (_, __) => notifyListeners());
+    _ref.listen(authFlowStateProvider, (_, __) => notifyListeners());
   }
 
   final Ref _ref;
 
   String? redirect(BuildContext context, GoRouterState state) {
-    final authAsync = _ref.read(authUserStreamProvider);
-    final isLoggedIn = authAsync.valueOrNull != null;
+    final authFlowState = _ref.read(authFlowStateProvider);
     final path = state.matchedLocation;
 
     // Splash manages its own navigation — never redirect away from it.
     if (path == AppRoutes.splash) return null;
+    if (path == AppRoutes.flow) return null;
 
-    final isPublicRoute = path == AppRoutes.login ||
+    final isGuestRoute = path == AppRoutes.login ||
         path == AppRoutes.register ||
-        path == AppRoutes.recoverPassword ||
-        path == AppRoutes.updatePassword ||
-        path == AppRoutes.termsOfUse ||
-        path == AppRoutes.privacyPolicy;
+        path == AppRoutes.recoverPassword;
+    final isOnboardingRoute = path == AppRoutes.onboarding ||
+        path == AppRoutes.onboardingIndividual ||
+        path == AppRoutes.onboardingCnpj ||
+        path == AppRoutes.onboardingAgency ||
+        path == AppRoutes.onboardingLegalRep ||
+        path == AppRoutes.onboardingOperationalStyle ||
+        path == AppRoutes.onboardingStatus;
+    final isAppRoute = path == AppRoutes.hub ||
+        path == AppRoutes.home ||
+        path == AppRoutes.search ||
+        path == AppRoutes.regions ||
+        path == AppRoutes.cities ||
+        path == AppRoutes.pdvs ||
+        path == AppRoutes.registerPdv ||
+        path == AppRoutes.networks ||
+        path == AppRoutes.categories ||
+        path == AppRoutes.subcategories ||
+        path == AppRoutes.industries ||
+        path == AppRoutes.registerIndustry ||
+        path == AppRoutes.productMix;
 
     // /email-verification só é válida quando o notifier está em AuthEmailUnconfirmed.
     if (path == AppRoutes.emailVerification) {
       final authState = _ref.read(authNotifierProvider);
-      if (authState is AuthAuthenticated) return AppRoutes.flow;
       if (authState is AuthEmailUnconfirmed) return null;
-      return AppRoutes.login;
+      return AppRoutes.flow;
     }
 
-    // Not logged in -> send to login (except public routes)
-    if (!isLoggedIn && !isPublicRoute) {
-      return AppRoutes.login;
+    if (path == AppRoutes.updatePassword &&
+        authFlowState != AuthFlowState.recovery) {
+      return AppRoutes.flow;
     }
 
-    // Logged in -> don't stay on login/register
-    if (isLoggedIn && (path == AppRoutes.login || path == AppRoutes.register)) {
-      final authState = _ref.read(authNotifierProvider);
-      if (authState is AuthLoading) return null;
-      if (authState is AuthAuthenticated) return authState.redirectPath;
+    if (isGuestRoute && authFlowState != AuthFlowState.unauthenticated) {
+      return AppRoutes.flow;
+    }
+
+    if (isOnboardingRoute &&
+        authFlowState != AuthFlowState.onboardingRequired) {
+      return AppRoutes.flow;
+    }
+
+    if (isAppRoute && authFlowState != AuthFlowState.authenticated) {
       return AppRoutes.flow;
     }
 

@@ -42,7 +42,8 @@ class _UpdatePasswordScreenState
       if (!mounted) return;
       setState(() => _action = const ActionSuccess(null));
       await Future.delayed(const Duration(milliseconds: 800));
-      if (mounted) context.go(AppRoutes.login);
+      await ref.read(authRepositoryProvider).signOut();
+      return;
     } on AppException catch (e) {
       if (!mounted) return;
       setState(() => _action = ActionFailure(e.message));
@@ -190,7 +191,10 @@ class _UpdatePasswordScreenState
                     label: 'Alterar',
                     isLoading: _action.isLoading,
                     onPressed:
-                        _canSubmit && !_action.isLoading ? _submit : null,
+                        _canSubmit &&
+                                !_action.isLoading
+                            ? _submit
+                            : null,
                     trailingIcon: _action.isLoading
                         ? null
                         : const Icon(

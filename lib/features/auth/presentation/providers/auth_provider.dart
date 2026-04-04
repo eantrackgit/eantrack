@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../../../../core/error/app_exception.dart';
 import '../../data/auth_repository.dart';
+import '../../domain/auth_flow_state.dart';
 import '../../domain/auth_state.dart';
 
 // ---------------------------------------------------------------------------
@@ -18,8 +21,43 @@ final authRepositoryProvider = Provider<AuthRepository>(
 );
 
 /// Raw Supabase auth stream — User? (null = not logged in).
+final authRecoveryContextProvider =
+    StateNotifierProvider<AuthRecoveryContextNotifier, bool>((ref) {
+  return AuthRecoveryContextNotifier(
+    ref.read(supabaseClientProvider),
+  );
+});
+
 final authUserStreamProvider = StreamProvider<User?>((ref) {
   return ref.read(authRepositoryProvider).authStateStream;
+});
+
+/// Placeholder for a future dedicated onboarding source.
+/// For now, it derives the current completion status from [AuthAuthenticated].
+final authOnboardingCompleteProvider = Provider<bool>((ref) {
+  final authState = ref.watch(authNotifierProvider);
+  if (authState is AuthAuthenticated) {
+    return authState.flowState?.isOnboardingComplete ?? false;
+  }
+  return false;
+});
+
+final authFlowStateProvider = Provider<AuthFlowState>((ref) {
+  final isRecovery = ref.watch(authRecoveryContextProvider);
+  final authUser = ref.watch(authUserStreamProvider).valueOrNull;
+  final hasSession = isRecovery ||
+      authUser != null;
+
+  if (isRecovery) {
+    return AuthFlowState.recovery;
+  }
+  if (!hasSession) {
+    return AuthFlowState.unauthenticated;
+  }
+  if (!ref.watch(authOnboardingCompleteProvider)) {
+    return AuthFlowState.onboardingRequired;
+  }
+  return AuthFlowState.authenticated;
 });
 
 // ---------------------------------------------------------------------------
@@ -36,7 +74,10 @@ final authNotifierProvider =
   ref.listen<AsyncValue<User?>>(authUserStreamProvider, (prev, next) {
     next.whenData((user) {
       if (user != null && notifier.state is! AuthAuthenticated) {
-        notifier.onExternalAuthChange(user);
+    final isRecovery = ref.read(authRecoveryContextProvider);
+    if (!isRecovery) {
+      notifier.onExternalAuthChange(user);
+    }
       } else if (user == null &&
           notifier.state is! AuthUnauthenticated &&
           notifier.state is! AuthInitial &&
@@ -177,6 +218,45 @@ class AuthNotifier extends StateNotifier<AuthState> {
     if (state is AuthError) {
       state = const AuthUnauthenticated();
     }
+  }
+}
+
+class AuthRecoveryContextNotifier extends StateNotifier<bool> {
+  AuthRecoveryContextNotifier(this._client) : super(false) {
+    _subscription = _client.auth.onAuthStateChange.listen(_onAuthStateChange);
+  }
+
+  final SupabaseClient _client;
+  late final StreamSubscription<dynamic> _subscription;
+
+  void _onAuthStateChange(dynamic data) {
+    final event = data.event as AuthChangeEvent;
+
+    switch (event) {
+      case AuthChangeEvent.passwordRecovery:
+        state = data.session?.user != null;
+        return;
+      case AuthChangeEvent.signedOut:
+      case AuthChangeEvent.userDeleted:
+        state = false;
+        return;
+        return;
+      case AuthChangeEvent.initialSession:
+        if (data.session == null) {
+          state = false;
+        }
+        return;
+      case AuthChangeEvent.tokenRefreshed:
+      case AuthChangeEvent.userUpdated:
+      case AuthChangeEvent.mfaChallengeVerified:
+        return;
+    }
+  }
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
   }
 }
 
