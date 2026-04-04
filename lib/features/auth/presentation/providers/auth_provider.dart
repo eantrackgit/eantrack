@@ -234,22 +234,25 @@ class AuthRecoveryContextNotifier extends StateNotifier<bool> {
 
     switch (event) {
       case AuthChangeEvent.passwordRecovery:
-        state = data.session?.user != null;
-        return;
+        state = true;
+        break;
+      case AuthChangeEvent.signedIn:
+        break;
       case AuthChangeEvent.signedOut:
       case AuthChangeEvent.userDeleted:
         state = false;
-        return;
-        return;
+        break;
       case AuthChangeEvent.initialSession:
         if (data.session == null) {
           state = false;
         }
-        return;
+        break;
       case AuthChangeEvent.tokenRefreshed:
       case AuthChangeEvent.userUpdated:
       case AuthChangeEvent.mfaChallengeVerified:
-        return;
+        break;
+      default:
+        break;
     }
   }
 

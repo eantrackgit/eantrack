@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/error/app_exception.dart';
 import '../../../shared/utils/password_validator.dart';
 import '../domain/user_flow_state.dart';
@@ -132,7 +133,10 @@ class AuthRepository {
           'Informe o e-mail para redefinir sua senha.');
     }
     try {
-      await _client.auth.resetPasswordForEmail(email.trim());
+      await _client.auth.resetPasswordForEmail(
+        email.trim(),
+        redirectTo: AppConfig.passwordResetRedirectUrl,
+      );
     } on AuthException catch (e) {
       throw AuthAppException(_mapAuthError(e.message));
     }
