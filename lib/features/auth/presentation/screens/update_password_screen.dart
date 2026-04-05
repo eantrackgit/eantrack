@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/error/app_exception.dart';
 import '../../../../core/router/app_routes.dart';
@@ -34,55 +33,6 @@ class _UpdatePasswordScreenState
 
   bool get _canSubmit => passwordValid && passwordsMatch;
 
-  Future<void> _testCheckRpc() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final supabase = Supabase.instance.client;
-
-    print('>>> TESTE CHECK RPC - senha digitada: ${_passwordCtrl.text}');
-    print('>>> TESTE CHECK RPC - currentUser: ${supabase.auth.currentUser?.id}');
-    print('>>> TESTE CHECK RPC - iniciando chamada');
-
-    try {
-      final result = await supabase.rpc(
-        'check_password_reuse_current_user',
-        params: {
-          'p_new_password': _passwordCtrl.text,
-          'p_history_limit': 3,
-        },
-      );
-
-      print('>>> TESTE CHECK RPC - resultado: $result');
-
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('Resultado RPC: $result'),
-        ),
-      );
-    } on PostgrestException catch (e) {
-      print('>>> TESTE CHECK RPC - erro: $e');
-      print('>>> TESTE CHECK RPC - code: ${e.code}');
-      print('>>> TESTE CHECK RPC - message: ${e.message}');
-      print('>>> TESTE CHECK RPC - details: ${e.details}');
-
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('Erro RPC: ${e.message}'),
-        ),
-      );
-    } catch (e) {
-      print('>>> TESTE CHECK RPC - erro: $e');
-
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('Erro RPC: $e'),
-        ),
-      );
-    }
-  }
-
   Future<void> _submit() async {
     if (!validateAndSubmit()) return;
     if (!_canSubmit || _action.isLoading) return;
@@ -91,21 +41,38 @@ class _UpdatePasswordScreenState
       await ref.read(authRepositoryProvider).changePassword(_passwordCtrl.text);
       if (!mounted) return;
       setState(() => _action = const ActionSuccess(null));
-      await Future.delayed(const Duration(milliseconds: 800));
+      await showAppFeedbackDialog(
+        context: context,
+        title: 'Senha alterada',
+        message:
+            'Sua senha foi atualizada com sucesso. Faça login novamente para continuar.',
+        icon: Icons.check_circle_outline_rounded,
+        accentColor: AppColors.success,
+      );
+      if (!mounted) return;
       await ref.read(authRepositoryProvider).signOut();
       return;
     } on SamePasswordException catch (e) {
-      if (!mounted) return;
-      setState(() => _action = ActionFailure(e.message));
+      await _showUpdatePasswordErrorDialog(e.message);
     } on AppException catch (e) {
-      if (!mounted) return;
-      setState(() => _action = ActionFailure(e.message));
+      await _showUpdatePasswordErrorDialog(e.message);
     } catch (_) {
-      if (!mounted) return;
-      setState(() => _action = const ActionFailure(
-            'Erro ao atualizar senha. Tente novamente.',
-          ));
+      await _showUpdatePasswordErrorDialog(
+        'Erro ao atualizar senha. Tente novamente.',
+      );
     }
+  }
+
+  Future<void> _showUpdatePasswordErrorDialog(String message) async {
+    if (!mounted) return;
+    setState(() => _action = const ActionIdle());
+    await showAppFeedbackDialog(
+      context: context,
+      title: 'Falha ao atualizar senha',
+      message: message,
+      icon: Icons.error_outline_rounded,
+      accentColor: AppColors.error,
+    );
   }
 
   @override
@@ -187,40 +154,6 @@ class _UpdatePasswordScreenState
               onFieldSubmitted: (_) => _submit(),
             ),
             const SizedBox(height: AppSpacing.md),
-            if (_action.isFailure) ...[
-              AppErrorBox(_action.errorMessage!),
-              const SizedBox(height: AppSpacing.md),
-            ],
-            if (_action is ActionSuccess) ...[
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppSpacing.sm),
-                  border: Border.all(
-                    color: AppColors.success.withValues(alpha: 0.4),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.check_circle_outline,
-                      color: AppColors.success,
-                      size: 18,
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Text(
-                        'Senha alterada! Redirecionando...',
-                        style: AppTextStyles.bodySmall
-                            .copyWith(color: AppColors.success),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-            ],
             Row(
               children: [
                 SizedBox(
@@ -258,11 +191,6 @@ class _UpdatePasswordScreenState
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            TextButton(
-              onPressed: _action.isLoading ? null : _testCheckRpc,
-              child: const Text('TESTAR CHECK RPC'),
             ),
             const SizedBox(height: AppSpacing.sm),
           ],

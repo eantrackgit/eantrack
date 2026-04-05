@@ -13,6 +13,8 @@ abstract final class AppRoutes {
   static const emailVerification = '/email-verification';
   static const recoverPassword = '/recover-password';
   static const updatePassword = '/update-password';
+  static const passwordRecoveryLinkExpired =
+      '/password-recovery-link-expired';
 
   // --- Onboarding (post-registration) ---
   static const onboarding = '/onboarding';

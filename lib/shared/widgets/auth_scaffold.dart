@@ -5,23 +5,12 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text_styles.dart';
 import 'app_card.dart';
-import 'app_loading_overlay.dart';
 
-/// Layout padrão para telas de auth e onboarding.
-///
-/// Fornece:
-/// - Fundo [AppColors.secondary]
-/// - Card centralizado, maxWidth 480
-/// - Scroll seguro
-/// - Overlay de loading opcional
-/// - Header com logo + título + subtítulo opcionais
-/// - Animação de entrada (fade + scale) no AppCard
+/// Standard layout for auth and onboarding screens.
 class AuthScaffold extends StatelessWidget {
   const AuthScaffold({
     super.key,
     required this.child,
-    this.isLoading = false,
-    this.loadingMessage,
     this.title,
     this.subtitle,
     this.showLogo = false,
@@ -31,75 +20,64 @@ class AuthScaffold extends StatelessWidget {
   });
 
   final Widget child;
-  final bool isLoading;
-  final String? loadingMessage;
-
-  /// Texto exibido abaixo do logo (ou no topo do card se [showLogo] = false).
   final String? title;
   final String? subtitle;
-
-  /// Exibe o logo SVG centralizado no topo do card.
   final bool showLogo;
   final double logoWidth;
   final double logoHeight;
-
-  /// Padding interno do AppCard. Padrão: EdgeInsets.all(AppSpacing.lg).
   final EdgeInsetsGeometry? padding;
 
   @override
   Widget build(BuildContext context) {
-    return AppLoadingOverlay(
-      isLoading: isLoading,
-      message: loadingMessage,
-      child: Scaffold(
-        backgroundColor: AppColors.secondary,
-        body: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: SingleChildScrollView(
-                padding:
-                    const EdgeInsets.symmetric(vertical: AppSpacing.xl),
-                child: AppCard(
-                  color: AppColors.secondaryBackground,
-                  padding: padding,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (showLogo) ...[
-                        Center(
-                          child: SvgPicture.asset(
-                            'assets/images/eantrack.svg',
-                            width: logoWidth,
-                            height: logoHeight,
-                            fit: BoxFit.contain,
-                          ),
+    return Scaffold(
+      backgroundColor: AppColors.secondary,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+              child: AppCard(
+                color: AppColors.secondaryBackground,
+                padding: padding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (showLogo) ...[
+                      Center(
+                        child: SvgPicture.asset(
+                          'assets/images/eantrack.svg',
+                          width: logoWidth,
+                          height: logoHeight,
+                          fit: BoxFit.contain,
                         ),
-                        const SizedBox(height: AppSpacing.sm),
-                      ],
-                      if (title != null) ...[
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                    ],
+                    if (title != null) ...[
+                      Text(
+                        title!,
+                        style: AppTextStyles.headlineSmall.copyWith(
+                          color: AppColors.secondary,
+                        ),
+                        textAlign:
+                            showLogo ? TextAlign.center : TextAlign.start,
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: AppSpacing.xs),
                         Text(
-                          title!,
-                          style: AppTextStyles.headlineSmall
-                              .copyWith(color: AppColors.secondary),
+                          subtitle!,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.secondaryText,
+                          ),
                           textAlign:
                               showLogo ? TextAlign.center : TextAlign.start,
                         ),
-                        if (subtitle != null) ...[
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(
-                            subtitle!,
-                            style: AppTextStyles.bodySmall
-                                .copyWith(color: AppColors.secondaryText),
-                            textAlign:
-                                showLogo ? TextAlign.center : TextAlign.start,
-                          ),
-                        ],
-                        const SizedBox(height: AppSpacing.lg),
                       ],
-                      child,
+                      const SizedBox(height: AppSpacing.lg),
                     ],
-                  ),
+                    child,
+                  ],
                 ),
               ),
             ),
@@ -110,12 +88,9 @@ class AuthScaffold extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// AppErrorBox — shake animation on entry
-// ---------------------------------------------------------------------------
-
 class AppErrorBox extends StatefulWidget {
   const AppErrorBox(this.message, {super.key});
+
   final String message;
 
   @override
@@ -173,8 +148,9 @@ class _AppErrorBoxState extends State<AppErrorBox>
             Expanded(
               child: Text(
                 widget.message,
-                style:
-                    AppTextStyles.bodySmall.copyWith(color: AppColors.error),
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.error,
+                ),
               ),
             ),
           ],
@@ -183,10 +159,6 @@ class _AppErrorBoxState extends State<AppErrorBox>
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// PasswordRuleRow
-// ---------------------------------------------------------------------------
 
 class PasswordRuleRow extends StatelessWidget {
   const PasswordRuleRow({
@@ -204,6 +176,7 @@ class PasswordRuleRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color color;
     final IconData icon;
+
     if (!isTyping) {
       color = AppColors.accent2;
       icon = Icons.radio_button_unchecked;
@@ -214,6 +187,7 @@ class PasswordRuleRow extends StatelessWidget {
       color = AppColors.error;
       icon = Icons.cancel;
     }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(

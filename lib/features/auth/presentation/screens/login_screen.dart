@@ -37,8 +37,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     try {
       await ref.read(authNotifierProvider.notifier).signInWithGoogle();
     } catch (e) {
-      if (!mounted) return;
-      setState(() => _googleAction = ActionFailure(e.toString()));
+      await _showActionErrorDialog(
+        title: 'Falha no login com Google',
+        message: e.toString(),
+        isGoogleFlow: true,
+      );
     }
   }
 
@@ -51,34 +54,68 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             password: _passwordController.text,
           );
     } catch (e) {
-      if (!mounted) return;
-      setState(() => _action = ActionFailure(e.toString()));
+      await _showActionErrorDialog(
+        title: 'Falha no login',
+        message: e.toString(),
+      );
     }
+  }
+
+  Future<void> _showActionErrorDialog({
+    required String title,
+    required String message,
+    bool isGoogleFlow = false,
+  }) async {
+    if (!mounted) return;
+    setState(() {
+      if (isGoogleFlow) {
+        _googleAction = const ActionIdle();
+      } else {
+        _action = const ActionIdle();
+      }
+    });
+    await showAppFeedbackDialog(
+      context: context,
+      title: title,
+      message: message,
+      icon: Icons.error_outline_rounded,
+      accentColor: AppColors.error,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AuthState>(authNotifierProvider, (_, next) {
+    ref.listen<AuthState>(authNotifierProvider, (_, next) async {
       if (!mounted) return;
       switch (next) {
-        case AuthLoading():
-          setState(() => _action = const ActionLoading());
         case AuthAuthenticated(:final redirectPath):
-          setState(() => _action = const ActionSuccess(null));
+          setState(() {
+            _action = const ActionSuccess(null);
+            _googleAction = const ActionSuccess(null);
+          });
           context.go(redirectPath);
         case AuthEmailUnconfirmed():
-          setState(() => _action = const ActionSuccess(null));
+          setState(() {
+            _action = const ActionSuccess(null);
+            _googleAction = const ActionSuccess(null);
+          });
           context.go(AppRoutes.emailVerification);
         case AuthError(:final message):
-          setState(() => _action = ActionFailure(message));
+          await _showActionErrorDialog(
+            title: _googleAction.isLoading
+                ? 'Falha no login com Google'
+                : 'Falha no login',
+            message: message,
+            isGoogleFlow: _googleAction.isLoading,
+          );
         default:
           break;
       }
     });
 
+    final isBusy = _action.isLoading || _googleAction.isLoading;
+
     return AuthScaffold(
-      isLoading: _action.isLoading,
-      loadingMessage: _action.isLoading ? 'Entrando...' : null,
       child: Form(
         key: formKey,
         child: Column(
@@ -139,24 +176,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   return 'Informe a senha.';
                 }
                 if (value.length < 8) {
-                  return 'M\u00EDnimo 8 caracteres.';
+                  return 'Minimo 8 caracteres.';
                 }
                 return null;
               },
               onFieldSubmitted: (_) => _submit(),
             ),
             const SizedBox(height: AppSpacing.sm),
-            if (_action.isFailure) ...[
-              AppErrorBox(_action.errorMessage!),
-              const SizedBox(height: AppSpacing.md),
-            ],
-            if (_googleAction.isFailure) ...[
-              AppErrorBox(_googleAction.errorMessage!),
-              const SizedBox(height: AppSpacing.md),
-            ],
             AppButton(
               label: 'Entrar',
-              onPressed: (_action.isLoading || _googleAction.isLoading) ? null : _submit,
+              onPressed: isBusy ? null : _submit,
               isLoading: _action.isLoading,
             ),
             const SizedBox(height: AppSpacing.md),
@@ -166,9 +195,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               label: 'Entrar com Google',
               variant: AppButtonVariant.social,
               isLoading: _googleAction.isLoading,
-              onPressed: (_action.isLoading || _googleAction.isLoading)
-                  ? null
-                  : _signInWithGoogle,
+              onPressed: isBusy ? null : _signInWithGoogle,
               leadingIcon: const FaIcon(
                 FontAwesomeIcons.squareGooglePlus,
                 size: 20,
@@ -184,7 +211,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                onPressed: () => context.push(AppRoutes.recoverPassword),
+                onPressed: isBusy
+                    ? null
+                    : () => context.push(AppRoutes.recoverPassword),
                 child: RichText(
                   text: TextSpan(
                     style: AppTextStyles.labelMedium,
@@ -212,9 +241,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             AppButton(
               label: 'Criar conta',
               variant: AppButtonVariant.outlined,
-              onPressed: _action.isLoading
-                  ? null
-                  : () => context.push(AppRoutes.register),
+              onPressed: isBusy ? null : () => context.push(AppRoutes.register),
             ),
             const SizedBox(height: AppSpacing.md),
             Column(
@@ -239,10 +266,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// Private widgets
-// ---------------------------------------------------------------------------
 
 class _DividerOu extends StatelessWidget {
   @override

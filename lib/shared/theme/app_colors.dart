@@ -16,6 +16,9 @@ abstract final class AppColors {
   // Backgrounds
   static const primaryBackground = Color(0xFFF1F4F8);
   static const secondaryBackground = Color(0xFFFFFFFF);
+  static const modalOverlayBase = Color(0xFF050816);
+  static const modalOverlayMid = Color(0xFF0E0A36);
+  static const modalOverlayGlow = Color(0xFF1A56DB);
 
   // Action
   static const actionBlue =

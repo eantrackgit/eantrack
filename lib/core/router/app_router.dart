@@ -7,6 +7,7 @@ import '../../features/auth/domain/auth_state.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/auth/presentation/screens/email_verification_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/auth/presentation/screens/password_recovery_link_expired_screen.dart';
 import '../../features/auth/presentation/screens/recover_password_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/screens/update_password_screen.dart';
@@ -40,15 +41,61 @@ CustomTransitionPage<void> _fadePage(GoRouterState state, Widget child) {
   );
 }
 
+Map<String, String> _recoveryLinkParamsFromUri(Uri uri) {
+  final params = <String, String>{...uri.queryParameters};
+  final fragment = uri.fragment;
+
+  if (fragment.isEmpty) return params;
+
+  if (fragment.startsWith('error=')) {
+    params.addAll(Uri.splitQueryString(fragment));
+    return params;
+  }
+
+  final queryIndex = fragment.indexOf('?');
+  if (queryIndex >= 0 && queryIndex < fragment.length - 1) {
+    final fragmentQuery = fragment.substring(queryIndex + 1);
+    params.addAll(Uri.splitQueryString(fragmentQuery));
+  }
+
+  return params;
+}
+
+bool _hasExpiredRecoveryLinkParams(Uri uri) {
+  final params = _recoveryLinkParamsFromUri(uri);
+  final error = (params['error'] ?? '').toLowerCase();
+  final errorCode = (params['error_code'] ?? '').toLowerCase();
+  final description = Uri.decodeComponent(
+    params['error_description'] ?? '',
+  ).toLowerCase();
+
+  return error == 'access_denied' ||
+      errorCode == 'otp_expired' ||
+      description.contains('email link is invalid or has expired') ||
+      description.contains('invalid or has expired') ||
+      description.contains('already used') ||
+      description.contains('already been used');
+}
+
+String? _initialRecoveryErrorLocation() {
+  if (_hasExpiredRecoveryLinkParams(Uri.base)) {
+    return AppRoutes.passwordRecoveryLinkExpired;
+  }
+
+  return null;
+}
+
 final appRouterProvider = Provider<GoRouter>((ref) {
   final notifier = _RouterNotifier(ref);
   ref.read(authRecoveryContextProvider);
+  final recoveryErrorLocation = _initialRecoveryErrorLocation();
 
   return GoRouter(
     debugLogDiagnostics: false,
     refreshListenable: notifier,
     redirect: notifier.redirect,
-    initialLocation: AppRoutes.splash,
+    initialLocation: recoveryErrorLocation ?? AppRoutes.splash,
+    overridePlatformDefaultLocation: recoveryErrorLocation != null,
     routes: [
       // --- Splash ---
       GoRoute(
@@ -79,6 +126,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.updatePassword,
         pageBuilder: (_, state) =>
             _fadePage(state, const UpdatePasswordScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.passwordRecoveryLinkExpired,
+        pageBuilder: (_, state) => _fadePage(
+          state,
+          const PasswordRecoveryLinkExpiredScreen(),
+        ),
       ),
 
       // --- Hub (protected) ---
@@ -160,13 +214,21 @@ class _RouterNotifier extends ChangeNotifier {
     final authFlowState = _ref.read(authFlowStateProvider);
     final path = state.matchedLocation;
 
+    if (_hasExpiredRecoveryLinkParams(state.uri)) {
+      return path == AppRoutes.passwordRecoveryLinkExpired
+          ? null
+          : AppRoutes.passwordRecoveryLinkExpired;
+    }
+
     // Splash manages its own navigation — never redirect away from it.
     if (path == AppRoutes.splash) return null;
     if (path == AppRoutes.flow) return null;
+    if (path == AppRoutes.passwordRecoveryLinkExpired) return null;
 
     final isGuestRoute = path == AppRoutes.login ||
         path == AppRoutes.register ||
-        path == AppRoutes.recoverPassword;
+        path == AppRoutes.recoverPassword ||
+        path == AppRoutes.passwordRecoveryLinkExpired;
     final isOnboardingRoute = path == AppRoutes.onboarding ||
         path == AppRoutes.onboardingIndividual ||
         path == AppRoutes.onboardingCnpj ||

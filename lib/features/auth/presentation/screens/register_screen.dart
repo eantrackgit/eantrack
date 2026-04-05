@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -60,9 +60,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
 
   void _onEmailChanged(String value) {
     _emailDebounce?.cancel();
-    if (_action.isFailure) {
-      setState(() => _action = const ActionIdle());
-    }
 
     if (value.trim().isEmpty || AppValidators.email(value) != null) {
       setState(() => _emailStatus = _EmailStatus.idle);
@@ -78,14 +75,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     final available =
         await ref.read(authRepositoryProvider).checkEmailAvailable(email);
     if (!mounted) return;
-    setState(() =>
-        _emailStatus = available ? _EmailStatus.available : _EmailStatus.taken);
+    setState(() {
+      _emailStatus = available ? _EmailStatus.available : _EmailStatus.taken;
+    });
   }
 
   String? _emailFieldValidator(String? value) {
     final error = emailValidator(value);
     if (error != null || !submitted) return error;
-    if (_emailStatus == _EmailStatus.taken) return 'Este e-mail já está em uso.';
+    if (_emailStatus == _EmailStatus.taken) {
+      return 'Este e-mail ja esta em uso.';
+    }
     return null;
   }
 
@@ -93,11 +93,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     setState(() => _googleAction = const ActionLoading());
     try {
       await ref.read(authNotifierProvider.notifier).signInWithGoogle();
-      // Na web: browser redireciona para Google.
-      // Estado será atualizado via stream quando voltar.
     } catch (e) {
-      if (!mounted) return;
-      setState(() => _googleAction = ActionFailure(e.toString()));
+      await _showActionErrorDialog(
+        title: 'Falha no cadastro com Google',
+        message: e.toString(),
+        isGoogleFlow: true,
+      );
     }
   }
 
@@ -120,40 +121,73 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
             password: _passwordCtrl.text,
           );
     } catch (e) {
-      if (!mounted) return;
-      setState(() => _action = ActionFailure(e.toString()));
+      await _showActionErrorDialog(
+        title: 'Falha ao criar conta',
+        message: e.toString(),
+      );
     }
+  }
+
+  Future<void> _showActionErrorDialog({
+    required String title,
+    required String message,
+    bool isGoogleFlow = false,
+  }) async {
+    if (!mounted) return;
+    setState(() {
+      if (isGoogleFlow) {
+        _googleAction = const ActionIdle();
+      } else {
+        _action = const ActionIdle();
+      }
+    });
+    await showAppFeedbackDialog(
+      context: context,
+      title: title,
+      message: message,
+      icon: Icons.error_outline_rounded,
+      accentColor: AppColors.error,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AuthState>(authNotifierProvider, (_, next) {
+    ref.listen<AuthState>(authNotifierProvider, (_, next) async {
       if (!mounted) return;
       switch (next) {
-        case AuthLoading():
-          setState(() => _action = const ActionLoading());
         case AuthEmailUnconfirmed():
-          setState(() => _action = const ActionSuccess(null));
+          setState(() {
+            _action = const ActionSuccess(null);
+            _googleAction = const ActionSuccess(null);
+          });
           context.go(AppRoutes.emailVerification);
         case AuthAuthenticated(:final redirectPath):
-          setState(() => _action = const ActionSuccess(null));
+          setState(() {
+            _action = const ActionSuccess(null);
+            _googleAction = const ActionSuccess(null);
+          });
           context.go(redirectPath);
         case AuthError(:final message):
-          setState(() => _action = ActionFailure(message));
+          await _showActionErrorDialog(
+            title: _googleAction.isLoading
+                ? 'Falha no cadastro com Google'
+                : 'Falha ao criar conta',
+            message: message,
+            isGoogleFlow: _googleAction.isLoading,
+          );
         default:
           break;
       }
     });
 
+    final isBusy = _action.isLoading || _googleAction.isLoading;
+
     return AuthScaffold(
-      isLoading: _action.isLoading,
-      loadingMessage: _action.isLoading ? 'Criando sua conta...' : null,
       child: Form(
         key: formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Header
             Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -176,7 +210,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'Todos os campos são obrigatórios',
+                  'Todos os campos sao obrigatorios',
                   textAlign: TextAlign.center,
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.secondaryText,
@@ -185,8 +219,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
-
-            // Email
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -215,8 +247,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
             ),
             _EmailStatusHint(_emailStatus),
             const SizedBox(height: AppSpacing.md),
-
-            // Password
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -256,27 +286,27 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
               children: [
                 PasswordRuleRow(
                   satisfied: hasUppercase,
-                  label: 'Uma letra mai\u00fascula',
+                  label: 'Uma letra maiuscula',
                   isTyping: isTypingPassword,
                 ),
                 PasswordRuleRow(
                   satisfied: hasLowercase,
-                  label: 'Uma letra min\u00fascula',
+                  label: 'Uma letra minuscula',
                   isTyping: isTypingPassword,
                 ),
                 PasswordRuleRow(
                   satisfied: hasDigit,
-                  label: 'Um n\u00famero',
+                  label: 'Um numero',
                   isTyping: isTypingPassword,
                 ),
                 PasswordRuleRow(
                   satisfied: hasMinLength,
-                  label: 'M\u00ednimo de 8 caracteres',
+                  label: 'Minimo de 8 caracteres',
                   isTyping: isTypingPassword,
                 ),
                 PasswordRuleRow(
                   satisfied: hasSymbol,
-                  label: 'Um s\u00edmbolo (ex: @, #, \$, %, &, *)',
+                  label: 'Um simbolo (ex: @, #, \$, %, &, *)',
                   isTyping: isTypingPassword,
                 ),
                 PasswordRuleRow(
@@ -287,8 +317,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
               ],
             ),
             const SizedBox(height: AppSpacing.md),
-
-            // Confirm password
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -316,8 +344,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
-
-            // Terms
             _TermsRow(
               accepted: _termsAccepted,
               hasError: _termsError,
@@ -329,20 +355,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
               onPrivacyTap: () => context.push(AppRoutes.privacyPolicy),
             ),
             const SizedBox(height: AppSpacing.lg),
-
-            // Erros de submit e Google
-            if (_action.isFailure) ...[
-              AppErrorBox(_action.errorMessage!),
-              const SizedBox(height: AppSpacing.md),
-            ],
-            if (_googleAction.isFailure) ...[
-              AppErrorBox(_googleAction.errorMessage!),
-              const SizedBox(height: AppSpacing.md),
-            ],
             const SizedBox(height: AppSpacing.sm),
             _GoogleButton(
               isLoading: _googleAction.isLoading,
-              disabled: _action.isLoading || _googleAction.isLoading,
+              disabled: isBusy,
               onPressed: _signInWithGoogle,
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -353,18 +369,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                     label: 'Voltar',
                     variant: AppButtonVariant.outlined,
                     leadingIcon: const Icon(Icons.arrow_back_ios, size: 14),
-                    onPressed: _action.isLoading
-                        ? null
-                        : () => context.go(AppRoutes.login),
+                    onPressed: isBusy ? null : () => context.go(AppRoutes.login),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: AppButton(
-                    label: 'Avançar',
+                    label: 'Criar conta',
                     trailingIcon: const Icon(Icons.arrow_forward_ios, size: 14),
-                    onPressed:
-                        (_action.isLoading || !_canSubmit) ? null : _submit,
+                    onPressed: (isBusy || !_canSubmit) ? null : _submit,
                     isLoading: _action.isLoading,
                   ),
                 ),
@@ -377,12 +390,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   }
 }
 
-// ---------------------------------------------------------------------------
-// Private widgets
-// ---------------------------------------------------------------------------
-
 class _EmailStatusHint extends StatelessWidget {
   const _EmailStatusHint(this.status);
+
   final _EmailStatus status;
 
   @override
@@ -394,9 +404,12 @@ class _EmailStatusHint extends StatelessWidget {
         _EmailStatus.checking =>
           _hint(Icons.hourglass_empty, 'Verificando...', AppColors.accent2),
         _EmailStatus.available =>
-          _hint(Icons.check_circle_outline, 'Dispon\u00EDvel', AppColors.success),
-        _EmailStatus.taken => _hint(Icons.cancel_outlined,
-            'Este e-mail j\u00E1 est\u00E1 em uso', AppColors.error),
+          _hint(Icons.check_circle_outline, 'Disponivel', AppColors.success),
+        _EmailStatus.taken => _hint(
+            Icons.cancel_outlined,
+            'Este e-mail ja esta em uso',
+            AppColors.error,
+          ),
       },
     );
   }
@@ -415,7 +428,6 @@ class _EmailStatusHint extends StatelessWidget {
     );
   }
 }
-
 
 class _TermsRow extends StatelessWidget {
   const _TermsRow({
@@ -453,10 +465,11 @@ class _TermsRow extends StatelessWidget {
                 onTap: () => onChanged(!accepted),
                 child: RichText(
                   text: TextSpan(
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.secondaryText),
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.secondaryText,
+                    ),
                     children: [
-                      const TextSpan(text: 'Ao continuar, você concorda com os '),
+                      const TextSpan(text: 'Ao continuar, voce concorda com os '),
                       WidgetSpan(
                         child: GestureDetector(
                           onTap: onTermsTap,
@@ -475,7 +488,7 @@ class _TermsRow extends StatelessWidget {
                         child: GestureDetector(
                           onTap: onPrivacyTap,
                           child: Text(
-                            'Política de Privacidade.',
+                            'Politica de Privacidade.',
                             style: AppTextStyles.bodySmall.copyWith(
                               color: AppColors.primary,
                               decoration: TextDecoration.underline,
@@ -495,7 +508,7 @@ class _TermsRow extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(left: 12),
             child: Text(
-              'Para continuar, é necessário aceitar os Termos de Uso e a Política de Privacidade.',
+              'Para continuar, e necessario aceitar os Termos de Uso e a Politica de Privacidade.',
               style: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
             ),
           ),
@@ -503,10 +516,6 @@ class _TermsRow extends StatelessWidget {
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// Google button — reutilizado em login e register
-// ---------------------------------------------------------------------------
 
 class _GoogleButton extends StatelessWidget {
   const _GoogleButton({

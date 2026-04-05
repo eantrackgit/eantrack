@@ -35,25 +35,38 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
           .resetPassword(_emailCtrl.text.trim());
       if (!mounted) return;
       setState(() => _action = const ActionSuccess(null));
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Link enviado! Verifique sua caixa de entrada.'),
-        ),
+      await showAppFeedbackDialog(
+        context: context,
+        title: 'Link enviado',
+        message:
+            'Enviamos um link para redefinir sua senha. Verifique sua caixa de entrada e spam. Por segurança, esse link expira em alguns minutos e pode ser usado apenas uma vez.',
+        icon: Icons.mark_email_read_outlined,
+        accentColor: AppColors.success,
       );
+      if (!mounted) return;
       context.go(AppRoutes.login);
     } catch (e) {
-      if (!mounted) return;
-      setState(() => _action = ActionFailure(
-            e is AppException ? e.message : 'Erro ao enviar. Tente novamente.',
-          ));
+      await _showRecoveryErrorDialog(
+        e is AppException ? e.message : 'Erro ao enviar. Tente novamente.',
+      );
     }
+  }
+
+  Future<void> _showRecoveryErrorDialog(String message) async {
+    if (!mounted) return;
+    setState(() => _action = const ActionIdle());
+    await showAppFeedbackDialog(
+      context: context,
+      title: 'Falha ao enviar link',
+      message: message,
+      icon: Icons.error_outline_rounded,
+      accentColor: AppColors.error,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return AuthScaffold(
-      isLoading: _action.isLoading,
-      loadingMessage: 'Enviando e-mail...',
       padding: EdgeInsets.zero,
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -74,23 +87,25 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
                     color: AppColors.tertiary,
                     size: 20,
                   ),
-                  onPressed: () => context.go(AppRoutes.login),
+                  onPressed:
+                      _action.isLoading ? null : () => context.go(AppRoutes.login),
                 ),
               ),
               const SizedBox(height: 60),
               Text(
                 'Esqueceu sua senha?',
                 textAlign: TextAlign.center,
-                style: AppTextStyles.headlineSmall
-                    .copyWith(color: AppColors.secondary),
+                style: AppTextStyles.headlineSmall.copyWith(
+                  color: AppColors.secondary,
+                ),
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                'Insira o seu e-mail abaixo que enviaremos um link '
-                'para você criar uma nova senha.',
+                'Insira o seu e-mail abaixo que enviaremos um link para voce criar uma nova senha.',
                 textAlign: TextAlign.center,
-                style:
-                    AppTextStyles.bodySmall.copyWith(color: AppColors.actionBlue),
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.actionBlue,
+                ),
               ),
               const SizedBox(height: AppSpacing.lg),
               AppTextField(
@@ -105,10 +120,6 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
                   if (!_action.isLoading) _submit();
                 },
               ),
-              if (_action.isFailure) ...[
-                const SizedBox(height: AppSpacing.sm),
-                AppErrorBox(_action.errorMessage!),
-              ],
               const SizedBox(height: AppSpacing.lg),
               Row(
                 children: [

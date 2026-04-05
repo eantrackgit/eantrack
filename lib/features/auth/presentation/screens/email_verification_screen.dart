@@ -95,13 +95,23 @@ class _EmailVerificationScreenState
 
   Future<void> _resend() async {
     if (_email.isEmpty) {
-      _snack('E-mail não disponível. Volte e tente novamente.');
+      await _showFeedbackDialog(
+        title: 'E-mail indisponível',
+        message: 'Volte e tente novamente.',
+        icon: Icons.mail_outline_rounded,
+        accentColor: AppColors.error,
+      );
       return;
     }
     final cooldown = ref.read(emailCooldownProvider);
     if (cooldown.isLocked) return;
     if (cooldown.attempts >= EmailCooldownState.maxAttempts) {
-      _snack('Você excedeu o número de tentativas. Tente mais tarde.');
+      await _showFeedbackDialog(
+        title: 'Limite atingido',
+        message: 'Você excedeu o número de tentativas. Tente mais tarde.',
+        icon: Icons.schedule_rounded,
+        accentColor: AppColors.error,
+      );
       return;
     }
     setState(() => _resendLoading = true);
@@ -122,15 +132,33 @@ class _EmailVerificationScreenState
       if (!mounted) return;
       setState(() => _resendLoading = false);
       if (!sent) {
-        _snack('Falha ao reenviar. Tente novamente.');
+        await _showFeedbackDialog(
+          title: 'Falha ao reenviar',
+          message: 'Tente novamente.',
+          icon: Icons.error_outline_rounded,
+          accentColor: AppColors.error,
+        );
         return;
       }
       ref.read(emailCooldownProvider.notifier).onResendSuccess();
+      await _showFeedbackDialog(
+        title: 'Link enviado',
+        message:
+            'Enviamos um link para redefinir sua senha. Verifique sua caixa de entrada e spam. Por segurança, esse link expira em alguns minutos e pode ser usado apenas uma vez.',
+        icon: Icons.mark_email_read_outlined,
+        accentColor: AppColors.success,
+      );
+      if (!mounted) return;
       _startCooldownTick();
     } catch (_) {
       if (!mounted) return;
       setState(() => _resendLoading = false);
-      _snack('Falha ao reenviar. Tente novamente.');
+      await _showFeedbackDialog(
+        title: 'Falha ao reenviar',
+        message: 'Tente novamente.',
+        icon: Icons.error_outline_rounded,
+        accentColor: AppColors.error,
+      );
     }
   }
 
@@ -151,12 +179,24 @@ class _EmailVerificationScreenState
         if (mounted) _openPasswordModal();
       } else {
         setState(() => _isManualChecking = false);
-        if (!ok) _snack('Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada.');
+        if (!ok) {
+          await _showFeedbackDialog(
+            title: 'E-mail ainda não confirmado',
+            message: 'Verifique sua caixa de entrada e tente novamente.',
+            icon: Icons.mark_email_unread_outlined,
+            accentColor: AppColors.secondary,
+          );
+        }
       }
     } catch (_) {
       if (!mounted) return;
       setState(() => _isManualChecking = false);
-      _snack('Erro ao verificar. Tente novamente.');
+      await _showFeedbackDialog(
+        title: 'Erro ao verificar',
+        message: 'Tente novamente.',
+        icon: Icons.error_outline_rounded,
+        accentColor: AppColors.error,
+      );
     }
   }
 
@@ -173,8 +213,20 @@ class _EmailVerificationScreenState
   // Helpers
   // ---------------------------------------------------------------------------
 
-  void _snack(String msg) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  Future<void> _showFeedbackDialog({
+    required String title,
+    required String message,
+    IconData icon = Icons.info_outline_rounded,
+    Color accentColor = AppColors.secondary,
+  }) {
+    return showAppFeedbackDialog(
+      context: context,
+      title: title,
+      message: message,
+      icon: icon,
+      accentColor: accentColor,
+    );
+  }
 
   String _censor(String email) {
     final parts = email.split('@');
@@ -538,8 +590,9 @@ class _PasswordModalState extends ConsumerState<_PasswordModal> {
             style: AppTextStyles.bodyMedium.copyWith(color: AppColors.secondary),
             decoration: InputDecoration(
               hintText: 'Senha',
-              hintStyle:
-                  AppTextStyles.bodyMedium.copyWith(color: AppColors.secondaryText),
+              hintStyle: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.secondaryText,
+              ),
               filled: true,
               fillColor: AppColors.primaryBackground,
               contentPadding: const EdgeInsets.symmetric(
@@ -669,7 +722,9 @@ class _ResendButtonState extends State<_ResendButton>
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
-                color: isActive ? AppColors.secondaryBackground : AppColors.secondary,
+                color: isActive
+                    ? AppColors.secondaryBackground
+                    : AppColors.secondary,
                 borderRadius: AppRadius.smAll,
                 border: isActive
                     ? Border.all(color: AppColors.alternate, width: 1.5)
