@@ -169,15 +169,77 @@ class AuthRepository {
     }
   }
 
-  Future<void> updatePassword(String newPassword) async {
+  Future<void> changePassword(String newPassword) async {
     try {
-      await _client.auth.updateUser(
-        UserAttributes(password: newPassword),
-      );
-    } on AuthException catch (e) {
-      throw AuthAppException(_mapAuthError(e.message));
+      print('[changePassword] STEP 1 - check reuse');
+
+      late final dynamic checkResult;
+      try {
+        checkResult = await _client.rpc(
+          'check_password_reuse_current_user',
+          params: {
+            'p_new_password': newPassword,
+            'p_history_limit': 3,
+          },
+        );
+      } on PostgrestException {
+        throw const PasswordReuseCheckException();
+      } catch (_) {
+        throw const PasswordReuseCheckException();
+      }
+
+      print('[changePassword] STEP 1 - resultado: $checkResult');
+
+      final allowed = _extractAllowedFromCheckResult(checkResult);
+      if (allowed == null) {
+        throw const PasswordReuseCheckException();
+      }
+      if (!allowed) {
+        throw const PasswordReusedException();
+      }
+
+      print('[changePassword] STEP 2 - updateUser');
+
+      try {
+        await _client.auth.updateUser(
+          UserAttributes(password: newPassword),
+        );
+      } on AuthException catch (e) {
+        if (_isSamePasswordError(e)) {
+          throw const SamePasswordException();
+        }
+        throw AuthAppException(_mapAuthError(e.message));
+      } catch (e) {
+        if (e is AppException) rethrow;
+        throw const ServerException(
+          'Erro ao atualizar senha. Tente novamente.',
+        );
+      }
+
+      print('[changePassword] STEP 2 - updateUser OK');
+      print('[changePassword] STEP 3 - register history');
+
+      late final dynamic registerResult;
+      try {
+        registerResult = await _client.rpc(
+          'register_password_history_current_user',
+          params: {
+            'p_password': newPassword,
+            'p_keep_last': 3,
+          },
+        );
+      } on PostgrestException {
+        throw const PasswordHistoryRegisterException();
+      } catch (_) {
+        throw const PasswordHistoryRegisterException();
+      }
+
+      print('[changePassword] STEP 3 - resultado: $registerResult');
     } catch (e) {
+      print('[changePassword] erro: $e');
+
       if (e is AppException) rethrow;
+
       throw const ServerException(
         'Erro ao atualizar senha. Tente novamente.',
       );
@@ -284,6 +346,53 @@ class AuthRepository {
   String _sha256(String input) {
     final bytes = utf8.encode(input);
     return sha256.convert(bytes).toString();
+  }
+
+  bool? _extractAllowedFromCheckResult(dynamic result) {
+    if (result == null) return null;
+
+    if (result is bool) return result;
+
+    bool? parseAllowedValue(dynamic value) {
+      if (value is bool) return value;
+      if (value is String) {
+        final normalized = value.trim().toLowerCase();
+        if (normalized == 'true') return true;
+        if (normalized == 'false') return false;
+      }
+      return null;
+    }
+
+    if (result is Map) {
+      final map = Map<String, dynamic>.from(result);
+      return parseAllowedValue(map['allowed']);
+    }
+
+    if (result is List && result.isNotEmpty) {
+      final first = result.first;
+      if (first is Map) {
+        final map = Map<String, dynamic>.from(first);
+        return parseAllowedValue(map['allowed']);
+      }
+    }
+
+    return null;
+  }
+
+  bool _isSamePasswordError(AuthException error) {
+    final code = error.code?.toLowerCase();
+    final statusCode = error.statusCode;
+    final message = error.message.toLowerCase();
+    final hasSamePasswordMessage =
+        message.contains('should be different') ||
+        message.contains('different from the old') ||
+        message.contains('different from your current') ||
+        message.contains('new password should be different');
+
+    if (code == 'same_password') return true;
+    if (statusCode == '422' && hasSamePasswordMessage) return true;
+
+    return hasSamePasswordMessage;
   }
 
   String _mapAuthError(String message) {

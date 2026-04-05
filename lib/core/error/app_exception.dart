@@ -29,6 +29,26 @@ class WeakPasswordException extends AuthAppException {
   const WeakPasswordException(super.message);
 }
 
+class SamePasswordException extends AuthAppException {
+  const SamePasswordException()
+      : super('A nova senha deve ser diferente da atual.');
+}
+
+class PasswordReusedException extends AuthAppException {
+  const PasswordReusedException()
+      : super('Você já usou essa senha antes. Escolha uma diferente.');
+}
+
+class PasswordReuseCheckException extends AuthAppException {
+  const PasswordReuseCheckException()
+      : super('Não foi possível validar sua nova senha. Tente novamente.');
+}
+
+class PasswordHistoryRegisterException extends AuthAppException {
+  const PasswordHistoryRegisterException()
+      : super('Não foi possível registrar o histórico da senha.');
+}
+
 // --- Network ---
 
 class NetworkException extends AppException {

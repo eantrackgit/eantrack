@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/error/app_exception.dart';
 import '../../../../core/router/app_routes.dart';
@@ -33,17 +34,69 @@ class _UpdatePasswordScreenState
 
   bool get _canSubmit => passwordValid && passwordsMatch;
 
+  Future<void> _testCheckRpc() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final supabase = Supabase.instance.client;
+
+    print('>>> TESTE CHECK RPC - senha digitada: ${_passwordCtrl.text}');
+    print('>>> TESTE CHECK RPC - currentUser: ${supabase.auth.currentUser?.id}');
+    print('>>> TESTE CHECK RPC - iniciando chamada');
+
+    try {
+      final result = await supabase.rpc(
+        'check_password_reuse_current_user',
+        params: {
+          'p_new_password': _passwordCtrl.text,
+          'p_history_limit': 3,
+        },
+      );
+
+      print('>>> TESTE CHECK RPC - resultado: $result');
+
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Resultado RPC: $result'),
+        ),
+      );
+    } on PostgrestException catch (e) {
+      print('>>> TESTE CHECK RPC - erro: $e');
+      print('>>> TESTE CHECK RPC - code: ${e.code}');
+      print('>>> TESTE CHECK RPC - message: ${e.message}');
+      print('>>> TESTE CHECK RPC - details: ${e.details}');
+
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Erro RPC: ${e.message}'),
+        ),
+      );
+    } catch (e) {
+      print('>>> TESTE CHECK RPC - erro: $e');
+
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Erro RPC: $e'),
+        ),
+      );
+    }
+  }
+
   Future<void> _submit() async {
     if (!validateAndSubmit()) return;
     if (!_canSubmit || _action.isLoading) return;
     setState(() => _action = const ActionLoading());
     try {
-      await ref.read(authRepositoryProvider).updatePassword(_passwordCtrl.text);
+      await ref.read(authRepositoryProvider).changePassword(_passwordCtrl.text);
       if (!mounted) return;
       setState(() => _action = const ActionSuccess(null));
       await Future.delayed(const Duration(milliseconds: 800));
       await ref.read(authRepositoryProvider).signOut();
       return;
+    } on SamePasswordException catch (e) {
+      if (!mounted) return;
+      setState(() => _action = ActionFailure(e.message));
     } on AppException catch (e) {
       if (!mounted) return;
       setState(() => _action = ActionFailure(e.message));
@@ -205,6 +258,11 @@ class _UpdatePasswordScreenState
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            TextButton(
+              onPressed: _action.isLoading ? null : _testCheckRpc,
+              child: const Text('TESTAR CHECK RPC'),
             ),
             const SizedBox(height: AppSpacing.sm),
           ],

@@ -1,4 +1,6 @@
-﻿/// App configuration via dart-define.
+import 'package:flutter/foundation.dart' show kIsWeb;
+
+/// App configuration via dart-define.
 ///
 /// Build — desenvolvimento:
 ///   flutter run \
@@ -32,13 +34,22 @@ class AppConfig {
   /// Prod: https://operational.eantrack.com
   static const appOrigin = String.fromEnvironment(
     'APP_ORIGIN',
-    defaultValue: 'http://localhost:8080',
+    defaultValue: '',
   );
 
-  static String get passwordResetRedirectUrl =>
-      '$appOrigin/#/update-password';
+  static bool get isLocalhost {
+    final host = Uri.base.host.toLowerCase();
+    return host == 'localhost' || host == '127.0.0.1';
+  }
+
+  static String get passwordResetRedirectUrl {
+    if (kIsWeb && isLocalhost) {
+      return '${Uri.base.origin}/#/update-password';
+    }
+
+    return '$appOrigin/#/update-password';
+  }
 
   static bool get isConfigured =>
       supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
 }
-
