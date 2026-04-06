@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/error/app_exception.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../shared/shared.dart';
 import '../../domain/auth_state.dart';
@@ -39,7 +40,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     } catch (e) {
       await _showActionErrorDialog(
         title: 'Falha no login com Google',
-        message: e.toString(),
+        message: e is AppException
+            ? e.message
+            : 'Falha ao entrar com Google. Tente novamente.',
         isGoogleFlow: true,
       );
     }
@@ -56,7 +59,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     } catch (e) {
       await _showActionErrorDialog(
         title: 'Falha no login',
-        message: e.toString(),
+        message: e is AppException
+            ? e.message
+            : 'Erro ao realizar login. Tente novamente.',
       );
     }
   }
@@ -88,12 +93,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     ref.listen<AuthState>(authNotifierProvider, (_, next) async {
       if (!mounted) return;
       switch (next) {
-        case AuthAuthenticated(:final redirectPath):
+        case AuthAuthenticated():
           setState(() {
             _action = const ActionSuccess(null);
             _googleAction = const ActionSuccess(null);
           });
-          context.go(redirectPath);
+          context.go(AppRoutes.flow);
         case AuthEmailUnconfirmed():
           setState(() {
             _action = const ActionSuccess(null);
@@ -199,7 +204,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               leadingIcon: const FaIcon(
                 FontAwesomeIcons.squareGooglePlus,
                 size: 20,
-                color: AppColors.info,
+                color: AppColors.actionBlue,
               ),
             ),
             const SizedBox(height: AppSpacing.xs),

@@ -14,8 +14,8 @@ class AuthInitial extends AuthState {
 
 /// An async operation is in progress (sign in, sign up, reset password).
 class AuthLoading extends AuthState {
-  const AuthLoading([this.message = '']);
-  final String message;
+  const AuthLoading([this.message]);
+  final String? message;
 }
 
 /// No active session.
@@ -40,9 +40,6 @@ class AuthAuthenticated extends AuthState {
 
   final User user;
   final UserFlowState? flowState;
-
-  /// Always sends to FlowPage — it decides the next step.
-  String get redirectPath => '/flow';
 }
 
 /// An error occurred. [message] is user-friendly Portuguese text.

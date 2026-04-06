@@ -10,13 +10,14 @@
 
 | Componente | Arquivo | Variantes / Props chave |
 |-----------|---------|------------------------|
-| `AppButton` | `app_button.dart` | Construtores nomeados: `.primary()`, `.secondary()`, `.outlined()`, `.action()`, `.social()`.<br>primary=navy filled · secondary/outlined=navy outlined · action=azul · social=vermelho |
+| `AppButton` | `app_button.dart` | Variantes: `primary`, `outlined`, `social`. Props: `label`, `isLoading`, `onPressed`, `leadingIcon`, `trailingIcon`. Loading via spinner interno no botão — nunca overlay global. |
 | `AppTextField` | `app_text_field.dart` | label floating, obscure toggle, validator support, `AppValidators` embutidos |
-| `AppLoadingOverlay` | `app_loading_overlay.dart` | overlay semi-transparente + `AppLoadingIndicator` standalone |
 | `AppCard` | `app_card.dart` | `child`, `color?`, `padding?`, `onTap?`, `selected?`, `borderColor?`. Com ripple quando `onTap` definido. |
-| `AuthScaffold` | `auth_scaffold.dart` | Scaffold padrão auth/onboarding: bg `AppColors.secondary`, card centralizado maxWidth 480, scroll seguro, loading overlay opcional. **Usar em todas as telas Auth e Onboarding.** |
-| `AppErrorBox` | `auth_scaffold.dart` | Caixa de erro inline com ícone + texto PT-BR. Exportada junto com AuthScaffold. |
-| `PasswordRuleRow` | `auth_scaffold.dart` | Row de checklist de senha com animação (ícone + texto colorido). |
+| `AppErrorBox` | `app_error_box.dart` | Caixa de erro inline com ícone + texto PT-BR + shake animation. Usar acima do botão primary em formulários. |
+| `AppFeedbackDialog` | `app_feedback_dialog.dart` | Modal centralizado de sucesso/erro. Chamar via `showAppFeedbackDialog(context, title, message, icon, accentColor)`. Padrão para feedback crítico. |
+| `AuthScaffold` | `auth_scaffold.dart` | Scaffold padrão auth/onboarding: bg `AppColors.secondary`, card centralizado maxWidth 480, scroll seguro. Usar em todas as telas Auth e Onboarding. |
+| `PasswordRuleRow` | `password_rule_row.dart` | Row de checklist de senha com animação (ícone + texto colorido). Independente de auth. |
+| `AppVersionBadge` | `app_version_badge.dart` | Badge de versão lida de `assets/config/version.json`. Renderizado no rodapé do AuthScaffold. |
 
 ---
 

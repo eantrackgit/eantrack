@@ -18,6 +18,7 @@ abstract final class AppColors {
   static const secondaryBackground = Color(0xFFFFFFFF);
   static const modalOverlayBase = Color(0xFF050816);
   static const modalOverlayMid = Color(0xFF0E0A36);
+  // Intentionally same blue as actionBlue — used as glow accent in modal backdrop.
   static const modalOverlayGlow = Color(0xFF1A56DB);
 
   // Action
@@ -34,5 +35,5 @@ abstract final class AppColors {
   static const success = Color(0xFF22C55E);
   static const warning = Color(0xFFF9CF58);
   static const error = Color(0xFFFF5963);
-  static const info = Color(0xFFFFFFFF);
+  static const info = Color(0xFF3B82F6);
 }

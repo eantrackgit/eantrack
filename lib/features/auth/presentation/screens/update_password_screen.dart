@@ -50,7 +50,7 @@ class _UpdatePasswordScreenState
         accentColor: AppColors.success,
       );
       if (!mounted) return;
-      await ref.read(authRepositoryProvider).signOut();
+      await ref.read(authNotifierProvider.notifier).signOut();
       return;
     } on SamePasswordException catch (e) {
       await _showUpdatePasswordErrorDialog(e.message);

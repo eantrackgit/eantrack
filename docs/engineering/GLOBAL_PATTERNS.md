@@ -21,7 +21,7 @@ class FeatureError extends FeatureState { final String message; }
 final state = ref.watch(featureNotifierProvider);
 return switch (state) {
   FeatureInitial() => const SizedBox.shrink(),
-  FeatureLoading() => const AppLoadingOverlay(),
+  FeatureLoading() => const _SkeletonContent(), // skeleton, nunca overlay global
   FeatureLoaded(:final data) => _buildContent(data),
   FeatureError(:final message) => AppErrorWidget(
     message: message,
@@ -256,33 +256,44 @@ AppException (sealed, abstract)
 | Tipo | Quando usar | Implementação |
 |------|-------------|---------------|
 | Botão loading | Submit de form, ação pontual | Spinner dentro do botão (18px) |
-| Overlay | Operação bloqueante de tela inteira | `AppLoadingOverlay` (semi-transparente + spinner central) |
 | Skeleton | Carregamento de lista/conteúdo | Shimmer nos cards placeholder |
 | Inline | Busca em campo (debounce) | Texto "Verificando..." ou spinner 14px |
 
-### Nunca
+### Proibido
+- `AppLoadingOverlay` ou qualquer spinner de tela inteira — removido do projeto
+- Loading global bloqueante em ações de formulário ou auth
 - Texto "Carregando..." sozinho sem spinner
-- Tela completamente branca/preta durante load
 - Loading infinito sem timeout (max 30s → mostrar erro)
+
+### Regra
+Loading acontece **no botão da ação**. O usuário sabe exatamente o que está em andamento.
 
 ---
 
-## 9. SNACKBAR / FEEDBACK
+## 9. FEEDBACK — PADRÕES
 
-| Tipo | Background | Ícone | Duração | Posição |
-|------|------------|-------|---------|---------|
-| Sucesso | `success` 15% | `check_circle` | 3s | bottom |
-| Erro | `error` 15% | `warning_amber` | 5s | bottom |
-| Info | `link` 15% | `info_outline` | 3s | bottom |
+### Modal centralizado (`showAppFeedbackDialog`) — padrão principal
 
-### Quando usar
-- Sucesso: após ação completada (salvar, criar, excluir)
-- Erro: quando ErrorBanner inline não faz sentido (ex: erro de lista)
-- Info: feedback informativo (ex: "Link copiado")
+Usar para:
+- Sucesso de ação crítica (trocar senha, salvar dados importantes)
+- Erro de autenticação ou regra de negócio que requer atenção explícita
+- Qualquer feedback que não pode ser ignorado
 
-### Quando NÃO usar
-- Erros de formulário → usar ErrorBanner inline ou validator messages
-- Loading → usar spinner, não snackbar
+### `AppErrorBox` — erros inline
+
+Usar em formulários para exibir erro de auth/backend acima do botão de submit.
+Não usar SnackBar para erros de formulário.
+
+### SnackBar — feedback leve e transitório
+
+Usar apenas para:
+- Info passageira (ex: "Link copiado", "Filtro aplicado")
+- Confirmação não-crítica de ações reversíveis (ex: "Região criada")
+
+### Proibido
+- SnackBar para erros de formulário
+- SnackBar para erros de autenticação
+- SnackBar como substituto de modal em ações críticas
 
 ---
 

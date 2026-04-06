@@ -8,10 +8,12 @@ export 'theme/app_theme.dart';
 export 'widgets/app_button.dart';
 export 'widgets/app_card.dart';
 export 'widgets/app_empty_state.dart';
+export 'widgets/app_error_box.dart';
 export 'widgets/app_feedback_dialog.dart';
 export 'widgets/app_text_field.dart';
 export 'widgets/app_version_badge.dart';
 export 'widgets/auth_scaffold.dart';
+export 'widgets/password_rule_row.dart';
 
 export 'widgets/app_bottom_nav.dart';
 export 'widgets/app_sidebar.dart';

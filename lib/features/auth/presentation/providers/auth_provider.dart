@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
 import '../../../../core/error/app_exception.dart';
 import '../../data/auth_repository.dart';
+import '../../data/password_history_service.dart';
 import '../../domain/auth_flow_state.dart';
 import '../../domain/auth_state.dart';
 
@@ -16,8 +17,15 @@ final supabaseClientProvider = Provider<SupabaseClient>(
   (_) => Supabase.instance.client,
 );
 
+final passwordHistoryServiceProvider = Provider<PasswordHistoryService>(
+  (ref) => PasswordHistoryService(ref.read(supabaseClientProvider)),
+);
+
 final authRepositoryProvider = Provider<AuthRepository>(
-  (ref) => AuthRepository(ref.read(supabaseClientProvider)),
+  (ref) => AuthRepository(
+    client: ref.read(supabaseClientProvider),
+    passwordHistoryService: ref.read(passwordHistoryServiceProvider),
+  ),
 );
 
 /// Raw Supabase auth stream — User? (null = not logged in).

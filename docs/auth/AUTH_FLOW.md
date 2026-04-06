@@ -431,45 +431,80 @@ enum EmailVerificationStatus {
 
 ---
 
+## FLUXO 5: CHANGE PASSWORD (troca de senha via recovery link)
+
+### Contexto
+Usuário recebe link de recovery por email → clica → Supabase injeta sessão com `AuthChangeEvent.passwordRecovery` → app detecta via `AuthRecoveryContextNotifier` → `authFlowStateProvider` retorna `AuthFlowState.recovery` → GoRouter permite acesso a `/update-password`.
+
+### Método: `AuthRepository.changePassword(newPassword)`
+
+Fluxo linear e atômico — os 3 passos rodam na mesma chamada:
+
+```
+STEP 1 — check reuse (RPC)
+  ↓ check_password_reuse_current_user(p_new_password, p_history_limit: 3)
+  ↓ parse resultado via PasswordReuseCheckResult.fromRpcResponse
+  ↓ se !allowed → throw PasswordReusedException (mensagem específica)
+
+STEP 2 — updateUser (Supabase Auth)
+  ↓ _client.auth.updateUser(UserAttributes(password: newPassword))
+  ↓ se 422 / same_password → throw SamePasswordException
+  ↓ se outro AuthException → throw AuthAppException
+
+STEP 3 — register history (RPC)
+  ↓ register_password_history_current_user(p_password, p_keep_last: 3)
+  ↓ se PostgrestException → throw PasswordHistoryRegisterException
+```
+
+### Tratamento de erros
+
+| Exceção | Causa | Mensagem ao usuário |
+|---|---|---|
+| `SamePasswordException` | STEP 2: Supabase 422 | "A nova senha deve ser diferente da atual." |
+| `PasswordReusedException` | STEP 1: RPC retorna `allowed: false` | "Você já usou essa senha antes. Escolha uma diferente." |
+| `PasswordReuseCheckException` | STEP 1: RPC falhou | "Não foi possível validar sua nova senha. Tente novamente." |
+| `PasswordHistoryRegisterException` | STEP 3: RPC falhou | "Não foi possível registrar o histórico da senha." |
+
+### Após sucesso
+1. Modal de sucesso via `showAppFeedbackDialog`
+2. `authNotifierProvider.notifier.signOut()`
+3. GoRouter detecta `AuthUnauthenticated` → redirect `/login`
+
+### Links expirados
+Se o usuário clicar em link de recovery expirado, a URL contém `error=access_denied` ou `error_code=otp_expired`. O GoRouter detecta esses parâmetros no redirect e envia para `/password-recovery-link-expired`.
+
+---
+
 ## GUARDS DE ROTA (RouterNotifier.redirect)
 
-### Lógica completa (em ordem de prioridade)
-```dart
-String? redirect(BuildContext context, GoRouterState state) {
-  final user = _ref.read(authUserStreamProvider).valueOrNull;
-  final isLoggedIn = user != null;
-  final isOnPublicRoute = ['/login', '/register', '/recover-password']
-      .contains(state.matchedLocation);
-  final isOnVerifyRoute = state.matchedLocation == '/email-verification';
+### Lógica resumida (em ordem de prioridade)
 
-  // 1. Não autenticado → só pode acessar rotas públicas
-  if (!isLoggedIn) {
-    return isOnPublicRoute ? null : '/login';
-  }
-
-  // 2. Autenticado + email NÃO confirmado → forçar verificação
-  if (!_isEmailConfirmed(user)) {
-    return isOnVerifyRoute ? null : '/email-verification';
-  }
-
-  // 3. Autenticado + email OK + em rota pública → sair de lá
-  if (isOnPublicRoute || isOnVerifyRoute) {
-    return '/flow'; // /flow faz check de onboarding
-  }
-
-  // 4. Rota /flow → check user_flow_state
-  if (state.matchedLocation == '/flow') {
-    final flowState = _ref.read(userFlowStateProvider).valueOrNull;
-    if (flowState == null || !flowState.isOnboardingComplete) {
-      return '/onboarding';
-    }
-    return '/hub';
-  }
-
-  // 5. Rota protegida normal → permitir
-  return null;
-}
 ```
+1. URL contém error=access_denied / error_code=otp_expired
+   → redirect /password-recovery-link-expired
+
+2. path == /splash | /flow | /password-recovery-link-expired
+   → null (sem redirect — essas rotas se auto-gerenciam)
+
+3. path == /update-password && authFlowState != recovery
+   → redirect /flow
+
+4. isGuestRoute && authFlowState != unauthenticated
+   → redirect /flow
+
+5. isOnboardingRoute && authFlowState != onboardingRequired
+   → redirect /flow
+
+6. isAppRoute && authFlowState != authenticated
+   → redirect /flow
+
+7. qualquer outro caso → null (permitir)
+```
+
+`authFlowState` é derivado de `authFlowStateProvider` (Riverpod) com base em:
+- `isRecovery` (AuthRecoveryContextNotifier detecta `passwordRecovery` event)
+- `authUser` (authUserStreamProvider)
+- `isOnboardingComplete` (authOnboardingCompleteProvider)
 
 ---
 

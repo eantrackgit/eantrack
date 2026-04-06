@@ -161,12 +161,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
             _googleAction = const ActionSuccess(null);
           });
           context.go(AppRoutes.emailVerification);
-        case AuthAuthenticated(:final redirectPath):
+        case AuthAuthenticated():
           setState(() {
             _action = const ActionSuccess(null);
             _googleAction = const ActionSuccess(null);
           });
-          context.go(redirectPath);
+          context.go(AppRoutes.flow);
         case AuthError(:final message):
           await _showActionErrorDialog(
             title: _googleAction.isLoading

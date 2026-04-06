@@ -190,13 +190,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (_, state) => _fadePage(
             state,
             const _PlaceholderScreen(
-                title: 'Politica de Privacidade')),
+                title: 'Política de Privacidade')),
       ),
 
       GoRoute(
         path: AppRoutes.noConnection,
         pageBuilder: (_, state) =>
-            _fadePage(state, const _PlaceholderScreen(title: 'Sem Conexao')),
+            _fadePage(state, const _PlaceholderScreen(title: 'Sem Conexão')),
       ),
     ],
   );
@@ -227,28 +227,14 @@ class _RouterNotifier extends ChangeNotifier {
 
     final isGuestRoute = path == AppRoutes.login ||
         path == AppRoutes.register ||
-        path == AppRoutes.recoverPassword ||
-        path == AppRoutes.passwordRecoveryLinkExpired;
+        path == AppRoutes.recoverPassword;
     final isOnboardingRoute = path == AppRoutes.onboarding ||
         path == AppRoutes.onboardingIndividual ||
         path == AppRoutes.onboardingCnpj ||
         path == AppRoutes.onboardingAgency ||
-        path == AppRoutes.onboardingLegalRep ||
-        path == AppRoutes.onboardingOperationalStyle ||
-        path == AppRoutes.onboardingStatus;
+        path == AppRoutes.onboardingLegalRep;
     final isAppRoute = path == AppRoutes.hub ||
-        path == AppRoutes.home ||
-        path == AppRoutes.search ||
-        path == AppRoutes.regions ||
-        path == AppRoutes.cities ||
-        path == AppRoutes.pdvs ||
-        path == AppRoutes.registerPdv ||
-        path == AppRoutes.networks ||
-        path == AppRoutes.categories ||
-        path == AppRoutes.subcategories ||
-        path == AppRoutes.industries ||
-        path == AppRoutes.registerIndustry ||
-        path == AppRoutes.productMix;
+        path == AppRoutes.regions;
 
     // /email-verification só é válida quando o notifier está em AuthEmailUnconfirmed.
     if (path == AppRoutes.emailVerification) {
@@ -287,7 +273,7 @@ class _PlaceholderScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(title)),
-      body: Center(child: Text('$title - em construcao')),
+      body: Center(child: Text('$title - em construção')),
     );
   }
 }

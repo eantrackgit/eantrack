@@ -29,6 +29,8 @@
 5. **Sealed state classes** — state handling exhaustivo, sem nullable fields para estado
 6. **Erros tipados** — hierarquia AppException, nunca erros raw do Supabase na UI
 7. **Navegação controla transições** — telas não definem animações de entrada/saída; toda transição de rota é responsabilidade do `app_router.dart` via `_fadePage()`. Widgets de tela são estáticos.
+8. **Domain sem navegação** — nenhum model, state ou entity conhece rotas. Redirect é responsabilidade exclusiva do router ou da camada de apresentação.
+9. **Services injetáveis** — nenhum service é instanciado diretamente dentro de outro. Toda dependência chega via constructor injection + Riverpod provider.
 
 ---
 
@@ -57,21 +59,25 @@ lib/
 │   │   └── breakpoints.dart           # Mobile/tablet/desktop breakpoints
 │   └── widgets/
 │       ├── app_button.dart
+│       ├── app_card.dart
+│       ├── app_empty_state.dart
+│       ├── app_error_box.dart         # Caixa de erro inline com shake animation
+│       ├── app_feedback_dialog.dart   # Modal centralizado de sucesso/erro
 │       ├── app_text_field.dart
-│       ├── app_loading_overlay.dart
-│       ├── app_card.dart              # Fase 2
-│       ├── app_empty_state.dart       # Fase 2
-│       ├── app_search_bar.dart        # Fase 2
-│       ├── app_tab_bar.dart           # Fase 2
-│       ├── app_bottom_nav.dart        # Fase 2
-│       ├── app_sidebar.dart           # Fase 2
-│       └── app_status_badge.dart      # Fase 2
+│       ├── app_version_badge.dart
+│       ├── auth_scaffold.dart         # Layout padrão de auth/onboarding
+│       ├── password_rule_row.dart     # Linha de regra de senha (checklist)
+│       ├── app_bottom_nav.dart
+│       └── app_sidebar.dart
 └── features/
     ├── auth/
     │   ├── data/
-    │   │   └── auth_repository.dart
+    │   │   ├── auth_repository.dart
+    │   │   ├── password_history_service.dart  # RPC check + register history
+    │   │   └── password_reuse_parser.dart     # Parser defensivo da resposta RPC
     │   ├── domain/
     │   │   ├── auth_state.dart
+    │   │   ├── auth_flow_state.dart
     │   │   └── user_flow_state.dart
     │   └── presentation/
     │       ├── providers/
@@ -80,7 +86,9 @@ lib/
     │           ├── login_screen.dart
     │           ├── register_screen.dart
     │           ├── email_verification_screen.dart
-    │           └── recover_password_screen.dart
+    │           ├── recover_password_screen.dart
+    │           ├── update_password_screen.dart
+    │           └── password_recovery_link_expired_screen.dart
     ├── onboarding/                    # Fase 2
     ├── hub/                           # Fase 2
     ├── regions/                       # Fase 3
@@ -164,8 +172,10 @@ class RouterNotifier extends ChangeNotifier {
 
 ```dart
 class AuthRepository {
-  const AuthRepository(this._client);
-  final SupabaseClient _client;
+  const AuthRepository({
+    required SupabaseClient client,
+    required PasswordHistoryService passwordHistoryService,
+  });
   // Todas as chamadas Supabase aqui — retorna tipos de domínio ou lança AppException
 }
 ```
@@ -176,7 +186,8 @@ class AuthRepository {
 |-----|---------|
 | `email_code_exists(p_hash)` | Check duplicidade de email (SHA-256 hash) |
 | `insert_email_code(p_hash, p_user_id)` | Armazena hash pós-signup |
-| `is_email_confirmed_status(p_email)` | Verifica se email foi confirmado |
+| `check_password_reuse_current_user(p_new_password, p_history_limit)` | Verifica se nova senha já foi usada recentemente |
+| `register_password_history_current_user(p_password, p_keep_last)` | Registra nova senha no histórico |
 
 ### Tabelas Principais
 

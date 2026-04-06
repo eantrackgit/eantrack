@@ -1,39 +1,25 @@
 import 'dart:convert';
-
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart';
-
 import '../../../core/config/app_config.dart';
 import '../../../core/error/app_exception.dart';
 import '../../../shared/utils/password_validator.dart';
 import '../domain/user_flow_state.dart';
-
+import 'password_history_service.dart';
 class AuthRepository {
-  const AuthRepository(this._client);
+  const AuthRepository({
+    required SupabaseClient client,
+    required PasswordHistoryService passwordHistoryService,
+  })  : _client = client,
+        _passwordHistoryService = passwordHistoryService;
 
   final SupabaseClient _client;
-
-  // ---------------------------------------------------------------------------
-  // Auth state
-  // ---------------------------------------------------------------------------
-
+  final PasswordHistoryService _passwordHistoryService;
   Stream<User?> get authStateStream =>
       _client.auth.onAuthStateChange.map((e) => e.session?.user);
-
   User? get currentUser => _client.auth.currentUser;
-
-  // ---------------------------------------------------------------------------
-  // Sign in
-  // ---------------------------------------------------------------------------
-
-  /// Returns normally on success.
-  /// Throws [EmailNotConfirmedException] if email not yet confirmed.
-  /// Throws [AuthAppException] for invalid credentials or other auth errors.
-  Future<void> signIn({
-    required String email,
-    required String password,
-  }) async {
+  Future<void> signIn({required String email, required String password}) async {
     try {
       final response = await _client.auth.signInWithPassword(
         email: email.trim(),
@@ -43,8 +29,7 @@ class AuthRepository {
         throw const AuthAppException('Credenciais inválidas.');
       }
     } on AuthException catch (e) {
-      if (e.message.toLowerCase().contains('confirm') ||
-          e.message.toLowerCase().contains('not confirmed')) {
+      if (_isEmailNotConfirmedError(e.message)) {
         throw const EmailNotConfirmedException();
       }
       throw AuthAppException(_mapAuthError(e.message));
@@ -53,54 +38,25 @@ class AuthRepository {
       throw const AuthAppException('Erro ao realizar login. Tente novamente.');
     }
   }
-
-  // ---------------------------------------------------------------------------
-  // Sign up
-  // ---------------------------------------------------------------------------
-
-  /// Creates a new account.
-  /// Validates password strength, checks email uniqueness via RPC,
-  /// creates Supabase Auth user, and stores email hash.
-  ///
-  /// Throws [WeakPasswordException], [EmailAlreadyInUseException], or [AuthAppException].
-  Future<void> signUp({
-    required String email,
-    required String password,
-  }) async {
+  Future<void> signUp({required String email, required String password}) async {
     _validatePassword(password);
-
-    final normalized = email.trim().toLowerCase();
-    final hash = _sha256(normalized);
-
-    // Check for duplicate email via RPC (privacy-preserving hash lookup)
+    final normalizedEmail = email.trim().toLowerCase();
+    final emailHash = _sha256(normalizedEmail);
     try {
-      final exists = await _client.rpc(
-            'email_code_exists',
-            params: {'p_hash': hash},
-          ) as bool? ??
-          false;
-
-      if (exists) throw const EmailAlreadyInUseException();
+      if (await _emailExists(emailHash)) throw const EmailAlreadyInUseException();
     } on EmailAlreadyInUseException {
       rethrow;
-    } catch (_) {
-      // RPC failure is non-fatal for the duplicate check; proceed with signup
-      // Supabase will catch true duplicates at the auth level
-    }
-
+    } catch (_) {}
     try {
       final response = await _client.auth.signUp(
-        email: normalized,
+        email: normalizedEmail,
         password: password,
       );
-
       if (response.user == null) {
         throw const AuthAppException('Erro ao criar conta. Tente novamente.');
       }
-
-      // Store email hash for future duplicate checks
       await _client.rpc('insert_email_code', params: {
-        'p_hash': hash,
+        'p_hash': emailHash,
         'p_user_id': response.user!.id,
       });
     } on AuthException catch (e) {
@@ -110,195 +66,58 @@ class AuthRepository {
       throw const AuthAppException('Erro ao criar conta. Tente novamente.');
     }
   }
-
-  // ---------------------------------------------------------------------------
-  // Sign out
-  // ---------------------------------------------------------------------------
-
-  Future<void> signOut() async {
-    try {
-      await _client.auth.signOut();
-    } catch (_) {
-      // Swallow — user is considered signed out locally regardless
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Password reset
-  // ---------------------------------------------------------------------------
+  Future<void> signOut() async { try { await _client.auth.signOut(); } catch (_) {} }
 
   Future<void> resetPassword(String email) async {
-    if (email.trim().isEmpty) {
-      throw const AuthAppException(
-          'Informe o e-mail para redefinir sua senha.');
+    final normalizedEmail = email.trim();
+    if (normalizedEmail.isEmpty) {
+      throw const AuthAppException('Informe o e-mail para redefinir sua senha.');
     }
     try {
       await _client.auth.resetPasswordForEmail(
-        email.trim(),
+        normalizedEmail,
         redirectTo: AppConfig.passwordResetRedirectUrl,
       );
     } on AuthException catch (e) {
       throw AuthAppException(_mapAuthError(e.message));
     }
   }
-
-  // ---------------------------------------------------------------------------
-  // Email verification
-  // ---------------------------------------------------------------------------
-
-  /// Checks if the current user's email has been confirmed.
-  /// Uses refreshSession + currentUser to avoid signInWithPassword rate limits.
-  Future<bool> isEmailConfirmed() async {
-    try {
-      final response = await _client.auth.getUser();
-      return response.user?.emailConfirmedAt != null;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  /// Resends the verification email.
+  Future<bool> isEmailConfirmed() async { try { return (await _client.auth.getUser()).user?.emailConfirmedAt != null; } catch (_) { return false; } }
   Future<void> resendVerificationEmail(String email) async {
-    try {
-      await _client.auth.resend(
-        type: OtpType.signup,
-        email: email.trim(),
-      );
-    } on AuthException catch (e) {
-      throw AuthAppException(_mapAuthError(e.message));
-    }
+    try { await _client.auth.resend(type: OtpType.signup, email: email.trim()); }
+    on AuthException catch (e) { throw AuthAppException(_mapAuthError(e.message)); }
   }
-
   Future<void> changePassword(String newPassword) async {
+    await _passwordHistoryService.ensureNewPasswordCanBeUsed(newPassword);
     try {
-      print('[changePassword] STEP 1 - check reuse');
-
-      late final dynamic checkResult;
-      try {
-        checkResult = await _client.rpc(
-          'check_password_reuse_current_user',
-          params: {
-            'p_new_password': newPassword,
-            'p_history_limit': 3,
-          },
-        );
-      } on PostgrestException {
-        throw const PasswordReuseCheckException();
-      } catch (_) {
-        throw const PasswordReuseCheckException();
-      }
-
-      print('[changePassword] STEP 1 - resultado: $checkResult');
-
-      final allowed = _extractAllowedFromCheckResult(checkResult);
-      if (allowed == null) {
-        throw const PasswordReuseCheckException();
-      }
-      if (!allowed) {
-        throw const PasswordReusedException();
-      }
-
-      print('[changePassword] STEP 2 - updateUser');
-
-      try {
-        await _client.auth.updateUser(
-          UserAttributes(password: newPassword),
-        );
-      } on AuthException catch (e) {
-        if (_isSamePasswordError(e)) {
-          throw const SamePasswordException();
-        }
-        throw AuthAppException(_mapAuthError(e.message));
-      } catch (e) {
-        if (e is AppException) rethrow;
-        throw const ServerException(
-          'Erro ao atualizar senha. Tente novamente.',
-        );
-      }
-
-      print('[changePassword] STEP 2 - updateUser OK');
-      print('[changePassword] STEP 3 - register history');
-
-      late final dynamic registerResult;
-      try {
-        registerResult = await _client.rpc(
-          'register_password_history_current_user',
-          params: {
-            'p_password': newPassword,
-            'p_keep_last': 3,
-          },
-        );
-      } on PostgrestException {
-        throw const PasswordHistoryRegisterException();
-      } catch (_) {
-        throw const PasswordHistoryRegisterException();
-      }
-
-      print('[changePassword] STEP 3 - resultado: $registerResult');
+      await _client.auth.updateUser(UserAttributes(password: newPassword));
+    } on AuthException catch (e) {
+      if (_isSamePasswordError(e)) throw const SamePasswordException();
+      throw AuthAppException(_mapAuthError(e.message));
     } catch (e) {
-      print('[changePassword] erro: $e');
-
       if (e is AppException) rethrow;
-
-      throw const ServerException(
-        'Erro ao atualizar senha. Tente novamente.',
-      );
+      throw const ServerException('Erro ao atualizar senha. Tente novamente.');
     }
+    await _passwordHistoryService.registerPasswordHistory(newPassword);
   }
-
-  // ---------------------------------------------------------------------------
-  // Email availability (used by register screen debounce)
-  // ---------------------------------------------------------------------------
-
-  /// Returns true if the email is not yet registered.
-  /// Uses the same SHA-256 hash + RPC as signUp.
-  /// Fails silently (returns true) if RPC is unavailable — signUp handles real duplicates.
   Future<bool> checkEmailAvailable(String email) async {
-    final normalized = email.trim().toLowerCase();
-    if (normalized.isEmpty) return true;
-    final hash = _sha256(normalized);
+    final normalizedEmail = email.trim().toLowerCase();
+    if (normalizedEmail.isEmpty) return true;
     try {
-      final exists = await _client.rpc(
-            'email_code_exists',
-            params: {'p_hash': hash},
-          ) as bool? ??
-          false;
-      return !exists;
+      return !(await _emailExists(_sha256(normalizedEmail)));
     } catch (_) {
       return true;
     }
   }
-
-  // ---------------------------------------------------------------------------
-  // User flow state
-  // ---------------------------------------------------------------------------
-
   Future<UserFlowState?> getUserFlowState(String userId) async {
     try {
-      final data = await _client
-          .from('user_flow_state')
-          .select()
-          .eq('user_id', userId)
-          .maybeSingle();
-
-      if (data == null) return null;
-      return UserFlowState.fromJson(data as Map<String, dynamic>);
+      final data =
+          await _client.from('user_flow_state').select().eq('user_id', userId).maybeSingle();
+      return data == null ? null : UserFlowState.fromJson(data);
     } catch (_) {
       return null;
     }
   }
-
-  // ---------------------------------------------------------------------------
-  // Google OAuth
-  // ---------------------------------------------------------------------------
-
-  /// Inicia o fluxo OAuth com Google.
-  ///
-  /// Na Web: redireciona para a página do Google e volta ao app via URL de retorno.
-  /// No mobile: abre um browser customizado (deep link `io.supabase.flutter://login-callback`).
-  ///
-  /// A atualização de estado (AuthAuthenticated) é tratada pelo listener
-  /// do stream de auth no [authNotifierProvider].
   Future<void> signInWithGoogle() async {
     try {
       await _client.auth.signInWithOAuth(
@@ -314,104 +133,67 @@ class AuthRepository {
       );
     }
   }
-
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
-
-  /// Valida força da senha usando [PasswordValidator].
-  /// Lança [WeakPasswordException] se alguma regra for violada.
+  Future<bool> _emailExists(String emailHash) async =>
+      await _client.rpc('email_code_exists', params: {'p_hash': emailHash})
+          as bool? ??
+      false;
   void _validatePassword(String password) {
-    if (!PasswordValidator.hasMinLength(password)) {
-      throw const WeakPasswordException(
-          'A senha deve ter pelo menos 8 caracteres.');
-    }
-    if (!PasswordValidator.hasUppercase(password)) {
-      throw const WeakPasswordException(
-          'A senha deve conter uma letra maiúscula.');
-    }
-    if (!PasswordValidator.hasLowercase(password)) {
-      throw const WeakPasswordException(
-          'A senha deve conter uma letra minúscula.');
-    }
-    if (!PasswordValidator.hasNumber(password)) {
-      throw const WeakPasswordException('A senha deve conter um número.');
-    }
-    if (!PasswordValidator.hasSymbol(password)) {
-      throw const WeakPasswordException(
-          'A senha deve conter um símbolo (ex: @, #, \$, %).');
+    final checks = <(bool, String)>[
+      (
+        PasswordValidator.hasMinLength(password),
+        'A senha deve ter pelo menos 8 caracteres.',
+      ),
+      (
+        PasswordValidator.hasUppercase(password),
+        'A senha deve conter uma letra maiúscula.',
+      ),
+      (
+        PasswordValidator.hasLowercase(password),
+        'A senha deve conter uma letra minúscula.',
+      ),
+      (PasswordValidator.hasNumber(password), 'A senha deve conter um número.'),
+      (
+        PasswordValidator.hasSymbol(password),
+        'A senha deve conter um símbolo (ex: @, #, \$, %).',
+      ),
+    ];
+    for (final check in checks) {
+      if (!check.$1) throw WeakPasswordException(check.$2);
     }
   }
-
-  String _sha256(String input) {
-    final bytes = utf8.encode(input);
-    return sha256.convert(bytes).toString();
+  String _sha256(String input) => sha256.convert(utf8.encode(input)).toString();
+  bool _isEmailNotConfirmedError(String message) {
+    final normalized = message.toLowerCase();
+    return normalized.contains('confirm') || normalized.contains('not confirmed');
   }
-
-  bool? _extractAllowedFromCheckResult(dynamic result) {
-    if (result == null) return null;
-
-    if (result is bool) return result;
-
-    bool? parseAllowedValue(dynamic value) {
-      if (value is bool) return value;
-      if (value is String) {
-        final normalized = value.trim().toLowerCase();
-        if (normalized == 'true') return true;
-        if (normalized == 'false') return false;
-      }
-      return null;
-    }
-
-    if (result is Map) {
-      final map = Map<String, dynamic>.from(result);
-      return parseAllowedValue(map['allowed']);
-    }
-
-    if (result is List && result.isNotEmpty) {
-      final first = result.first;
-      if (first is Map) {
-        final map = Map<String, dynamic>.from(first);
-        return parseAllowedValue(map['allowed']);
-      }
-    }
-
-    return null;
-  }
-
   bool _isSamePasswordError(AuthException error) {
-    final code = error.code?.toLowerCase();
-    final statusCode = error.statusCode;
-    final message = error.message.toLowerCase();
+    final normalized = error.message.toLowerCase();
     final hasSamePasswordMessage =
-        message.contains('should be different') ||
-        message.contains('different from the old') ||
-        message.contains('different from your current') ||
-        message.contains('new password should be different');
-
-    if (code == 'same_password') return true;
-    if (statusCode == '422' && hasSamePasswordMessage) return true;
-
-    return hasSamePasswordMessage;
+        normalized.contains('should be different') ||
+        normalized.contains('different from the old') ||
+        normalized.contains('different from your current') ||
+        normalized.contains('new password should be different');
+    return error.code?.toLowerCase() == 'same_password' ||
+        (error.statusCode == '422' && hasSamePasswordMessage) ||
+        hasSamePasswordMessage;
   }
-
   String _mapAuthError(String message) {
-    final m = message.toLowerCase();
-    if (m.contains('invalid login credentials') ||
-        m.contains('invalid_credentials')) {
+    final normalized = message.toLowerCase();
+    if (normalized.contains('invalid login credentials') ||
+        normalized.contains('invalid_credentials')) {
       return 'E-mail ou senha incorretos.';
     }
-    if (m.contains('email not confirmed')) {
+    if (normalized.contains('email not confirmed')) {
       return 'E-mail não confirmado. Verifique sua caixa de entrada.';
     }
-    if (m.contains('user already registered') ||
-        m.contains('already registered')) {
+    if (normalized.contains('user already registered') ||
+        normalized.contains('already registered')) {
       return 'Este e-mail já está em uso.';
     }
-    if (m.contains('rate limit') || m.contains('too many')) {
+    if (normalized.contains('rate limit') || normalized.contains('too many')) {
       return 'Muitas tentativas. Aguarde antes de tentar novamente.';
     }
-    if (m.contains('network') || m.contains('timeout')) {
+    if (normalized.contains('network') || normalized.contains('timeout')) {
       return 'Falha de conexão. Verifique sua internet.';
     }
     return 'Erro de autenticação. Tente novamente.';

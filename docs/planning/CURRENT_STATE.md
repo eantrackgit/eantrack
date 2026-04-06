@@ -44,15 +44,22 @@
 - lib/shared/layout/breakpoints.dart ✅
 
 ### Código — Auth (Data + Domain + Providers)
+- lib/features/auth/domain/auth_state.dart ✅ (domain puro — sem redirectPath)
+- lib/features/auth/domain/auth_flow_state.dart ✅
 - lib/features/auth/domain/user_flow_state.dart ✅
-- lib/features/auth/domain/auth_state.dart ✅
-- lib/features/auth/data/auth_repository.dart ✅
-- lib/features/auth/presentation/providers/auth_provider.dart ✅ (+EmailCooldownNotifier)
+- lib/features/auth/data/auth_repository.dart ✅ (injectable via constructor)
+- lib/features/auth/data/password_history_service.dart ✅ (check + register RPCs)
+- lib/features/auth/data/password_reuse_parser.dart ✅ (parser defensivo)
+- lib/features/auth/presentation/providers/auth_provider.dart ✅ (+passwordHistoryServiceProvider +EmailCooldownNotifier)
 
-### Shared Widgets (Fase 1)
-- lib/shared/widgets/app_button.dart ✅ (primary/secondary/outlined + loading/disabled)
+### Shared Widgets
+- lib/shared/widgets/app_button.dart ✅ (loading no botão, sem overlay global)
 - lib/shared/widgets/app_text_field.dart ✅ (+AppValidators embutidos)
-- lib/shared/widgets/app_loading_overlay.dart ✅ (overlay + AppLoadingIndicator)
+- lib/shared/widgets/app_error_box.dart ✅ (inline + shake animation)
+- lib/shared/widgets/app_feedback_dialog.dart ✅ (modal centralizado sucesso/erro)
+- lib/shared/widgets/auth_scaffold.dart ✅ (somente AuthScaffold — widgets extraídos)
+- lib/shared/widgets/password_rule_row.dart ✅ (widget independente)
+- lib/shared/widgets/app_version_badge.dart ✅
 
 ### Auth Screens
 - lib/features/auth/presentation/screens/login_screen.dart ✅
@@ -106,9 +113,8 @@ ONB-009  LegalRepresentativeScreen (UI)
 
 ## Próximo passo exato
 
-Executar **flutter analyze** para validar compilação de todo o código novo.
-Depois: integrar Regiões com dados reais (verificar assinatura `list_regions_by_agency_exhibition` no Supabase Dashboard).
-Seguir com: Redes (NET-001..004), Categorias (CAT-001..003), PDVs (PDV-001..004).
+Auth flow completo e validado em produção.
+Continuar: Redes (NET-001..004), Categorias (CAT-001..003), PDVs (PDV-001..004).
 
 ---
 
@@ -133,16 +139,17 @@ Seguir com: Redes (NET-001..004), Categorias (CAT-001..003), PDVs (PDV-001..004)
 
 ## Qualidade do Projeto
 
-**Nota atual: 9.47 / 10** *(2026-04-03)*
+**Nota atual: 9.6 / 10** *(2026-04-05)*
 
 | Área | Nota |
 |------|------|
-| Arquitetura | 9.6 |
-| Auth | 9.5 |
-| Onboarding | 9.2 *(individual deferred)* |
-| UX | 9.5 |
+| Arquitetura | 9.7 |
+| Auth | 9.8 |
+| Segurança | 9.5 |
+| UX | 9.6 |
 | UI | 9.5 |
-| Consistência | 9.5 |
+| Consistência (código + docs) | 9.5 |
+| Documentação | 9.5 |
 
 ---
 

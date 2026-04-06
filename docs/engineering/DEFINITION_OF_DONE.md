@@ -26,11 +26,11 @@
 - [ ] Nenhuma largura fixa sem fallback responsivo
 
 ### Estados obrigatórios
-- [ ] Loading: spinner visível (botão ou overlay conforme contexto)
+- [ ] Loading: spinner visível no botão da ação (nunca overlay global)
 - [ ] Disabled: opacity 0.5, onPressed null, cursor default
 - [ ] Error: mensagem PT-BR user-friendly, ErrorBanner ou validator message
 - [ ] Empty (se lista): AppEmptyState com ícone + texto + CTA
-- [ ] Success (se ação): feedback visual (snackbar ou redirect)
+- [ ] Success (se ação): modal centralizado (`showAppFeedbackDialog`) ou redirect direto
 
 ### Formulários (se aplicável)
 - [ ] `bool _submitted = false;` declarado no State
@@ -151,7 +151,7 @@
 - [ ] Verificação de nome duplicado (RPC, se aplicável)
 - [ ] Botões: Cancelar + Salvar
 - [ ] Loading no botão Salvar
-- [ ] Sucesso: snackbar + fechar dialog / voltar
+- [ ] Sucesso: modal (`showAppFeedbackDialog`) + fechar / redirect
 - [ ] Erro: ErrorBanner inline
 
 ### Detail Screen

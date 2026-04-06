@@ -171,7 +171,7 @@ class {Nome}Screen extends ConsumerWidget {
 
     return Scaffold(
       body: switch (state) {
-        {Nome}Loading() => const AppLoadingOverlay(),
+        {Nome}Loading() => const _SkeletonContent(), // skeleton, nunca overlay global
         {Nome}Loaded(:final data) => _Content(data: data),
         {Nome}Error(:final message) => _ErrorView(message: message),
         _ => const SizedBox.shrink(),
