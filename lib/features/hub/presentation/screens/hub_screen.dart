@@ -9,6 +9,7 @@ import '../../../../shared/theme/app_spacing.dart';
 import '../../../../shared/theme/app_text_styles.dart';
 import '../../../../shared/widgets/app_bottom_nav.dart';
 import '../../../../shared/widgets/app_sidebar.dart';
+import '../../../../shared/widgets/app_version_badge.dart';
 
 /// Tela principal do app pós-login.
 ///
@@ -122,6 +123,19 @@ class _Content extends StatelessWidget {
               delegate: SliverChildBuilderDelegate(
                 (context, i) => _ModuleCardWidget(card: modules[i]),
                 childCount: modules.length,
+              ),
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                0,
+                AppSpacing.md,
+                AppSpacing.xl,
+              ),
+              child: AppVersionBadge(
+                alignment: Alignment.centerRight,
               ),
             ),
           ),

@@ -5,6 +5,7 @@ set -euo pipefail
 : "${SUPABASE_ANON_KEY:?Defina SUPABASE_ANON_KEY antes do build.}"
 
 fvm flutter build web --release \
+  --pwa-strategy=none \
   --dart-define=APP_ENV=production \
   --dart-define=SUPABASE_URL="$SUPABASE_URL" \
   --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"

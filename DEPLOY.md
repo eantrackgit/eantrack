@@ -1,5 +1,8 @@
 # Deploy Flutter Web - Operational
 
+Politica de cache/update web: `docs/web/cache_and_deploy_strategy.md`
+Politica de versao manual: `docs/engineering/app_versioning.md`
+
 ## Pre-requisitos
 
 - `fvm` instalado
@@ -53,6 +56,8 @@ Subir o conteudo de `build/web` para:
 
 - build concluido sem erro
 - `build/web/.htaccess` presente
+- build gerado com `--pwa-strategy=none`
+- `assets/config/version.json` revisado antes do build
 - arquivos enviados para `/home/u165659716/domains/eantrack.com/public_html/operational`
 - `https://operational.eantrack.com` abre o app
 - refresh nao quebra a aplicacao

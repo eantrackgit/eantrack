@@ -5,6 +5,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text_styles.dart';
 import 'app_card.dart';
+import 'app_version_badge.dart';
 
 /// Standard layout for auth and onboarding screens.
 class AuthScaffold extends StatelessWidget {
@@ -77,6 +78,8 @@ class AuthScaffold extends StatelessWidget {
                       const SizedBox(height: AppSpacing.lg),
                     ],
                     child,
+                    const SizedBox(height: AppSpacing.lg),
+                    const AppVersionBadge(),
                   ],
                 ),
               ),

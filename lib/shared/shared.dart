@@ -10,6 +10,7 @@ export 'widgets/app_card.dart';
 export 'widgets/app_empty_state.dart';
 export 'widgets/app_feedback_dialog.dart';
 export 'widgets/app_text_field.dart';
+export 'widgets/app_version_badge.dart';
 export 'widgets/auth_scaffold.dart';
 
 export 'widgets/app_bottom_nav.dart';

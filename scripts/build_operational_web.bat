@@ -12,6 +12,7 @@ if "%SUPABASE_ANON_KEY%"=="" (
 )
 
 call fvm flutter build web --release ^
+  --pwa-strategy=none ^
   --dart-define=APP_ENV=production ^
   --dart-define=SUPABASE_URL=%SUPABASE_URL% ^
   --dart-define=SUPABASE_ANON_KEY=%SUPABASE_ANON_KEY%

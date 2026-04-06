@@ -5,9 +5,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/app.dart';
 import 'core/config/app_config.dart';
+import 'core/config/app_version.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppVersion.load();
 
   if (!AppConfig.isConfigured) {
     runApp(const _MissingConfigApp());

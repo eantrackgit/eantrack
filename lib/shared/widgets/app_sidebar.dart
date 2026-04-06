@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text_styles.dart';
+import 'app_version_badge.dart';
 
 /// Sidebar de navegação lateral para desktop/tablet.
 ///
@@ -67,6 +68,18 @@ class AppSidebar extends StatelessWidget {
                   selected: selectedIndex == i,
                   onTap: () => onItemTap(i),
                 ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.md,
+                AppSpacing.md,
+              ),
+              child: const AppVersionBadge(
+                alignment: Alignment.centerLeft,
+                textColor: AppColors.accent2,
               ),
             ),
           ],
