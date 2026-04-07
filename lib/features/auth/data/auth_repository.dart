@@ -117,7 +117,7 @@ class AuthRepository {
       throw AuthAppException(
         _mapUnexpectedAuthError(
           e,
-          fallbackMessage: 'Erro ao enviar o link de recuperacao. Tente novamente.',
+          fallbackMessage: 'Erro ao enviar o link de recuperação. Tente novamente.',
         ),
       );
     }
@@ -266,34 +266,34 @@ class AuthRepository {
     final normalized = message.toLowerCase();
 
     if (_looksLikeSupabaseConfigError(normalized)) {
-      return 'Falha na configuracao do Supabase. Revise SUPABASE_URL e SUPABASE_ANON_KEY.';
+      return 'Falha na configuração do Supabase. Revise SUPABASE_URL e SUPABASE_ANON_KEY.';
     }
     if (_looksLikeNetworkOrFetchError(normalized)) {
-      return 'Falha de conexao com o Supabase. Verifique internet, dominio liberado e URL do projeto.';
+      return 'Falha de conexão com o Supabase. Verifique internet, domínio liberado e URL do projeto.';
     }
     if (normalized.contains('invalid login credentials') ||
         normalized.contains('invalid_credentials')) {
       return 'E-mail ou senha incorretos.';
     }
     if (normalized.contains('email not confirmed')) {
-      return 'E-mail nao confirmado. Verifique sua caixa de entrada.';
+      return 'E-mail não confirmado. Verifique sua caixa de entrada.';
     }
     if (normalized.contains('user already registered') ||
         normalized.contains('already registered')) {
-      return 'Este e-mail ja esta em uso.';
+      return 'Este e-mail já está em uso.';
     }
     if (_isRateLimitError(normalized)) {
       return 'Muitas tentativas. Aguarde antes de tentar novamente.';
     }
     if (normalized.contains('network') || normalized.contains('timeout')) {
-      return 'Falha de conexao. Verifique sua internet.';
+      return 'Falha de conexão. Verifique sua internet.';
     }
 
     final sanitizedMessage = _sanitizeAuthMessage(message);
     if (sanitizedMessage != null) {
-      return 'Erro de autenticacao: $sanitizedMessage';
+      return 'Erro de autenticação: $sanitizedMessage';
     }
-    return 'Erro de autenticacao. Tente novamente.';
+    return 'Erro de autenticação. Tente novamente.';
   }
 
   String _mapUnexpectedAuthError(
@@ -304,15 +304,15 @@ class AuthRepository {
     final normalized = rawMessage.toLowerCase();
 
     if (_looksLikeSupabaseConfigError(normalized)) {
-      return 'Falha na configuracao do Supabase. Revise SUPABASE_URL e SUPABASE_ANON_KEY.';
+      return 'Falha na configuração do Supabase. Revise SUPABASE_URL e SUPABASE_ANON_KEY.';
     }
     if (_looksLikeNetworkOrFetchError(normalized)) {
-      return 'Falha de conexao com o Supabase. Verifique internet, dominio liberado e URL do projeto.';
+      return 'Falha de conexão com o Supabase. Verifique internet, domínio liberado e URL do projeto.';
     }
 
     final sanitizedMessage = _sanitizeAuthMessage(rawMessage);
     if (sanitizedMessage != null) {
-      return 'Erro de autenticacao: $sanitizedMessage';
+      return 'Erro de autenticação: $sanitizedMessage';
     }
 
     return fallbackMessage;

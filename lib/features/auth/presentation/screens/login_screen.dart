@@ -160,17 +160,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: IconButton(
-                onPressed: () {},
-                icon: const Icon(
-                  Icons.headset_mic_outlined,
-                  size: 20,
-                  color: AppColors.secondaryText,
-                ),
-              ),
-            ),
             Center(
               child: SvgPicture.asset(
                 'assets/images/eantrack.svg',
@@ -216,7 +205,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
-                        'Enviamos o link de recuperacao. Verifique sua caixa de entrada e spam para continuar.',
+                        'Enviamos o link de recuperação. Verifique sua caixa de entrada e spam para continuar.',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.secondaryText,
                           height: 1.45,
@@ -320,23 +309,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               label: 'Criar conta',
               variant: AppButtonVariant.outlined,
               onPressed: isBusy ? null : () => context.push(AppRoutes.register),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Column(
-              children: [
-                const Icon(
-                  Icons.fingerprint,
-                  size: 32,
-                  color: AppColors.secondaryText,
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Entre com biometria',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.secondaryText,
-                  ),
-                ),
-              ],
             ),
           ],
         ),

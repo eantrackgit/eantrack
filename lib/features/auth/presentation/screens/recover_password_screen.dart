@@ -103,12 +103,12 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
 
   String _helperMessage(ResendCooldownState cooldown) {
     if (cooldown.isLocked) {
-      return 'Ja enviamos um link recentemente para este e-mail.\n\n'
-          'Para sua seguranca, aguarde alguns minutos antes de solicitar outro.';
+      return 'Já enviamos um link recentemente para este e-mail.\n\n'
+          'Para sua segurança, aguarde alguns minutos antes de solicitar outro.';
     }
 
-    return 'Se nao encontrar o e-mail, confira sua caixa de entrada e spam.'
-        '\n\nQuando quiser, voce pode solicitar um novo link abaixo.';
+    return 'Se não encontrar o e-mail, confira sua caixa de entrada e spam.'
+        '\n\nQuando quiser, você pode solicitar um novo link abaixo.';
   }
 
   @override
@@ -152,8 +152,8 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
               const SizedBox(height: AppSpacing.sm),
               Text(
                 isEmailLocked
-                    ? 'O reenvio esta temporariamente bloqueado. Assim que o tempo terminar, voce podera solicitar um novo link.'
-                    : 'Insira o seu e-mail abaixo que enviaremos um link para voce criar uma nova senha.',
+                    ? 'O reenvio está temporariamente bloqueado. Assim que o tempo terminar, você poderá solicitar um novo link.'
+                    : 'Insira o seu e-mail abaixo que enviaremos um link para você criar uma nova senha.',
                 textAlign: TextAlign.center,
                 style: AppTextStyles.bodySmall.copyWith(
                   color: AppColors.actionBlue,
@@ -209,8 +209,8 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
                           Expanded(
                             child: Text(
                               isEmailLocked
-                                  ? 'Reenvio disponivel em ${formatCooldownMmSs(cooldown.remainingLock)}'
-                                  : 'Voce ja pode solicitar um novo link',
+                                  ? 'Reenvio disponível em ${formatCooldownMmSs(cooldown.remainingLock)}'
+                                  : 'Você já pode solicitar um novo link',
                               style: AppTextStyles.labelLarge.copyWith(
                                 color: AppColors.secondary,
                                 fontWeight: FontWeight.w600,

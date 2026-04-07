@@ -43,6 +43,22 @@ abstract final class AppRoutes {
   static const registerIndustry = '/hub/industries/register';
   static const productMix = '/hub/industries/mix';
 
+  /// Routes that require [AuthFlowState.authenticated].
+  /// Add new protected routes here — the redirect guard reads this set.
+  static const Set<String> protectedRoutes = {
+    hub,
+    regions,
+    cities,
+    pdvs,
+    registerPdv,
+    networks,
+    categories,
+    subcategories,
+    industries,
+    registerIndustry,
+    productMix,
+  };
+
   // --- Legal ---
   static const termsOfUse = '/terms-of-use';
   static const privacyPolicy = '/privacy-policy';

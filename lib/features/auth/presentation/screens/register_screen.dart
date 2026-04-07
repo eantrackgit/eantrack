@@ -85,7 +85,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     final error = emailValidator(value);
     if (error != null || !submitted) return error;
     if (_emailStatus == _EmailStatus.taken) {
-      return 'Este e-mail ja esta em uso.';
+      return 'Este e-mail já está em uso.';
     }
     return null;
   }
@@ -403,10 +403,10 @@ class _EmailStatusHint extends StatelessWidget {
         _EmailStatus.checking =>
           _hint(Icons.hourglass_empty, 'Verificando...', AppColors.accent2),
         _EmailStatus.available =>
-          _hint(Icons.check_circle_outline, 'Disponivel', AppColors.success),
+          _hint(Icons.check_circle_outline, 'Disponível', AppColors.success),
         _EmailStatus.taken => _hint(
             Icons.cancel_outlined,
-            'Este e-mail ja esta em uso',
+            'Este e-mail já está em uso',
             AppColors.error,
           ),
       },
@@ -468,7 +468,7 @@ class _TermsRow extends StatelessWidget {
                       color: AppColors.secondaryText,
                     ),
                     children: [
-                      const TextSpan(text: 'Ao continuar, voce concorda com os '),
+                      const TextSpan(text: 'Ao continuar, você concorda com os '),
                       WidgetSpan(
                         child: GestureDetector(
                           onTap: onTermsTap,

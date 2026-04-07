@@ -55,7 +55,7 @@ class AppSidebar extends StatelessWidget {
               avatarUrl: avatarUrl,
             ),
             Divider(
-              color: AppColors.info.withOpacity(0.1),
+              color: AppColors.info.withValues(alpha: 0.1),
               height: 1,
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -170,7 +170,7 @@ class _SidebarTile extends StatelessWidget {
           duration: const Duration(milliseconds: 150),
           decoration: BoxDecoration(
             color: selected
-                ? AppColors.primary.withOpacity(0.12)
+                ? AppColors.primary.withValues(alpha: 0.12)
                 : Colors.transparent,
             border: selected
                 ? const Border(
