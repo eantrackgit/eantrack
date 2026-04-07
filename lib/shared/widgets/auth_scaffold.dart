@@ -7,6 +7,9 @@ import '../theme/app_text_styles.dart';
 import 'app_card.dart';
 import 'app_version_badge.dart';
 
+// Espaço reservado na base do scroll para o badge fixo não sobrepor o card.
+const double _kVersionFooterHeight = 24.0;
+
 /// Standard layout for auth and onboarding screens.
 class AuthScaffold extends StatelessWidget {
   const AuthScaffold({
@@ -33,58 +36,71 @@ class AuthScaffold extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.secondary,
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
-              child: AppCard(
-                color: AppColors.secondaryBackground,
-                padding: padding,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (showLogo) ...[
-                      Center(
-                        child: SvgPicture.asset(
-                          'assets/images/eantrack.svg',
-                          width: logoWidth,
-                          height: logoHeight,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                    ],
-                    if (title != null) ...[
-                      Text(
-                        title!,
-                        style: AppTextStyles.headlineSmall.copyWith(
-                          color: AppColors.secondary,
-                        ),
-                        textAlign:
-                            showLogo ? TextAlign.center : TextAlign.start,
-                      ),
-                      if (subtitle != null) ...[
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          subtitle!,
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.secondaryText,
+        child: Stack(
+          children: [
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.only(
+                    top: AppSpacing.xl,
+                    // Reserva espaço para o badge fixo não cobrir o card.
+                    bottom: AppSpacing.xl + _kVersionFooterHeight,
+                  ),
+                  child: AppCard(
+                    color: AppColors.secondaryBackground,
+                    padding: padding,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (showLogo) ...[
+                          Center(
+                            child: SvgPicture.asset(
+                              'assets/images/eantrack.svg',
+                              width: logoWidth,
+                              height: logoHeight,
+                              fit: BoxFit.contain,
+                            ),
                           ),
-                          textAlign:
-                              showLogo ? TextAlign.center : TextAlign.start,
-                        ),
+                          const SizedBox(height: AppSpacing.sm),
+                        ],
+                        if (title != null) ...[
+                          Text(
+                            title!,
+                            style: AppTextStyles.headlineSmall.copyWith(
+                              color: AppColors.secondary,
+                            ),
+                            textAlign:
+                                showLogo ? TextAlign.center : TextAlign.start,
+                          ),
+                          if (subtitle != null) ...[
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              subtitle!,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.secondaryText,
+                              ),
+                              textAlign:
+                                  showLogo ? TextAlign.center : TextAlign.start,
+                            ),
+                          ],
+                          const SizedBox(height: AppSpacing.lg),
+                        ],
+                        child,
                       ],
-                      const SizedBox(height: AppSpacing.lg),
-                    ],
-                    child,
-                    const SizedBox(height: AppSpacing.lg),
-                    const AppVersionBadge(),
-                  ],
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
+            // Versão discreta fixada no rodapé, fora do card e do scroll.
+            const Positioned(
+              bottom: 8,
+              left: 0,
+              right: 0,
+              child: AppVersionBadge(),
+            ),
+          ],
         ),
       ),
     );

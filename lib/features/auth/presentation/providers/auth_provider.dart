@@ -298,11 +298,14 @@ final passwordRecoveryCooldownProvider = StateNotifierProvider.autoDispose<
     lockDuration: const Duration(minutes: 15),
     storage: ref.read(passwordRecoveryCooldownStorageProvider),
     storageKey: passwordRecoveryCooldownStorageKey,
+    storageEmailKey: passwordRecoveryCooldownEmailStorageKey,
   ),
 );
 
 const passwordRecoveryCooldownStorageKey =
     'auth.password_recovery.locked_until_ms';
+const passwordRecoveryCooldownEmailStorageKey =
+    'auth.password_recovery.email';
 
 class ResendCooldownState {
   const ResendCooldownState({
@@ -310,12 +313,14 @@ class ResendCooldownState {
     this.attempts = 0,
     this.maxAttempts,
     this.lockedUntil,
+    this.email,
   });
 
   final int attempts;
   final int? maxAttempts;
   final DateTime? lockedUntil;
   final Duration lockDuration;
+  final String? email;
 
   bool get isLocked {
     if (lockedUntil == null) return false;
@@ -341,21 +346,24 @@ class ResendCooldownNotifier extends StateNotifier<ResendCooldownState> {
     int? maxAttempts,
     CooldownStorage? storage,
     String? storageKey,
+    String? storageEmailKey,
   }) : _lockDuration = lockDuration,
        _maxAttempts = maxAttempts,
        _storage = storage,
        _storageKey = storageKey,
+       _storageEmailKey = storageEmailKey,
        super(
          ResendCooldownState(
            lockDuration: lockDuration,
            maxAttempts: maxAttempts,
-          ),
+         ),
        ) {
     restorePersistedLock();
   }
 
   final CooldownStorage? _storage;
   final String? _storageKey;
+  final String? _storageEmailKey;
 
   final Duration _lockDuration;
   final int? _maxAttempts;
@@ -366,11 +374,16 @@ class ResendCooldownNotifier extends StateNotifier<ResendCooldownState> {
     if (key == null || storage == null) return;
 
     final milliseconds = storage.readInt(key);
-    if (milliseconds == null) return;
+    final email = _readStoredEmail();
+    if (milliseconds == null) {
+      _clearStoredEmail();
+      return;
+    }
 
     final lockedUntil = DateTime.fromMillisecondsSinceEpoch(milliseconds);
     if (!DateTime.now().isBefore(lockedUntil)) {
       storage.remove(key);
+      _clearStoredEmail();
       if (state.lockedUntil != null) {
         state = ResendCooldownState(
           lockDuration: _lockDuration,
@@ -385,15 +398,25 @@ class ResendCooldownNotifier extends StateNotifier<ResendCooldownState> {
       maxAttempts: _maxAttempts,
       lockDuration: _lockDuration,
       lockedUntil: lockedUntil,
+      email: email,
     );
   }
 
-  void onResendSuccess() {
+  void onResendSuccess({String? email}) {
     final lockedUntil = DateTime.now().add(_lockDuration);
     final key = _storageKey;
+    final normalizedEmail = email?.trim();
 
     if (key != null) {
       _storage?.writeInt(key, lockedUntil.millisecondsSinceEpoch);
+    }
+    if (normalizedEmail != null && normalizedEmail.isNotEmpty) {
+      final emailKey = _storageEmailKey;
+      if (emailKey != null) {
+        _storage?.writeString(emailKey, normalizedEmail);
+      }
+    } else {
+      _clearStoredEmail();
     }
 
     state = ResendCooldownState(
@@ -401,6 +424,7 @@ class ResendCooldownNotifier extends StateNotifier<ResendCooldownState> {
       maxAttempts: _maxAttempts,
       lockDuration: _lockDuration,
       lockedUntil: lockedUntil,
+      email: normalizedEmail ?? state.email,
     );
   }
 
@@ -414,10 +438,26 @@ class ResendCooldownNotifier extends StateNotifier<ResendCooldownState> {
     if (key != null) {
       _storage?.remove(key);
     }
+    _clearStoredEmail();
 
     state = ResendCooldownState(
       lockDuration: _lockDuration,
       maxAttempts: _maxAttempts,
     );
+  }
+
+  String? _readStoredEmail() {
+    final emailKey = _storageEmailKey;
+    if (emailKey == null) return null;
+    final email = _storage?.readString(emailKey)?.trim();
+    if (email == null || email.isEmpty) return null;
+    return email;
+  }
+
+  void _clearStoredEmail() {
+    final emailKey = _storageEmailKey;
+    if (emailKey != null) {
+      _storage?.remove(emailKey);
+    }
   }
 }

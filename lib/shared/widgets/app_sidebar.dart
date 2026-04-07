@@ -79,7 +79,6 @@ class AppSidebar extends StatelessWidget {
               ),
               child: const AppVersionBadge(
                 alignment: Alignment.centerLeft,
-                textColor: AppColors.accent2,
               ),
             ),
           ],

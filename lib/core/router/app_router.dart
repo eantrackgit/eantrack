@@ -79,7 +79,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // --- Auth (public) ---
       GoRoute(
         path: AppRoutes.login,
-        pageBuilder: (_, state) => _fadePage(state, const LoginScreen()),
+        pageBuilder: (_, state) {
+          final recoveryFromQuery =
+              state.uri.queryParameters['recovery'] == 'email-sent';
+          final notice = state.extra is LoginScreenNotice
+              ? state.extra! as LoginScreenNotice
+              : recoveryFromQuery
+                  ? LoginScreenNotice.recoveryEmailSent
+                  : null;
+
+          return _fadePage(
+            state,
+            LoginScreen(
+              notice: notice,
+              consumeRecoveryQueryParam: recoveryFromQuery,
+            ),
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.register,

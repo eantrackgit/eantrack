@@ -76,7 +76,7 @@ class AppListStateView extends StatelessWidget {
       return AppEmptyState(
         icon: emptyIcon,
         title: emptyTitle,
-        subtitle: emptySubtitle,
+        subtitle: emptySubtitle ?? '',
       );
     }
 

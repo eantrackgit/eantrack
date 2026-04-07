@@ -10,6 +10,9 @@ class _WebCooldownStorage implements CooldownStorage {
   }
 
   @override
+  String? readString(String key) => html.window.localStorage[key];
+
+  @override
   void remove(String key) {
     html.window.localStorage.remove(key);
   }
@@ -17,6 +20,11 @@ class _WebCooldownStorage implements CooldownStorage {
   @override
   void writeInt(String key, int value) {
     html.window.localStorage[key] = value.toString();
+  }
+
+  @override
+  void writeString(String key, String value) {
+    html.window.localStorage[key] = value;
   }
 }
 

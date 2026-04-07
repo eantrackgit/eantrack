@@ -44,7 +44,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Link enviado com sucesso'), findsOneWidget);
+    expect(find.text('Esqueceu sua senha?'), findsOneWidget);
     expect(find.textContaining('Reenviar em '), findsOneWidget);
   });
 }

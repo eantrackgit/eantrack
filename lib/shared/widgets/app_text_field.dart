@@ -19,6 +19,7 @@ class AppTextField extends StatefulWidget {
     this.keyboardType = TextInputType.text,
     this.isPassword = false,
     this.readOnly = false,
+    this.enabled = true,
     this.inputFormatters,
     this.maxLength,
     this.autofillHints,
@@ -35,6 +36,7 @@ class AppTextField extends StatefulWidget {
   final TextInputType keyboardType;
   final bool isPassword;
   final bool readOnly;
+  final bool enabled;
   final List<TextInputFormatter>? inputFormatters;
   final int? maxLength;
   final Iterable<String>? autofillHints;
@@ -76,7 +78,12 @@ class _AppTextFieldState extends State<AppTextField> {
 
   @override
   Widget build(BuildContext context) {
-    final labelColor = _hasFocus ? AppColors.secondary : AppColors.secondaryText;
+    final isEnabled = widget.enabled;
+    final labelColor = !isEnabled
+        ? AppColors.secondaryText
+        : _hasFocus
+            ? AppColors.secondary
+            : AppColors.secondaryText;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
@@ -96,6 +103,7 @@ class _AppTextFieldState extends State<AppTextField> {
       child: TextFormField(
         focusNode: _focus,
         controller: widget.controller,
+        enabled: isEnabled,
         validator: widget.validator,
         onChanged: widget.onChanged,
         onFieldSubmitted: widget.onFieldSubmitted,
@@ -107,13 +115,17 @@ class _AppTextFieldState extends State<AppTextField> {
         maxLength: widget.maxLength,
         autofillHints: widget.autofillHints,
         autovalidateMode: AutovalidateMode.onUserInteraction,
-        style: AppTextStyles.bodyMedium,
+        style: AppTextStyles.bodyMedium.copyWith(
+          color: isEnabled ? AppColors.secondary : AppColors.secondaryText,
+        ),
         decoration: InputDecoration(
           labelText: widget.label,
           hintText: widget.hint,
           counterText: '',
           filled: true,
-          fillColor: AppColors.secondaryBackground,
+          fillColor: isEnabled
+              ? AppColors.secondaryBackground
+              : AppColors.primaryBackground,
           labelStyle: AppTextStyles.labelMedium.copyWith(color: labelColor),
           enabledBorder: OutlineInputBorder(
             borderRadius: AppRadius.smAll,
@@ -143,7 +155,9 @@ class _AppTextFieldState extends State<AppTextField> {
                     color: AppColors.secondaryText,
                     size: 20,
                   ),
-                  onPressed: () => setState(() => _obscure = !_obscure),
+                  onPressed: isEnabled
+                      ? () => setState(() => _obscure = !_obscure)
+                      : null,
                 )
               : null,
         ),

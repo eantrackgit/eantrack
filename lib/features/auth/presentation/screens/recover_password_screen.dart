@@ -8,6 +8,7 @@ import '../../../../core/error/app_exception.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../shared/shared.dart';
 import '../providers/auth_provider.dart';
+import 'login_screen.dart';
 import '../widgets/resend_cooldown_button.dart';
 
 class RecoverPasswordScreen extends ConsumerStatefulWidget {
@@ -30,7 +31,11 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
   void initState() {
     super.initState();
     ref.read(passwordRecoveryCooldownProvider.notifier).clearExpiredLockIfNeeded();
-    if (ref.read(passwordRecoveryCooldownProvider).isLocked) {
+    final cooldown = ref.read(passwordRecoveryCooldownProvider);
+    if (cooldown.email case final email?) {
+      _emailCtrl.text = email;
+    }
+    if (cooldown.isLocked) {
       _startCooldownTick();
     }
   }
@@ -50,26 +55,23 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
 
     if (!validateAndSubmit()) return;
 
+    final email = _emailCtrl.text.trim();
     setState(() => _action = const ActionLoading());
     try {
-      await ref
-          .read(authNotifierProvider.notifier)
-          .resetPassword(_emailCtrl.text.trim());
+      await ref.read(authNotifierProvider.notifier).resetPassword(email);
       if (!mounted) return;
 
-      ref.read(passwordRecoveryCooldownProvider.notifier).onResendSuccess();
+      ref
+          .read(passwordRecoveryCooldownProvider.notifier)
+          .onResendSuccess(email: email);
       _startCooldownTick();
-
-      await AppFeedback.showSuccess(
-        context,
-        title: 'Link enviado',
-        message:
-            'Enviamos um link para redefinir sua senha. Verifique sua caixa de entrada e spam. Por segurança, esse link expira em alguns minutos e pode ser usado apenas uma vez.',
-        icon: Icons.mark_email_read_outlined,
-      );
 
       if (!mounted) return;
       setState(() => _action = const ActionIdle());
+      context.go(
+        AppRoutes.login,
+        extra: LoginScreenNotice.recoveryEmailSent,
+      );
     } catch (e) {
       await _showRecoveryErrorDialog(
         e is AppException ? e.message : 'Erro ao enviar. Tente novamente.',
@@ -99,29 +101,20 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
     });
   }
 
-  String _maskEmail(String email) {
-    final parts = email.trim().split('@');
-    if (parts.length != 2) return email.trim();
-
-    final name = parts.first;
-    final masked = name.length > 2 ? '${name.substring(0, 2)}**' : '**';
-    return '$masked@${parts.last}';
-  }
-
   String _helperMessage(ResendCooldownState cooldown) {
     if (cooldown.isLocked) {
-      return 'Já enviamos um link recentemente.\n\n'
-          'Para sua segurança, aguarde alguns minutos antes de solicitar outro.';
+      return 'Ja enviamos um link recentemente para este e-mail.\n\n'
+          'Para sua seguranca, aguarde alguns minutos antes de solicitar outro.';
     }
 
-    return 'Se não encontrar o e-mail, confira sua caixa de entrada e spam.'
-        '\n\nQuando quiser, você pode solicitar um novo link abaixo.';
+    return 'Se nao encontrar o e-mail, confira sua caixa de entrada e spam.'
+        '\n\nQuando quiser, voce pode solicitar um novo link abaixo.';
   }
 
   @override
   Widget build(BuildContext context) {
     final cooldown = ref.watch(passwordRecoveryCooldownProvider);
-    final hasSentLink = cooldown.hasStoredLock;
+    final isEmailLocked = cooldown.isLocked;
     final canResend = !_isLoading && !cooldown.isLocked;
 
     return AuthScaffold(
@@ -150,7 +143,7 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
               ),
               const SizedBox(height: 60),
               Text(
-                hasSentLink ? 'Link enviado com sucesso' : 'Esqueceu sua senha?',
+                'Esqueceu sua senha?',
                 textAlign: TextAlign.center,
                 style: AppTextStyles.headlineSmall.copyWith(
                   color: AppColors.secondary,
@@ -158,9 +151,9 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                hasSentLink
-                    ? 'Enviamos um link de recuperação para o e-mail informado.'
-                    : 'Insira o seu e-mail abaixo que enviaremos um link para você criar uma nova senha.',
+                isEmailLocked
+                    ? 'O reenvio esta temporariamente bloqueado. Assim que o tempo terminar, voce podera solicitar um novo link.'
+                    : 'Insira o seu e-mail abaixo que enviaremos um link para voce criar uma nova senha.',
                 textAlign: TextAlign.center,
                 style: AppTextStyles.bodySmall.copyWith(
                   color: AppColors.actionBlue,
@@ -175,12 +168,13 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
                 textInputAction: TextInputAction.done,
                 autofillHints: const [AutofillHints.email],
                 validator: emailValidator,
-                readOnly: _isLoading,
+                readOnly: _isLoading || isEmailLocked,
+                enabled: !_isLoading && !isEmailLocked,
                 onFieldSubmitted: (_) {
                   if (!_isLoading && !cooldown.isLocked) _submit();
                 },
               ),
-              if (hasSentLink) ...[
+              if (cooldown.hasStoredLock) ...[
                 const SizedBox(height: AppSpacing.md),
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.md),
@@ -200,19 +194,23 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
                             width: 36,
                             height: 36,
                             decoration: BoxDecoration(
-                              color: AppColors.success.withValues(alpha: 0.12),
+                              color: AppColors.actionBlue.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(
-                              Icons.mark_email_read_outlined,
-                              color: AppColors.success,
+                            child: Icon(
+                              isEmailLocked
+                                  ? Icons.lock_clock_outlined
+                                  : Icons.mark_email_read_outlined,
+                              color: AppColors.actionBlue,
                               size: 18,
                             ),
                           ),
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: Text(
-                              'Último envio para ${_maskEmail(_emailCtrl.text)}',
+                              isEmailLocked
+                                  ? 'Reenvio disponivel em ${formatCooldownMmSs(cooldown.remainingLock)}'
+                                  : 'Voce ja pode solicitar um novo link',
                               style: AppTextStyles.labelLarge.copyWith(
                                 color: AppColors.secondary,
                                 fontWeight: FontWeight.w600,
@@ -247,7 +245,7 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
-                    child: hasSentLink
+                    child: cooldown.hasStoredLock
                         ? ResendCooldownButton(
                             cooldown: cooldown,
                             isLoading: _isLoading,

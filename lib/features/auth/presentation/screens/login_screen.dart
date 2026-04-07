@@ -10,8 +10,19 @@ import '../../../../shared/shared.dart';
 import '../../domain/auth_state.dart';
 import '../providers/auth_provider.dart';
 
+enum LoginScreenNotice {
+  recoveryEmailSent,
+}
+
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({
+    super.key,
+    this.notice,
+    this.consumeRecoveryQueryParam = false,
+  });
+
+  final LoginScreenNotice? notice;
+  final bool consumeRecoveryQueryParam;
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -24,6 +35,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   final _passwordFocus = FocusNode();
   AsyncAction<void> _action = const ActionIdle();
   AsyncAction<void> _googleAction = const ActionIdle();
+  late bool _showRecoveryEmailSentMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _showRecoveryEmailSentMessage =
+        widget.notice == LoginScreenNotice.recoveryEmailSent;
+
+    if (widget.consumeRecoveryQueryParam) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        GoRouter.of(context).replace(
+          AppRoutes.login,
+          extra: widget.notice,
+        );
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant LoginScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_showRecoveryEmailSentMessage &&
+        widget.notice == LoginScreenNotice.recoveryEmailSent) {
+      setState(() {
+        _showRecoveryEmailSentMessage = true;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -148,6 +188,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 ),
               ),
             ),
+            if (_showRecoveryEmailSentMessage) ...[
+              const SizedBox(height: AppSpacing.md),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.secondaryBackground,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.alternate),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppColors.success.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.mark_email_read_outlined,
+                        color: AppColors.success,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        'Enviamos o link de recuperacao. Verifique sua caixa de entrada e spam para continuar.',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.secondaryText,
+                          height: 1.45,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: AppSpacing.lg),
             AppTextField(
               label: 'E-mail',
