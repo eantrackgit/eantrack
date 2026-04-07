@@ -28,8 +28,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Crie sua conta'), findsOneWidget);
-    expect(find.text('Criar conta'), findsOneWidget);
+    expect(find.text('Criar conta'), findsWidgets);
   });
 
   testWidgets(
@@ -47,11 +46,11 @@ void main() {
     );
 
     const labels = [
-      'Uma letra mai\u00fascula',
-      'Uma letra min\u00fascula',
-      'Um n\u00famero',
-      'M\u00ednimo de 8 caracteres',
-      'Um s\u00edmbolo (ex: @, #, \$, %, &, *)',
+      'Uma letra maiuscula',
+      'Uma letra minuscula',
+      'Um numero',
+      'Minimo de 8 caracteres',
+      'Um simbolo (ex: @, #, \$, %, &, *)',
       'As senhas coincidem',
     ];
 

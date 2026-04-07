@@ -7,8 +7,46 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MockSupabaseClient extends Mock implements SupabaseClient {}
 
-class MockPostgrestFilterBuilder extends Mock
-    implements PostgrestFilterBuilder<List<Map<String, dynamic>>> {}
+/// Fake builder that resolves to [_value] when awaited.
+///
+/// Used to satisfy the `PostgrestFilterBuilder<dynamic>` return type of
+/// `SupabaseClient.rpc()` while still providing meaningful test data.
+class _FakePostgrestBuilder extends Fake
+    implements PostgrestFilterBuilder<dynamic> {
+  _FakePostgrestBuilder(this._value);
+  final dynamic _value;
+
+  @override
+  Future<R> then<R>(
+    FutureOr<R> Function(dynamic) onValue, {
+    Function? onError,
+  }) =>
+      Future<dynamic>.value(_value).then(onValue, onError: onError);
+
+  @override
+  Future<dynamic> catchError(
+    Function onError, {
+    bool Function(Object)? test,
+  }) =>
+      Future<dynamic>.value(_value);
+
+  @override
+  Future<dynamic> whenComplete(FutureOr<void> Function() action) =>
+      Future<dynamic>.value(_value).whenComplete(action);
+
+  @override
+  Stream<dynamic> asStream() => Stream.value(_value);
+
+  @override
+  Future<dynamic> timeout(
+    Duration timeLimit, {
+    FutureOr<dynamic> Function()? onTimeout,
+  }) =>
+      Future<dynamic>.value(_value).timeout(timeLimit, onTimeout: onTimeout);
+
+  // Allow builder chaining (.select(), .eq(), etc.) without breaking the chain.
+  _FakePostgrestBuilder select([String columns = '*']) => this;
+}
 
 void main() {
   late MockSupabaseClient client;
@@ -66,10 +104,10 @@ void main() {
           'list_regions_by_agency_exhibition',
           params: any(named: 'params'),
         ),
-      ).thenAnswer((_) async => [
-            {'id': 'r1', 'name': 'Norte', 'city_count': 3, 'is_active': true},
-            {'id': 'r2', 'name': 'Sul', 'city_count': 7, 'is_active': false},
-          ]);
+      ).thenReturn(_FakePostgrestBuilder([
+        {'id': 'r1', 'name': 'Norte', 'city_count': 3, 'is_active': true},
+        {'id': 'r2', 'name': 'Sul', 'city_count': 7, 'is_active': false},
+      ]));
 
       final result = await repository.fetchRegions(agencyId: agencyId);
 
@@ -84,7 +122,7 @@ void main() {
           'list_regions_by_agency_exhibition',
           params: any(named: 'params'),
         ),
-      ).thenAnswer((_) async => <dynamic>[]);
+      ).thenReturn(_FakePostgrestBuilder(<dynamic>[]));
 
       final result = await repository.fetchRegions(agencyId: agencyId);
 
@@ -129,7 +167,7 @@ void main() {
           'is_region_name_available_for_current_user',
           params: any(named: 'params'),
         ),
-      ).thenAnswer((_) async => true);
+      ).thenReturn(_FakePostgrestBuilder(true));
 
       final result = await repository.isNameAvailable('Norte');
 
@@ -142,7 +180,7 @@ void main() {
           'is_region_name_available_for_current_user',
           params: any(named: 'params'),
         ),
-      ).thenAnswer((_) async => false);
+      ).thenReturn(_FakePostgrestBuilder(false));
 
       final result = await repository.isNameAvailable('Norte');
 
@@ -155,7 +193,7 @@ void main() {
           'is_region_name_available_for_current_user',
           params: any(named: 'params'),
         ),
-      ).thenAnswer((_) async => {'available': true});
+      ).thenReturn(_FakePostgrestBuilder({'available': true}));
 
       final result = await repository.isNameAvailable('Norte');
 

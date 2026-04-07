@@ -213,7 +213,7 @@ class _ModuleCardWidget extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.secondary.withOpacity(0.1),
+                  color: AppColors.secondary.withValues(alpha: 0.1),
                   borderRadius: AppRadius.smAll,
                 ),
                 child: Icon(

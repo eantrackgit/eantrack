@@ -11,6 +11,45 @@ class MockGoTrueClient extends Mock implements GoTrueClient {}
 
 class MockPasswordHistoryService extends Mock implements PasswordHistoryService {}
 
+/// Fake builder that resolves to [_value] when awaited.
+/// Satisfies the PostgrestFilterBuilder<dynamic> return type of rpc().
+class _FakePostgrestBuilder extends Fake
+    implements PostgrestFilterBuilder<dynamic> {
+  _FakePostgrestBuilder(this._value);
+  final dynamic _value;
+
+  @override
+  Future<R> then<R>(
+    FutureOr<R> Function(dynamic) onValue, {
+    Function? onError,
+  }) =>
+      Future<dynamic>.value(_value).then(onValue, onError: onError);
+
+  @override
+  Future<dynamic> catchError(
+    Function onError, {
+    bool Function(Object)? test,
+  }) =>
+      Future<dynamic>.value(_value);
+
+  @override
+  Future<dynamic> whenComplete(FutureOr<void> Function() action) =>
+      Future<dynamic>.value(_value).whenComplete(action);
+
+  @override
+  Stream<dynamic> asStream() => Stream.value(_value);
+
+  @override
+  Future<dynamic> timeout(
+    Duration timeLimit, {
+    FutureOr<dynamic> Function()? onTimeout,
+  }) =>
+      Future<dynamic>.value(_value).timeout(timeLimit, onTimeout: onTimeout);
+
+  // Allow builder chaining (.select(), .eq(), etc.) without breaking the chain.
+  _FakePostgrestBuilder select([String columns = '*']) => this;
+}
+
 void main() {
   late SupabaseClient client;
   late GoTrueClient auth;
@@ -18,7 +57,7 @@ void main() {
   late AuthRepository repository;
 
   const email = 'user@test.com';
-  const password = 'StrongPass1';
+  const password = 'StrongPass@1';
 
   final user = User(
     id: 'user-1',
@@ -90,13 +129,13 @@ void main() {
 
   test('cadastro', () async {
     when(() => client.rpc('email_code_exists', params: any(named: 'params')))
-        .thenAnswer((_) async => false);
+        .thenReturn(_FakePostgrestBuilder(false));
     when(
       () => auth.signUp(
           email: any(named: 'email'), password: any(named: 'password')),
     ).thenAnswer((_) async => AuthResponse(user: user));
     when(() => client.rpc('insert_email_code', params: any(named: 'params')))
-        .thenAnswer((_) async => null);
+        .thenReturn(_FakePostgrestBuilder(null));
 
     await repository.signUp(email: email, password: password);
 
