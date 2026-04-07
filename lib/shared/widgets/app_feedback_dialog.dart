@@ -7,6 +7,41 @@ import '../theme/app_spacing.dart';
 import '../theme/app_text_styles.dart';
 import 'app_button.dart';
 
+/// Shortcut helpers for the two most common feedback patterns.
+///
+/// Error:   fixed [Icons.error_outline_rounded] + [AppColors.error]
+/// Success: fixed [AppColors.success], configurable icon
+class AppFeedback {
+  AppFeedback._();
+
+  static Future<void> showError(
+    BuildContext context, {
+    required String title,
+    required String message,
+  }) =>
+      showAppFeedbackDialog(
+        context: context,
+        title: title,
+        message: message,
+        icon: Icons.error_outline_rounded,
+        accentColor: AppColors.error,
+      );
+
+  static Future<void> showSuccess(
+    BuildContext context, {
+    required String title,
+    required String message,
+    IconData icon = Icons.check_circle_outline_rounded,
+  }) =>
+      showAppFeedbackDialog(
+        context: context,
+        title: title,
+        message: message,
+        icon: icon,
+        accentColor: AppColors.success,
+      );
+}
+
 Future<void> showAppFeedbackDialog({
   required BuildContext context,
   required String title,

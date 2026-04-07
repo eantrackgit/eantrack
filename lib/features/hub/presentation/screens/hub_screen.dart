@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
@@ -15,14 +14,14 @@ import '../../../../shared/widgets/app_version_badge.dart';
 ///
 /// Desktop: AppSidebar fixa à esquerda + conteúdo à direita.
 /// Mobile: conteúdo no topo + AppBottomNav na parte inferior.
-class HubScreen extends ConsumerStatefulWidget {
+class HubScreen extends StatefulWidget {
   const HubScreen({super.key});
 
   @override
-  ConsumerState<HubScreen> createState() => _HubScreenState();
+  State<HubScreen> createState() => _HubScreenState();
 }
 
-class _HubScreenState extends ConsumerState<HubScreen> {
+class _HubScreenState extends State<HubScreen> {
   int _selectedIndex = 0;
 
   static const _modules = [

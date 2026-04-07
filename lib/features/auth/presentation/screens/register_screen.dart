@@ -146,13 +146,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
         _action = const ActionIdle();
       }
     });
-    await showAppFeedbackDialog(
-      context: context,
-      title: title,
-      message: message,
-      icon: Icons.error_outline_rounded,
-      accentColor: AppColors.error,
-    );
+    await AppFeedback.showError(context, title: title, message: message);
   }
 
   @override

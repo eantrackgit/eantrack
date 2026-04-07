@@ -3,10 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
-import '../../../../shared/theme/app_colors.dart';
-import '../../../../shared/theme/app_spacing.dart';
-import '../../../../shared/theme/app_text_styles.dart';
-import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/shared.dart';
 import '../providers/onboarding_provider.dart';
 
 enum _Mode { individual, agency }
@@ -33,8 +30,10 @@ class _ChooseModeScreenState extends ConsumerState<ChooseModeScreen> {
     setState(() => _saving = false);
 
     if (!ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro ao salvar. Tente novamente.')),
+      await AppFeedback.showError(
+        context,
+        title: 'Erro ao salvar',
+        message: 'Não foi possível salvar a seleção. Tente novamente.',
       );
       return;
     }

@@ -35,13 +35,12 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
           .resetPassword(_emailCtrl.text.trim());
       if (!mounted) return;
       setState(() => _action = const ActionSuccess(null));
-      await showAppFeedbackDialog(
-        context: context,
+      await AppFeedback.showSuccess(
+        context,
         title: 'Link enviado',
         message:
             'Enviamos um link para redefinir sua senha. Verifique sua caixa de entrada e spam. Por segurança, esse link expira em alguns minutos e pode ser usado apenas uma vez.',
         icon: Icons.mark_email_read_outlined,
-        accentColor: AppColors.success,
       );
       if (!mounted) return;
       context.go(AppRoutes.login);
@@ -55,12 +54,10 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
   Future<void> _showRecoveryErrorDialog(String message) async {
     if (!mounted) return;
     setState(() => _action = const ActionIdle());
-    await showAppFeedbackDialog(
-      context: context,
+    await AppFeedback.showError(
+      context,
       title: 'Falha ao enviar link',
       message: message,
-      icon: Icons.error_outline_rounded,
-      accentColor: AppColors.error,
     );
   }
 

@@ -272,24 +272,38 @@ class AuthRecoveryContextNotifier extends StateNotifier<bool> {
 }
 
 // ---------------------------------------------------------------------------
-// Email cooldown provider (resend rate limiting)
+// Resend cooldown providers (rate limiting)
 // ---------------------------------------------------------------------------
 
-/// Tracks resend attempts and cooldown for email verification.
-/// Kept in memory only — resets on app restart (matches FlutterFlow behavior).
+/// Tracks resend attempts and cooldown windows in memory only.
+/// This survives widget rebuilds while the screen stays mounted.
 final emailCooldownProvider = StateNotifierProvider.autoDispose<
-    EmailCooldownNotifier, EmailCooldownState>(
-  (_) => EmailCooldownNotifier(),
+    ResendCooldownNotifier, ResendCooldownState>(
+  (_) => ResendCooldownNotifier(
+    lockDuration: const Duration(minutes: 5),
+    maxAttempts: 3,
+  ),
 );
 
-class EmailCooldownState {
-  const EmailCooldownState({
+final passwordRecoveryCooldownProvider = StateNotifierProvider.autoDispose<
+    ResendCooldownNotifier, ResendCooldownState>(
+  (_) => ResendCooldownNotifier(
+    lockDuration: const Duration(minutes: 15),
+  ),
+);
+
+class ResendCooldownState {
+  const ResendCooldownState({
+    required this.lockDuration,
     this.attempts = 0,
+    this.maxAttempts,
     this.lockedUntil,
   });
 
   final int attempts;
+  final int? maxAttempts;
   final DateTime? lockedUntil;
+  final Duration lockDuration;
 
   bool get isLocked {
     if (lockedUntil == null) return false;
@@ -301,20 +315,41 @@ class EmailCooldownState {
     return lockedUntil!.difference(DateTime.now());
   }
 
-  static const int maxAttempts = 3;
-  static const Duration lockDuration = Duration(minutes: 5);
+  bool get hasReachedAttemptLimit {
+    final limit = maxAttempts;
+    return limit != null && attempts >= limit;
+  }
 }
 
-class EmailCooldownNotifier extends StateNotifier<EmailCooldownState> {
-  EmailCooldownNotifier() : super(const EmailCooldownState());
+class ResendCooldownNotifier extends StateNotifier<ResendCooldownState> {
+  ResendCooldownNotifier({
+    required Duration lockDuration,
+    int? maxAttempts,
+  }) : _lockDuration = lockDuration,
+       _maxAttempts = maxAttempts,
+       super(
+         ResendCooldownState(
+           lockDuration: lockDuration,
+           maxAttempts: maxAttempts,
+         ),
+       );
 
-  /// Called after a successful resend. Increments attempt count
-  /// and locks if max attempts reached.
+  final Duration _lockDuration;
+  final int? _maxAttempts;
+
   void onResendSuccess() {
-    final next = state.attempts + 1;
-    final lock = DateTime.now().add(EmailCooldownState.lockDuration);
-    state = EmailCooldownState(attempts: next, lockedUntil: lock);
+    state = ResendCooldownState(
+      attempts: state.attempts + 1,
+      maxAttempts: _maxAttempts,
+      lockDuration: _lockDuration,
+      lockedUntil: DateTime.now().add(_lockDuration),
+    );
   }
 
-  void reset() => state = const EmailCooldownState();
+  void reset() {
+    state = ResendCooldownState(
+      lockDuration: _lockDuration,
+      maxAttempts: _maxAttempts,
+    );
+  }
 }

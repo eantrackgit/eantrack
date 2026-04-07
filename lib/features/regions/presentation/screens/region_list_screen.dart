@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../shared/theme/app_colors.dart';
-import '../../../../shared/theme/app_spacing.dart';
-import '../../../../shared/theme/app_text_styles.dart';
+import '../../../../shared/shared.dart';
 import '../../../../shared/utils/async_action.dart';
-import '../../../../shared/widgets/app_button.dart';
-import '../../../../shared/widgets/app_empty_state.dart';
-import '../../../../shared/widgets/app_error_box.dart';
 import '../../domain/region_model.dart';
 import '../../domain/region_state.dart';
 import '../providers/region_provider.dart';
@@ -263,29 +258,20 @@ class _Body extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return switch (state) {
-      RegionInitial() => const SizedBox.shrink(),
-      RegionLoading() => const Center(
-          child: CircularProgressIndicator(),
-        ),
-      RegionError(:final message) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AppErrorBox(message),
-                const SizedBox(height: AppSpacing.md),
-                AppButton.secondary('Tentar novamente', onPressed: onRetry, width: 200),
-              ],
-            ),
-          ),
-        ),
-      RegionLoaded(:final regions) => _RegionList(
-          regions: _filter(regions),
-          onToggleActive: onToggleActive,
-        ),
-    };
+    final regions = state is RegionLoaded
+        ? _filter((state as RegionLoaded).regions)
+        : <RegionModel>[];
+
+    return AppListStateView(
+      isLoading: state is RegionLoading,
+      errorMessage: state is RegionError ? (state as RegionError).message : null,
+      onRetry: onRetry,
+      isEmpty: state is RegionLoaded && regions.isEmpty,
+      emptyIcon: Icons.map_outlined,
+      emptyTitle: 'Nenhuma região encontrada',
+      emptySubtitle: 'Crie uma região para organizar seus territórios.',
+      child: _RegionList(regions: regions, onToggleActive: onToggleActive),
+    );
   }
 
   List<RegionModel> _filter(List<RegionModel> regions) {

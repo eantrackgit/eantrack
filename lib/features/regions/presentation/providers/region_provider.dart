@@ -31,11 +31,14 @@ final agencyIdProvider = Provider<String?>((ref) {
 // Region notifier
 // ---------------------------------------------------------------------------
 
+// autoDispose removido: o provider persiste em memória enquanto o app estiver
+// rodando, evitando re-fetch ao navegar de volta para a tela.
+// ref.watch(agencyIdProvider) garante invalidação automática ao trocar conta.
 final regionNotifierProvider =
-    StateNotifierProvider.autoDispose<RegionNotifier, RegionState>((ref) {
+    StateNotifierProvider<RegionNotifier, RegionState>((ref) {
   return RegionNotifier(
     repository: ref.read(regionRepositoryProvider),
-    agencyId: ref.read(agencyIdProvider),
+    agencyId: ref.watch(agencyIdProvider),
   );
 });
 

@@ -53,6 +53,7 @@ class _CnpjScreenState extends State<CnpjScreen> {
     // Placeholder — integração real em tarefa futura
     await Future.delayed(const Duration(milliseconds: 800));
 
+    if (!mounted) return;
     setState(() {
       _status = _CnpjStatus.success;
       _statusMessage = 'CNPJ encontrado. Verifique os dados na próxima etapa.';

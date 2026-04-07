@@ -10,6 +10,7 @@ import '../../../../core/router/app_routes.dart';
 import '../../../../shared/shared.dart';
 import '../../domain/auth_state.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/resend_cooldown_button.dart';
 
 class EmailVerificationScreen extends ConsumerStatefulWidget {
   const EmailVerificationScreen({super.key});
@@ -21,7 +22,6 @@ class EmailVerificationScreen extends ConsumerStatefulWidget {
 
 class _EmailVerificationScreenState
     extends ConsumerState<EmailVerificationScreen> {
-  StreamSubscription<int>? _polling;
   Timer? _cooldownTick;
 
   bool _confirmed = false;
@@ -37,34 +37,17 @@ class _EmailVerificationScreenState
     final s = ref.read(authNotifierProvider);
     if (s is AuthEmailUnconfirmed) {
       _email = s.email;
-      _startPolling();
+    }
+
+    if (ref.read(emailCooldownProvider).isLocked) {
+      _startCooldownTick();
     }
   }
 
   @override
   void dispose() {
-    _polling?.cancel();
     _cooldownTick?.cancel();
     super.dispose();
-  }
-
-  // ---------------------------------------------------------------------------
-  // Polling
-  // ---------------------------------------------------------------------------
-
-  void _startPolling() {
-    _polling =
-        Stream.periodic(const Duration(seconds: 3), (i) => i).listen((_) async {
-      if (_confirmed || !mounted) return;
-      final ok =
-          await ref.read(authNotifierProvider.notifier).checkEmailConfirmed();
-      if (ok && mounted && !_navigating) {
-        _polling?.cancel();
-        setState(() => _confirmed = true);
-        await Future.delayed(const Duration(seconds: 2));
-        if (mounted) _openPasswordModal();
-      }
-    });
   }
 
   void _navigate() {
@@ -105,7 +88,7 @@ class _EmailVerificationScreenState
     }
     final cooldown = ref.read(emailCooldownProvider);
     if (cooldown.isLocked) return;
-    if (cooldown.attempts >= EmailCooldownState.maxAttempts) {
+    if (cooldown.hasReachedAttemptLimit) {
       await _showFeedbackDialog(
         title: 'Limite atingido',
         message: 'Você excedeu o número de tentativas. Tente mais tarde.',
@@ -121,7 +104,6 @@ class _EmailVerificationScreenState
       if (!mounted) return;
       if (alreadyConfirmed) {
         setState(() => _resendLoading = false);
-        _polling?.cancel();
         setState(() => _confirmed = true);
         await Future.delayed(const Duration(seconds: 1));
         if (mounted) _openPasswordModal();
@@ -170,7 +152,6 @@ class _EmailVerificationScreenState
           await ref.read(authNotifierProvider.notifier).checkEmailConfirmed();
       if (!mounted) return;
       if (ok && !_navigating) {
-        _polling?.cancel();
         setState(() {
           _confirmed = true;
           _isManualChecking = false;
@@ -256,7 +237,7 @@ class _EmailVerificationScreenState
   // Waiting state
   // ---------------------------------------------------------------------------
 
-  Widget _buildWaiting(EmailCooldownState cooldown, bool canResend) {
+  Widget _buildWaiting(ResendCooldownState cooldown, bool canResend) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -334,17 +315,17 @@ class _EmailVerificationScreenState
                   size: 14,
                   color: AppColors.secondary,
                 ),
-                onPressed: () {
-                  _polling?.cancel();
-                  context.go(AppRoutes.login);
-                },
+                onPressed: () => context.go(AppRoutes.login),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: _ResendButton(
+                readyLabel: 'Reenviar',
                 cooldown: cooldown,
                 isLoading: _resendLoading,
+                lockedLabelBuilder: (remaining) =>
+                    'Aguarde... ${formatCooldownMmSs(remaining)}',
                 onPressed: canResend ? _resend : null,
               ),
             ),

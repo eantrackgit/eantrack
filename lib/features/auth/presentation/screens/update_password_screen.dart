@@ -41,13 +41,10 @@ class _UpdatePasswordScreenState
       await ref.read(authRepositoryProvider).changePassword(_passwordCtrl.text);
       if (!mounted) return;
       setState(() => _action = const ActionSuccess(null));
-      await showAppFeedbackDialog(
-        context: context,
+      await AppFeedback.showSuccess(
+        context,
         title: 'Senha alterada',
-        message:
-            'Sua senha foi atualizada com sucesso. Faça login novamente para continuar.',
-        icon: Icons.check_circle_outline_rounded,
-        accentColor: AppColors.success,
+        message: 'Sua senha foi atualizada com sucesso. Faça login novamente para continuar.',
       );
       if (!mounted) return;
       await ref.read(authNotifierProvider.notifier).signOut();
@@ -66,12 +63,10 @@ class _UpdatePasswordScreenState
   Future<void> _showUpdatePasswordErrorDialog(String message) async {
     if (!mounted) return;
     setState(() => _action = const ActionIdle());
-    await showAppFeedbackDialog(
-      context: context,
+    await AppFeedback.showError(
+      context,
       title: 'Falha ao atualizar senha',
       message: message,
-      icon: Icons.error_outline_rounded,
-      accentColor: AppColors.error,
     );
   }
 

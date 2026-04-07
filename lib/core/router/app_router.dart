@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/auth/domain/auth_flow_state.dart';
-import '../../features/auth/domain/auth_state.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/auth/presentation/screens/email_verification_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
@@ -21,9 +19,11 @@ import '../../features/onboarding/presentation/screens/legal_representative_scre
 import '../../features/regions/presentation/screens/region_list_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 import 'app_routes.dart';
+import 'recovery_link_parser.dart';
+import 'router_redirect_guard.dart';
 
 // ---------------------------------------------------------------------------
-// Page transition helper — fade + subtle upward slide
+// Page transition helper — fade
 // ---------------------------------------------------------------------------
 
 CustomTransitionPage<void> _fadePage(GoRouterState state, Widget child) {
@@ -41,61 +41,25 @@ CustomTransitionPage<void> _fadePage(GoRouterState state, Widget child) {
   );
 }
 
-Map<String, String> _recoveryLinkParamsFromUri(Uri uri) {
-  final params = <String, String>{...uri.queryParameters};
-  final fragment = uri.fragment;
-
-  if (fragment.isEmpty) return params;
-
-  if (fragment.startsWith('error=')) {
-    params.addAll(Uri.splitQueryString(fragment));
-    return params;
-  }
-
-  final queryIndex = fragment.indexOf('?');
-  if (queryIndex >= 0 && queryIndex < fragment.length - 1) {
-    final fragmentQuery = fragment.substring(queryIndex + 1);
-    params.addAll(Uri.splitQueryString(fragmentQuery));
-  }
-
-  return params;
-}
-
-bool _hasExpiredRecoveryLinkParams(Uri uri) {
-  final params = _recoveryLinkParamsFromUri(uri);
-  final error = (params['error'] ?? '').toLowerCase();
-  final errorCode = (params['error_code'] ?? '').toLowerCase();
-  final description = Uri.decodeComponent(
-    params['error_description'] ?? '',
-  ).toLowerCase();
-
-  return error == 'access_denied' ||
-      errorCode == 'otp_expired' ||
-      description.contains('email link is invalid or has expired') ||
-      description.contains('invalid or has expired') ||
-      description.contains('already used') ||
-      description.contains('already been used');
-}
-
-String? _initialRecoveryErrorLocation() {
-  if (_hasExpiredRecoveryLinkParams(Uri.base)) {
-    return AppRoutes.passwordRecoveryLinkExpired;
-  }
-
-  return null;
-}
+// ---------------------------------------------------------------------------
+// Router provider
+// ---------------------------------------------------------------------------
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final notifier = _RouterNotifier(ref);
+  final guard = RouterRedirectGuard(ref);
   ref.read(authRecoveryContextProvider);
-  final recoveryErrorLocation = _initialRecoveryErrorLocation();
+  final recoveryErrorLocation = RecoveryLinkParser.initialErrorLocation();
 
   return GoRouter(
     debugLogDiagnostics: false,
-    refreshListenable: notifier,
-    redirect: notifier.redirect,
+    refreshListenable: guard,
+    redirect: guard.redirect,
     initialLocation: recoveryErrorLocation ?? AppRoutes.splash,
     overridePlatformDefaultLocation: recoveryErrorLocation != null,
+    onException: (_, state, router) {
+      if (state.uri.toString() == AppRoutes.login) return;
+      router.go(AppRoutes.login);
+    },
     routes: [
       // --- Splash ---
       GoRoute(
@@ -188,9 +152,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.privacyPolicy,
         pageBuilder: (_, state) => _fadePage(
-            state,
-            const _PlaceholderScreen(
-                title: 'Política de Privacidade')),
+          state,
+          const _PlaceholderScreen(title: 'Política de Privacidade'),
+        ),
       ),
 
       GoRoute(
@@ -202,68 +166,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   );
 });
 
-/// Bridges Riverpod auth state -> GoRouter refresh + redirect.
-class _RouterNotifier extends ChangeNotifier {
-  _RouterNotifier(this._ref) {
-    _ref.listen(authFlowStateProvider, (_, __) => notifyListeners());
-  }
-
-  final Ref _ref;
-
-  String? redirect(BuildContext context, GoRouterState state) {
-    final authFlowState = _ref.read(authFlowStateProvider);
-    final path = state.matchedLocation;
-
-    if (_hasExpiredRecoveryLinkParams(state.uri)) {
-      return path == AppRoutes.passwordRecoveryLinkExpired
-          ? null
-          : AppRoutes.passwordRecoveryLinkExpired;
-    }
-
-    // Splash manages its own navigation — never redirect away from it.
-    if (path == AppRoutes.splash) return null;
-    if (path == AppRoutes.flow) return null;
-    if (path == AppRoutes.passwordRecoveryLinkExpired) return null;
-
-    final isGuestRoute = path == AppRoutes.login ||
-        path == AppRoutes.register ||
-        path == AppRoutes.recoverPassword;
-    final isOnboardingRoute = path == AppRoutes.onboarding ||
-        path == AppRoutes.onboardingIndividual ||
-        path == AppRoutes.onboardingCnpj ||
-        path == AppRoutes.onboardingAgency ||
-        path == AppRoutes.onboardingLegalRep;
-    final isAppRoute = path == AppRoutes.hub ||
-        path == AppRoutes.regions;
-
-    // /email-verification só é válida quando o notifier está em AuthEmailUnconfirmed.
-    if (path == AppRoutes.emailVerification) {
-      final authState = _ref.read(authNotifierProvider);
-      if (authState is AuthEmailUnconfirmed) return null;
-      return AppRoutes.flow;
-    }
-
-    if (path == AppRoutes.updatePassword &&
-        authFlowState != AuthFlowState.recovery) {
-      return AppRoutes.flow;
-    }
-
-    if (isGuestRoute && authFlowState != AuthFlowState.unauthenticated) {
-      return AppRoutes.flow;
-    }
-
-    if (isOnboardingRoute &&
-        authFlowState != AuthFlowState.onboardingRequired) {
-      return AppRoutes.flow;
-    }
-
-    if (isAppRoute && authFlowState != AuthFlowState.authenticated) {
-      return AppRoutes.flow;
-    }
-
-    return null;
-  }
-}
+// ---------------------------------------------------------------------------
+// Placeholder screen (legal / no-connection routes)
+// ---------------------------------------------------------------------------
 
 class _PlaceholderScreen extends StatelessWidget {
   const _PlaceholderScreen({required this.title});
