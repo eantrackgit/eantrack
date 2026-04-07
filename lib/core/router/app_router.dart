@@ -57,6 +57,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: recoveryErrorLocation ?? AppRoutes.splash,
     overridePlatformDefaultLocation: recoveryErrorLocation != null,
     onException: (_, state, router) {
+      // Recovery links with expired/invalid tokens land here when GoRouter
+      // fails to parse the URL fragment (e.g. #error=access_denied&error_code=otp_expired
+      // has no leading slash and matches no route). Check both the router URI
+      // and the raw browser URL to catch all fragment-encoding variants.
+      if (RecoveryLinkParser.hasExpiredParams(state.uri) ||
+          RecoveryLinkParser.hasExpiredParams(Uri.base)) {
+        router.go(AppRoutes.passwordRecoveryLinkExpired);
+        return;
+      }
       if (state.uri.toString() == AppRoutes.login) return;
       router.go(AppRoutes.login);
     },

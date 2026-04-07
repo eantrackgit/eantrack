@@ -106,6 +106,11 @@ class AuthRepository {
         redirectTo: AppConfig.passwordResetRedirectUrl,
       );
     } on AuthException catch (e) {
+      if (_isRateLimitError(e.message)) {
+        throw const AuthAppException(
+          'Já enviamos um link recentemente.\n\nPara sua segurança, aguarde alguns minutos antes de solicitar outro.',
+        );
+      }
       throw AuthAppException(_mapAuthError(e.message));
     } catch (e) {
       if (e is AppException) rethrow;
@@ -252,6 +257,11 @@ class AuthRepository {
         hasSamePasswordMessage;
   }
 
+  bool _isRateLimitError(String message) {
+    final normalized = message.toLowerCase();
+    return normalized.contains('rate limit') || normalized.contains('too many');
+  }
+
   String _mapAuthError(String message) {
     final normalized = message.toLowerCase();
 
@@ -272,7 +282,7 @@ class AuthRepository {
         normalized.contains('already registered')) {
       return 'Este e-mail ja esta em uso.';
     }
-    if (normalized.contains('rate limit') || normalized.contains('too many')) {
+    if (_isRateLimitError(normalized)) {
       return 'Muitas tentativas. Aguarde antes de tentar novamente.';
     }
     if (normalized.contains('network') || normalized.contains('timeout')) {

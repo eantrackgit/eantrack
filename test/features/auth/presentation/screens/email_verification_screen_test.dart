@@ -9,8 +9,7 @@ void main() {
     final repo = MockAuthRepository();
     final notifier = TestAuthNotifier(
       repo,
-      const AuthEmailUnconfirmed(
-          email: 'user@test.com', password: 'StrongPass1'),
+      const AuthEmailUnconfirmed(email: 'user@test.com'),
     );
 
     await tester.pumpWidget(
@@ -22,6 +21,6 @@ void main() {
     );
 
     expect(find.text('Confirme sua conta'), findsOneWidget);
-    expect(find.text('Reenviar e-mail'), findsOneWidget);
+    expect(find.text('Reenviar'), findsOneWidget);
   });
 }

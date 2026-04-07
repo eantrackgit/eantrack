@@ -74,11 +74,13 @@ Widget buildTestable({
   required Widget child,
   required AuthRepository repository,
   required TestAuthNotifier notifier,
+  List<Override> overrides = const [],
 }) {
   return ProviderScope(
     overrides: [
       authRepositoryProvider.overrideWithValue(repository),
       authNotifierProvider.overrideWith((ref) => notifier),
+      ...overrides,
     ],
     child: DefaultAssetBundle(
       bundle: FakeAssetBundle(),

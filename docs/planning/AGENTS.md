@@ -143,3 +143,46 @@ Scaffold(
 - Comentários/explicações em PT-BR (apenas quando necessário)
 - Sem sumário ao final — o código já é a entrega
 - Máximo 3 arquivos por task (DEC-011)
+
+## REGRA OPERACIONAL CRÍTICA — NÃO EXECUTAR COMANDOS PESADOS
+
+O ambiente atual apresenta travamento/instabilidade ao executar comandos locais pesados de validação.
+
+### PROIBIDO EXECUTAR SEM AUTORIZAÇÃO EXPLÍCITA
+NÃO executar automaticamente:
+- `dart format`
+- `flutter format`
+- `flutter analyze`
+- `flutter test`
+- `flutter pub get`
+- `flutter build`
+- qualquer comando de validação global ou demorado
+
+### REGRA
+O agente deve:
+1. implementar apenas as alterações solicitadas
+2. informar quais arquivos foram alterados
+3. descrever objetivamente o que foi feito
+4. encerrar a entrega SEM rodar validações locais automáticas
+
+### EXCEÇÃO
+Só executar qualquer comando se o usuário pedir explicitamente no prompt atual.
+
+Exemplos de autorização explícita:
+- "rode o analyze"
+- "pode executar os testes"
+- "pode formatar"
+- "valide localmente"
+
+Se não houver autorização explícita, assumir sempre:
+**NÃO RODAR NENHUM COMANDO.**
+
+### FORMATO DE ENTREGA ESPERADO
+Ao finalizar uma task, responder apenas com:
+- arquivos alterados
+- resumo objetivo da implementação
+- possíveis pontos de atenção
+- confirmação de que NÃO executou comandos locais
+
+### OBJETIVO
+Preservar fluidez, evitar travamentos e impedir loops improdutivos no ambiente.

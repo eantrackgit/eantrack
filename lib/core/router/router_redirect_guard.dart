@@ -24,7 +24,10 @@ class RouterRedirectGuard extends ChangeNotifier {
     final authFlowState = _ref.read(authFlowStateProvider);
     final path = state.matchedLocation;
 
-    if (RecoveryLinkParser.hasExpiredParams(state.uri)) {
+    // With PathUrlStrategy the browser fragment (#error=...) is not part of
+    // state.uri. Fall back to Uri.base so the redirect catches both formats.
+    if (RecoveryLinkParser.hasExpiredParams(state.uri) ||
+        RecoveryLinkParser.hasExpiredParams(Uri.base)) {
       return path == AppRoutes.passwordRecoveryLinkExpired
           ? null
           : AppRoutes.passwordRecoveryLinkExpired;

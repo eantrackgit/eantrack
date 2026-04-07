@@ -320,7 +320,7 @@ class _EmailVerificationScreenState
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
-              child: _ResendButton(
+              child: ResendCooldownButton(
                 readyLabel: 'Reenviar',
                 cooldown: cooldown,
                 isLoading: _resendLoading,
@@ -652,13 +652,17 @@ class _PasswordModalState extends ConsumerState<_PasswordModal> {
 
 class _ResendButton extends StatefulWidget {
   const _ResendButton({
+    required this.readyLabel,
     required this.cooldown,
     required this.isLoading,
+    required this.lockedLabelBuilder,
     required this.onPressed,
   });
 
-  final EmailCooldownState cooldown;
+  final String readyLabel;
+  final ResendCooldownState cooldown;
   final bool isLoading;
+  final String Function(Duration remaining) lockedLabelBuilder;
   final VoidCallback? onPressed;
 
   @override
@@ -690,7 +694,7 @@ class _ResendButtonState extends State<_ResendButton>
     final progress = locked
         ? 1.0 -
             (widget.cooldown.remainingLock.inMilliseconds /
-                EmailCooldownState.lockDuration.inMilliseconds)
+                widget.cooldown.lockDuration.inMilliseconds)
         : 0.0;
 
     final isActive = locked || widget.isLoading;

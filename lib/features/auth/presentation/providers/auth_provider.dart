@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import '../../../../core/error/app_exception.dart';
 import '../../data/auth_repository.dart';
 import '../../data/password_history_service.dart';
+import '../../data/password_recovery_cooldown_storage.dart';
 import '../../domain/auth_flow_state.dart';
 import '../../domain/auth_state.dart';
 
@@ -26,6 +27,10 @@ final authRepositoryProvider = Provider<AuthRepository>(
     client: ref.read(supabaseClientProvider),
     passwordHistoryService: ref.read(passwordHistoryServiceProvider),
   ),
+);
+
+final passwordRecoveryCooldownStorageProvider = Provider<CooldownStorage>(
+  (_) => createCooldownStorage(),
 );
 
 /// Raw Supabase auth stream — User? (null = not logged in).
@@ -275,8 +280,10 @@ class AuthRecoveryContextNotifier extends StateNotifier<bool> {
 // Resend cooldown providers (rate limiting)
 // ---------------------------------------------------------------------------
 
-/// Tracks resend attempts and cooldown windows in memory only.
-/// This survives widget rebuilds while the screen stays mounted.
+/// Shared resend cooldown state model.
+///
+/// Email verification keeps this state only in memory.
+/// Password recovery optionally restores/persists `lockedUntil` externally.
 final emailCooldownProvider = StateNotifierProvider.autoDispose<
     ResendCooldownNotifier, ResendCooldownState>(
   (_) => ResendCooldownNotifier(
@@ -287,10 +294,15 @@ final emailCooldownProvider = StateNotifierProvider.autoDispose<
 
 final passwordRecoveryCooldownProvider = StateNotifierProvider.autoDispose<
     ResendCooldownNotifier, ResendCooldownState>(
-  (_) => ResendCooldownNotifier(
+  (ref) => ResendCooldownNotifier(
     lockDuration: const Duration(minutes: 15),
+    storage: ref.read(passwordRecoveryCooldownStorageProvider),
+    storageKey: passwordRecoveryCooldownStorageKey,
   ),
 );
+
+const passwordRecoveryCooldownStorageKey =
+    'auth.password_recovery.locked_until_ms';
 
 class ResendCooldownState {
   const ResendCooldownState({
@@ -310,6 +322,8 @@ class ResendCooldownState {
     return DateTime.now().isBefore(lockedUntil!);
   }
 
+  bool get hasStoredLock => lockedUntil != null;
+
   Duration get remainingLock {
     if (!isLocked) return Duration.zero;
     return lockedUntil!.difference(DateTime.now());
@@ -325,28 +339,82 @@ class ResendCooldownNotifier extends StateNotifier<ResendCooldownState> {
   ResendCooldownNotifier({
     required Duration lockDuration,
     int? maxAttempts,
+    CooldownStorage? storage,
+    String? storageKey,
   }) : _lockDuration = lockDuration,
        _maxAttempts = maxAttempts,
+       _storage = storage,
+       _storageKey = storageKey,
        super(
          ResendCooldownState(
            lockDuration: lockDuration,
            maxAttempts: maxAttempts,
-         ),
-       );
+          ),
+       ) {
+    restorePersistedLock();
+  }
+
+  final CooldownStorage? _storage;
+  final String? _storageKey;
 
   final Duration _lockDuration;
   final int? _maxAttempts;
 
+  void restorePersistedLock() {
+    final key = _storageKey;
+    final storage = _storage;
+    if (key == null || storage == null) return;
+
+    final milliseconds = storage.readInt(key);
+    if (milliseconds == null) return;
+
+    final lockedUntil = DateTime.fromMillisecondsSinceEpoch(milliseconds);
+    if (!DateTime.now().isBefore(lockedUntil)) {
+      storage.remove(key);
+      if (state.lockedUntil != null) {
+        state = ResendCooldownState(
+          lockDuration: _lockDuration,
+          maxAttempts: _maxAttempts,
+        );
+      }
+      return;
+    }
+
+    state = ResendCooldownState(
+      attempts: state.attempts,
+      maxAttempts: _maxAttempts,
+      lockDuration: _lockDuration,
+      lockedUntil: lockedUntil,
+    );
+  }
+
   void onResendSuccess() {
+    final lockedUntil = DateTime.now().add(_lockDuration);
+    final key = _storageKey;
+
+    if (key != null) {
+      _storage?.writeInt(key, lockedUntil.millisecondsSinceEpoch);
+    }
+
     state = ResendCooldownState(
       attempts: state.attempts + 1,
       maxAttempts: _maxAttempts,
       lockDuration: _lockDuration,
-      lockedUntil: DateTime.now().add(_lockDuration),
+      lockedUntil: lockedUntil,
     );
   }
 
+  void clearExpiredLockIfNeeded() {
+    if (state.lockedUntil == null || state.isLocked) return;
+    reset();
+  }
+
   void reset() {
+    final key = _storageKey;
+    if (key != null) {
+      _storage?.remove(key);
+    }
+
     state = ResendCooldownState(
       lockDuration: _lockDuration,
       maxAttempts: _maxAttempts,
