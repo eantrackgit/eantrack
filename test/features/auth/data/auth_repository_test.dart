@@ -1,5 +1,6 @@
 import 'package:eantrack/core/error/app_exception.dart';
 import 'package:eantrack/features/auth/data/auth_repository.dart';
+import 'package:eantrack/features/auth/data/password_history_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -8,9 +9,12 @@ class MockSupabaseClient extends Mock implements SupabaseClient {}
 
 class MockGoTrueClient extends Mock implements GoTrueClient {}
 
+class MockPasswordHistoryService extends Mock implements PasswordHistoryService {}
+
 void main() {
   late SupabaseClient client;
   late GoTrueClient auth;
+  late PasswordHistoryService passwordHistoryService;
   late AuthRepository repository;
 
   const email = 'user@test.com';
@@ -28,7 +32,11 @@ void main() {
   setUp(() {
     client = MockSupabaseClient();
     auth = MockGoTrueClient();
-    repository = AuthRepository(client);
+    passwordHistoryService = MockPasswordHistoryService();
+    repository = AuthRepository(
+      client: client,
+      passwordHistoryService: passwordHistoryService,
+    );
     when(() => client.auth).thenReturn(auth);
   });
 

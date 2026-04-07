@@ -1,6 +1,6 @@
 import 'package:eantrack/features/auth/domain/auth_state.dart';
 import 'package:eantrack/features/auth/presentation/screens/register_screen.dart';
-import 'package:eantrack/shared/widgets/auth_scaffold.dart';
+import 'package:eantrack/shared/widgets/password_rule_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

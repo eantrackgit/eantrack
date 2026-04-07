@@ -3,17 +3,29 @@ import 'package:eantrack/features/auth/presentation/providers/auth_provider.dart
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeCooldownStorage implements CooldownStorage {
-  final Map<String, int> values = <String, int>{};
+  final Map<String, int> intValues = <String, int>{};
+  final Map<String, String> stringValues = <String, String>{};
 
   @override
-  int? readInt(String key) => values[key];
+  int? readInt(String key) => intValues[key];
 
   @override
-  void remove(String key) => values.remove(key);
+  String? readString(String key) => stringValues[key];
 
   @override
   void writeInt(String key, int value) {
-    values[key] = value;
+    intValues[key] = value;
+  }
+
+  @override
+  void writeString(String key, String value) {
+    stringValues[key] = value;
+  }
+
+  @override
+  void remove(String key) {
+    intValues.remove(key);
+    stringValues.remove(key);
   }
 }
 
