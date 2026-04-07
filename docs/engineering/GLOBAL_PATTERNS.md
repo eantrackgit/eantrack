@@ -157,9 +157,12 @@ Icons.visibility_off
 
 // PROIBIDO:
 CupertinoIcons.mail            // ❌
-FontAwesomeIcons.lock          // ❌
+FontAwesomeIcons.lock          // ❌ (exceto: FontAwesomeIcons.squareGooglePlus no botão social)
 CustomIcons.something          // ❌ (salvo SVG local aprovado)
 ```
+
+### Exceção aprovada
+`FontAwesomeIcons.squareGooglePlus` — permitido exclusivamente no botão "Entrar com Google" (login e register). Nenhum outro ícone FontAwesome.
 
 ### Se precisar ícone customizado
 1. Criar SVG e salvar em `assets/icons/`
@@ -236,7 +239,11 @@ AppException (sealed, abstract)
 │   ├── InvalidCredentialsException
 │   ├── EmailNotConfirmedException
 │   ├── EmailAlreadyInUseException
-│   └── WeakPasswordException
+│   ├── WeakPasswordException
+│   ├── SamePasswordException
+│   ├── PasswordReusedException
+│   ├── PasswordReuseCheckException
+│   └── PasswordHistoryRegisterException
 ├── NetworkException
 ├── ServerException
 └── ValidationException

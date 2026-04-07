@@ -28,6 +28,12 @@
 - DESIGN_SYSTEM.md ✅
 - GLOBAL_PATTERNS.md ✅
 - SCREEN_SPECS.md ✅
+- docs/auth/password_history.md ✅
+- docs/web/cache_and_deploy_strategy.md ✅
+- docs/engineering/app_versioning.md ✅
+- docs/engineering/ENGINEERING_PRINCIPLES.md ✅
+- docs/ux/UX_GUIDELINES.md ✅
+- docs/deploy/DEPLOY_GUARDRAILS.md ✅
 
 ### Código — Fundação
 - pubspec.yaml (+riverpod, +crypto, +mocktail) ✅
@@ -66,6 +72,8 @@
 - lib/features/auth/presentation/screens/register_screen.dart ✅
 - lib/features/auth/presentation/screens/email_verification_screen.dart ✅
 - lib/features/auth/presentation/screens/recover_password_screen.dart ✅
+- lib/features/auth/presentation/screens/update_password_screen.dart ✅
+- lib/features/auth/presentation/screens/password_recovery_link_expired_screen.dart ✅
 
 ### Onboarding — início (Sessão 6, 2026-03-30)
 - lib/features/onboarding/presentation/screens/choose_mode_screen.dart ✅ (ONB-002)
@@ -113,8 +121,8 @@ ONB-009  LegalRepresentativeScreen (UI)
 
 ## Próximo passo exato
 
-Auth flow completo e validado em produção.
-Continuar: Redes (NET-001..004), Categorias (CAT-001..003), PDVs (PDV-001..004).
+Auth flow completo, validado e com todas as regressões visuais corrigidas (2026-04-06).
+Continuar: Onboarding (ONB-004..009) → Hub → Regiões → Redes → Categorias → PDVs.
 
 ---
 
@@ -139,17 +147,17 @@ Continuar: Redes (NET-001..004), Categorias (CAT-001..003), PDVs (PDV-001..004).
 
 ## Qualidade do Projeto
 
-**Nota atual: 9.6 / 10** *(2026-04-05)*
+**Nota atual: 9.7 / 10** *(2026-04-06)*
 
 | Área | Nota |
 |------|------|
-| Arquitetura | 9.7 |
+| Arquitetura | 9.8 |
 | Auth | 9.8 |
-| Segurança | 9.5 |
-| UX | 9.6 |
-| UI | 9.5 |
-| Consistência (código + docs) | 9.5 |
-| Documentação | 9.5 |
+| Segurança | 9.6 |
+| UX | 9.7 |
+| UI | 9.7 |
+| Consistência (código + docs) | 9.7 |
+| Documentação | 9.7 |
 
 ---
 

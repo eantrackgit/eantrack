@@ -7,7 +7,7 @@ import '../../../../shared/theme/app_text_styles.dart';
 import '../../../../shared/utils/async_action.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
-import '../../../../shared/widgets/auth_scaffold.dart';
+import '../../../../shared/widgets/app_error_box.dart';
 import '../../domain/region_model.dart';
 import '../../domain/region_state.dart';
 import '../providers/region_provider.dart';

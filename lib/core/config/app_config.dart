@@ -42,12 +42,33 @@ class AppConfig {
     return host == 'localhost' || host == '127.0.0.1';
   }
 
-  static String get passwordResetRedirectUrl {
-    if (kIsWeb && isLocalhost) {
-      return '${Uri.base.origin}/#/update-password';
+  static List<String> get missingRequiredKeys {
+    final missing = <String>[];
+    if (supabaseUrl.isEmpty) missing.add('SUPABASE_URL');
+    if (supabaseAnonKey.isEmpty) missing.add('SUPABASE_ANON_KEY');
+    return missing;
+  }
+
+  static String get _normalizedAppOrigin =>
+      appOrigin.replaceFirst(RegExp(r'/$'), '');
+
+  static String get effectiveAppOrigin {
+    if (kIsWeb) {
+      if (_normalizedAppOrigin.isNotEmpty) {
+        return _normalizedAppOrigin;
+      }
+      return Uri.base.origin;
     }
 
-    return '$appOrigin/#/update-password';
+    return _normalizedAppOrigin;
+  }
+
+  static String get passwordResetRedirectUrl {
+    if (effectiveAppOrigin.isEmpty) {
+      return '';
+    }
+
+    return '$effectiveAppOrigin/#/update-password';
   }
 
   static bool get isConfigured =>

@@ -72,7 +72,7 @@
 - [ ] Logo + "Smart Tracking" no topo
 - [ ] 2 campos: Email + Senha (com eye toggle)
 - [ ] Botão "Entrar" (primary, loading interno)
-- [ ] Divider "ou" + Botão Google (vermelho, UI only)
+- [ ] Divider "ou" + Botão Google (vermelho, funcional via signInWithGoogle)
 - [ ] Link "Esqueceu sua senha?" → /recover-password
 - [ ] Botão "Criar conta" (outlined) → /register
 - [ ] Biometria (ícone + texto, UI only)
@@ -81,13 +81,15 @@
 - [ ] Erro de auth: ErrorBanner visível
 
 ### Register
-- [ ] TabBar (Informações ativa, demais placeholder)
-- [ ] 4 campos: Nome, Email, Senha, Confirmar senha
-- [ ] Checklist de força de senha (tempo real, 3 items)
-- [ ] Email debounce check (800ms, "Verificando..." → resultado)
-- [ ] Botões: Cancelar + Avançar
+- [ ] 3 campos: Email, Senha, Confirmar senha
+- [ ] Checklist de força de senha (tempo real: maiúscula, minúscula, número, 8+ chars, símbolo, confirmação)
+- [ ] Email debounce check (2s, "Verificando..." → disponível/em uso)
+- [ ] Checkbox aceite Termos + Política de Privacidade
+- [ ] Botão Google (vermelho, funcional via signInWithGoogle)
+- [ ] Botões: Voltar + Criar conta
+- [ ] "Criar conta" disabled enquanto campos inválidos ou email não disponível
 - [ ] Validação apenas no submit
-- [ ] Loading no botão Avançar
+- [ ] Loading no botão Criar conta
 
 ### Email Verification
 - [ ] Título dinâmico: "Confirme sua conta" / "Conta Confirmada!"

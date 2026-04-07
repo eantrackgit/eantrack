@@ -88,22 +88,23 @@ Usuário clica "Avançar" em `/register` (tab Informações).
 1. setState(() => _submitted = true)
 2. _formKey.currentState!.validate()
    └─ se false → PARA
-3. ref.read(authNotifierProvider.notifier).signUp(email, password, name)
+3. ref.read(authNotifierProvider.notifier).signUp(email, password)
 4. AuthNotifier:
    a. state = AuthLoading()
-   b. await _repository.signUp(email, password, name)
+   b. await _repository.signUp(email, password)
 5. AuthRepository.signUp():
-   a. // Check email disponível
-      final hash = sha256.convert(utf8.encode(email.toLowerCase())).toString()
+   a. // Validar senha (regras locais)
+      _validatePassword(password)
+   b. // Check email disponível
+      final hash = sha256.convert(utf8.encode(email.trim().toLowerCase())).toString()
       final exists = await _client.rpc('email_code_exists', params: {'p_hash': hash})
       se exists == true → throw EmailAlreadyInUseException()
-   b. // Criar conta
+   c. // Criar conta
       final response = await _client.auth.signUp(
-        email: email,
+        email: normalizedEmail,
         password: password,
-        data: {'display_name': name},
       )
-   c. // Registrar hash
+   d. // Registrar hash
       await _client.rpc('insert_email_code', params: {
         'p_hash': hash,
         'p_user_id': response.user!.id,
@@ -126,7 +127,6 @@ Usuário clica "Avançar" em `/register` (tab Informações).
 ### Validações de campo (executam só quando `_submitted == true`)
 | Campo | Validators (em ordem) |
 |-------|----------------------|
-| Nome | `isEmpty` → "Informe seu nome" / `length < 2` → "Nome deve ter pelo menos 2 caracteres" |
 | Email | `isEmpty` → "Informe seu e-mail" / `!RegExp(emailPattern).hasMatch` → "E-mail inválido" |
 | Senha | `isEmpty` → "Informe uma senha" / `length < 8` → "Mínimo 8 caracteres" / `!RegExp(r'[A-Z]')` → "Inclua uma letra maiúscula" / `!RegExp(r'[a-z]')` → "Inclua uma letra minúscula" |
 | Confirmar | `isEmpty` → "Confirme sua senha" / `!= senha` → "As senhas não coincidem" |
@@ -139,7 +139,7 @@ Timer? _emailDebounce;
 // onChanged do campo email:
 onChanged: (value) {
   _emailDebounce?.cancel();
-  _emailDebounce = Timer(Duration(milliseconds: 800), () {
+  _emailDebounce = Timer(const Duration(seconds: 2), () {
     _checkEmailAvailability(value);
   });
 }
@@ -180,7 +180,7 @@ _pollingSub = Stream.periodic(const Duration(seconds: 3)).listen((_) async {
   if (_status == EmailVerificationStatus.checking) return; // evita conflito
   
   try {
-    final confirmed = await ref.read(authRepositoryProvider).isEmailConfirmed(email);
+    final confirmed = await ref.read(authRepositoryProvider).isEmailConfirmed();
     if (confirmed && mounted) {
       _onEmailConfirmed();
     }
@@ -251,16 +251,11 @@ void _onEmailConfirmed() {
 
 **AuthRepository.isEmailConfirmed:**
 ```dart
-Future<bool> isEmailConfirmed(String email) async {
+Future<bool> isEmailConfirmed() async {
   try {
-    final response = await _client.rpc(
-      'is_email_confirmed_status',
-      params: {'p_email': email},
-    );
-    // response é jsonb — extrair campo de confirmação
-    return response['confirmed'] == true;
-  } on PostgrestException catch (e) {
-    throw ServerException(e.message);
+    return (await _client.auth.getUser()).user?.emailConfirmedAt != null;
+  } catch (_) {
+    return false;
   }
 }
 ```

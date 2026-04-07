@@ -223,7 +223,11 @@ AppException (sealed)
 │   ├── InvalidCredentialsException
 │   ├── EmailNotConfirmedException
 │   ├── EmailAlreadyInUseException
-│   └── WeakPasswordException
+│   ├── WeakPasswordException
+│   ├── SamePasswordException
+│   ├── PasswordReusedException
+│   ├── PasswordReuseCheckException
+│   └── PasswordHistoryRegisterException
 ├── NetworkException
 ├── ServerException
 └── ValidationException

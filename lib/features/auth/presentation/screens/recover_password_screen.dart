@@ -140,7 +140,7 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
                       trailingIcon: const Icon(
                         Icons.send,
                         size: 16,
-                        color: AppColors.info,
+                        color: AppColors.secondaryBackground,
                       ),
                       onPressed: _action.isLoading ? null : _submit,
                       isLoading: _action.isLoading,

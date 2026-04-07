@@ -191,11 +191,11 @@ class _AppButtonState extends State<AppButton> {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.secondary,
             disabledBackgroundColor: AppColors.secondary,
-            foregroundColor: AppColors.info,
+            foregroundColor: AppColors.secondaryBackground,
             shape: RoundedRectangleBorder(borderRadius: AppRadius.smAll),
             elevation: 0,
           ),
-          child: _content(AppColors.info),
+          child: _content(AppColors.secondaryBackground),
         );
 
       case AppButtonVariant.secondary:
@@ -217,11 +217,11 @@ class _AppButtonState extends State<AppButton> {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.actionBlue,
             disabledBackgroundColor: AppColors.actionBlue,
-            foregroundColor: AppColors.info,
+            foregroundColor: AppColors.secondaryBackground,
             shape: RoundedRectangleBorder(borderRadius: AppRadius.smAll),
             elevation: 0,
           ),
-          child: _content(AppColors.info),
+          child: _content(AppColors.secondaryBackground),
         );
 
       case AppButtonVariant.social:
@@ -230,11 +230,11 @@ class _AppButtonState extends State<AppButton> {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
             disabledBackgroundColor: AppColors.primary,
-            foregroundColor: AppColors.info,
+            foregroundColor: AppColors.secondaryBackground,
             shape: RoundedRectangleBorder(borderRadius: AppRadius.smAll),
             elevation: 0,
           ),
-          child: _content(AppColors.info),
+          child: _content(AppColors.secondaryBackground),
         );
     }
   }

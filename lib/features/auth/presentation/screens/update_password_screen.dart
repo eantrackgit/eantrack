@@ -186,7 +186,7 @@ class _UpdatePasswordScreenState
                         : const Icon(
                             Icons.arrow_forward_ios,
                             size: 14,
-                            color: AppColors.info,
+                            color: AppColors.secondaryBackground,
                           ),
                   ),
                 ),

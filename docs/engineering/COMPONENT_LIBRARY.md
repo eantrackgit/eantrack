@@ -10,7 +10,7 @@
 
 | Componente | Arquivo | Variantes / Props chave |
 |-----------|---------|------------------------|
-| `AppButton` | `app_button.dart` | Variantes: `primary`, `outlined`, `social`. Props: `label`, `isLoading`, `onPressed`, `leadingIcon`, `trailingIcon`. Loading via spinner interno no botão — nunca overlay global. |
+| `AppButton` | `app_button.dart` | Variantes: `primary` (navy), `secondary`/`outlined` (outlined navy), `action` (azul), `social` (vermelho). Props: `label`, `isLoading`, `onPressed`, `leadingIcon`, `trailingIcon`. Loading via spinner interno no botão — nunca overlay global. |
 | `AppTextField` | `app_text_field.dart` | label floating, obscure toggle, validator support, `AppValidators` embutidos |
 | `AppCard` | `app_card.dart` | `child`, `color?`, `padding?`, `onTap?`, `selected?`, `borderColor?`. Com ripple quando `onTap` definido. |
 | `AppErrorBox` | `app_error_box.dart` | Caixa de erro inline com ícone + texto PT-BR + shake animation. Usar acima do botão primary em formulários. |

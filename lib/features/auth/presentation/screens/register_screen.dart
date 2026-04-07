@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/error/app_exception.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../shared/shared.dart';
 import '../../domain/auth_state.dart';
@@ -96,7 +97,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     } catch (e) {
       await _showActionErrorDialog(
         title: 'Falha no cadastro com Google',
-        message: e.toString(),
+        message: e is AppException
+            ? e.message
+            : 'Falha ao entrar com Google. Tente novamente.',
         isGoogleFlow: true,
       );
     }
@@ -123,7 +126,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     } catch (e) {
       await _showActionErrorDialog(
         title: 'Falha ao criar conta',
-        message: e.toString(),
+        message: e is AppException
+            ? e.message
+            : 'Erro ao criar conta. Tente novamente.',
       );
     }
   }
@@ -455,7 +460,7 @@ class _TermsRow extends StatelessWidget {
               value: accepted,
               onChanged: onChanged,
               activeColor: AppColors.primary,
-              checkColor: AppColors.info,
+              checkColor: AppColors.secondaryBackground,
               side: BorderSide(
                 color: hasError ? AppColors.error : AppColors.accent1,
               ),
@@ -538,7 +543,7 @@ class _GoogleButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           disabledBackgroundColor: AppColors.primary,
-          foregroundColor: AppColors.info,
+          foregroundColor: AppColors.secondaryBackground,
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: AppRadius.smAll),
         ),
@@ -548,7 +553,7 @@ class _GoogleButton extends StatelessWidget {
                 height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  color: AppColors.info,
+                  color: AppColors.secondaryBackground,
                 ),
               )
             : Row(
@@ -558,13 +563,13 @@ class _GoogleButton extends StatelessWidget {
                   const FaIcon(
                     FontAwesomeIcons.squareGooglePlus,
                     size: 22,
-                    color: AppColors.info,
+                    color: AppColors.secondaryBackground,
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Text(
                     'Entrar com Google',
                     style: AppTextStyles.labelLarge.copyWith(
-                      color: AppColors.info,
+                      color: AppColors.secondaryBackground,
                       fontWeight: FontWeight.w500,
                     ),
                   ),

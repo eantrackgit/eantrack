@@ -43,6 +43,8 @@ class _MissingConfigApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final missingKeys = AppConfig.missingRequiredKeys;
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
@@ -50,7 +52,7 @@ class _MissingConfigApp extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Text(
-              'SUPABASE_ANON_KEY nao configurado.\n\n'
+              'Configuracao obrigatoria ausente: ${missingKeys.join(', ')}.\n\n'
               'Execute com:\n\n'
               'flutter run \\\n'
               '  --dart-define=SUPABASE_URL=https://<id>.supabase.co \\\n'

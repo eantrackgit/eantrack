@@ -89,8 +89,8 @@ params: { "p_password": "string", "p_keep_last": 3 }
 
 ### ERRO 3 — Parse incorreto da RPC
 
-- **Problema:** RPC pode retornar `bool`, `String`, `Map` ou `null`
-- **Correção:** `_extractAllowedFromCheckResult` com parser robusto para todos os tipos
+- **Problema:** RPC pode retornar `bool`, `num`, `String`, `Map`, `List` ou `null`
+- **Correção:** `PasswordReuseCheckResult.fromRpcResponse` em `password_reuse_parser.dart` com parser robusto para todos os tipos
 
 ### ERRO 4 — Diagnóstico enganoso
 
@@ -133,6 +133,8 @@ await registerRpc(newPassword);  // passar por parâmetro no mesmo fluxo
 
 | Arquivo | Papel |
 |---|---|
-| `lib/features/auth/data/auth_repository.dart` | `changePassword`, `_extractAllowedFromCheckResult`, `_isSamePasswordError` |
-| `lib/features/auth/presentation/screens/update_password_screen.dart` | Tela que chama `changePassword` |
+| `lib/features/auth/data/auth_repository.dart` | `changePassword`, `_isSamePasswordError` |
+| `lib/features/auth/data/password_history_service.dart` | `ensureNewPasswordCanBeUsed`, `registerPasswordHistory` |
+| `lib/features/auth/data/password_reuse_parser.dart` | `PasswordReuseCheckResult.fromRpcResponse` — parser defensivo |
+| `lib/features/auth/presentation/screens/update_password_screen.dart` | Tela que chama `authRepositoryProvider.changePassword` |
 | `lib/core/error/app_exception.dart` | Definição das exceções |

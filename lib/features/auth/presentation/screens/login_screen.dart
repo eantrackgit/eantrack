@@ -204,7 +204,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               leadingIcon: const FaIcon(
                 FontAwesomeIcons.squareGooglePlus,
                 size: 20,
-                color: AppColors.actionBlue,
+                color: AppColors.secondaryBackground,
               ),
             ),
             const SizedBox(height: AppSpacing.xs),

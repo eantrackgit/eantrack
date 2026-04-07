@@ -8,6 +8,7 @@ Politica de versao manual: `docs/engineering/app_versioning.md`
 - `fvm` instalado
 - `ssh` e `scp` disponiveis na maquina
 - variaveis `SUPABASE_URL` e `SUPABASE_ANON_KEY`
+- `APP_ORIGIN` operacional e injetado pelo script como `https://operational.eantrack.com`
 - variaveis `HOSTINGER_USER` e `HOSTINGER_HOST`
 - opcional: `HOSTINGER_PORT` se a SSH da Hostinger nao usar a porta padrao
 
