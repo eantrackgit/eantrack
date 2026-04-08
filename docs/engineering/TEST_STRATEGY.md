@@ -1,5 +1,7 @@
 # EANTrack — Test Strategy
 
+> Documento prático. Foca no que funciona neste projeto.
+
 ---
 
 ## Pirâmide de Testes
@@ -17,154 +19,175 @@
 
 ---
 
-## 1. Unit Tests
+## 1. Repository Tests (Unit)
 
-### O que testar com unit tests:
-- Toda função em `AuthRepository` (signIn, signUp, resetPassword, etc.)
-- Validators (`validateEmail`, `validatePassword`, `validateCNPJ`, etc.)
-- Funções utilitárias migradas de `custom_functions.dart`
-- Lógica de cooldown de reenvio de e-mail
-- `UserFlowState.isOnboardingComplete` e outras computed properties
-- State transitions em Notifiers (via mock do repository)
+**NÃO usam Supabase real.** Foco: regra de negócio.
 
-### Padrão:
+### Padrão de mock:
+```dart
+// CORRETO — resposta simples e previsível
+when(() => client.from('table').select()).thenAnswer(
+  (_) async => <Map<String, dynamic>>[],
+);
+
+// PROIBIDO
+when(() => client.from('table').select()).thenReturn(Future.value([]));
+```
+
+### Regras:
+- Mockar apenas `SupabaseClient` — nunca conectar ao Supabase real
+- Usar `thenAnswer((_) async => data)` — nunca `thenReturn(Future)`
+- Evitar builders que implementam `Future` (ex: `FakePostgrestBuilder` problemático)
+- Evitar mocks complexos de `PostgrestBuilder` — preferir respostas diretas
+
+### Padrão de grupo:
 ```dart
 group('AuthRepository.signIn', () {
   test('retorna normalmente com credenciais válidas', () async { ... });
-  test('lança EmailNotConfirmedException quando e-mail não confirmado', () async { ... });
+  test('lança EmailNotConfirmedException quando não confirmado', () async { ... });
   test('lança AuthAppException para senha incorreta', () async { ... });
   test('lança AuthAppException para usuário inexistente', () async { ... });
 });
 ```
 
-### Mock:
-- `mocktail` para mock de `SupabaseClient` e `AuthRepository`
-- Nunca conectar ao Supabase real em unit tests
-
 ---
 
 ## 2. Widget Tests
 
-### O que testar com widget tests:
-- Cada tela renderiza sem erros (smoke test)
-- Campos de formulário exibem erros de validação corretamente
-- Botões estão habilitados/desabilitados nos estados corretos
-- Textos corretos para cada estado (Loading, Error, Empty, etc.)
-- Responsividade: renderiza em larguras diferentes (360, 600, 1200px)
+**NÃO depender de texto frágil ou layout rígido.**
 
-### Padrão:
+### Setup obrigatório:
 ```dart
 testWidgets('LoginScreen renderiza sem erro', (tester) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [authNotifierProvider.overrideWith(...)],
-      child: MaterialApp.router(routerConfig: testRouter),
+      child: MaterialApp(  // sempre MaterialApp wrapping
+        home: Scaffold(    // sempre Scaffold
+          body: LoginScreen(),
+        ),
+      ),
     ),
   );
   expect(find.byType(LoginScreen), findsOneWidget);
 });
-
-testWidgets('LoginScreen exibe erro de validação para e-mail inválido', (tester) async {
-  // ...
-});
 ```
 
-### Simulação de estados:
-- Override de providers com `ProviderScope.overrides`
-- `MockAuthNotifier` com estados pré-definidos
+### Requerimentos:
+- `MaterialApp` obrigatório no topo
+- `Scaffold` obrigatório como parent
+- Viewport adequado — usar `tester.binding.setSurfaceSize(Size(400, 800))`
+
+### Proibições:
+- NÃO depender de texto exato que pode mudar
+- NÃO depender de posicionamento rígido de elementos
+- NÃO quebrar por overflow visual — componentes devem usar `Flexible` / `ellipsis`
+
+### Assets (SVG):
+```dart
+// Posicionar FakeAssetBundle corretamente
+await tester.pumpWidget(
+  DefaultAssetBundle(
+    bundle: FakeAssetBundle(),
+    child: MaterialApp(home: MyScreen()),
+  ),
+);
+```
 
 ---
 
-## 3. Integration Tests
+## 3. Mocks — Regra Crítica
 
-### Fluxos a testar (obrigatórios antes de cada release):
+### CORRETO:
+```dart
+thenAnswer((_) async => data)           // async simples
+thenAnswer((_) async => null)           // retorno nulo
+thenAnswer((_) async => throw MyEx())   // exceção
+```
 
-#### Auth
-- [ ] Cadastro completo → verificação de e-mail → onboarding
-- [ ] Login com credenciais válidas → redirect correto
-- [ ] Login com senha errada → mensagem de erro correta
-- [ ] Esqueceu senha → recebe e-mail
-- [ ] Sessão expirada → redirect para login
-- [ ] Auto-login ao abrir app com sessão válida
-
-#### PDV (Fase 6)
-- [ ] Cadastro de PDV com CNPJ válido
-- [ ] Cadastro com CNPJ inválido → erro claro
-
-#### Produto (Fase 8)
-- [ ] Lançamento de produto completo
-- [ ] Edição de produto existente
+### PROIBIDO:
+```dart
+thenReturn(Future.value(data))          // nunca para async
+thenReturn(Future.error(e))             // nunca para async
+when() dentro de outro stub             // causa loop infinito
+```
 
 ---
 
-## 4. Cenários de Borda (obrigatórios em todos os módulos)
+## 4. Anti-Patterns Proibidos
 
-- [ ] Sem conexão com internet
-- [ ] Resposta lenta do servidor (timeout)
-- [ ] Campos em branco
-- [ ] Texto muito longo (overflow de UI)
-- [ ] Tela muito pequena (320px)
-- [ ] Tela muito larga (1920px)
-- [ ] Caracteres especiais em campos de texto
-- [ ] Múltiplos taps rápidos em botão (double submit)
-- [ ] Voltar no meio de um fluxo multi-etapa
+| Anti-pattern | Por quê |
+|---|---|
+| `thenReturn(Future.value(...))` | Causa erro de timing no Mocktail |
+| `when()` dentro de outro stub | Loop ou comportamento indefinido |
+| Expectativa de texto que não existe na UI | Testes frágeis, quebram por i18n/copy |
+| Testes acoplados a detalhes visuais | Quebram sem motivo a cada ajuste de layout |
+| Mocks complexos de `PostgrestBuilder` | Difíceis de manter, acoplados ao SDK |
+| Overflow visual não tratado | Widget tests falham sem motivo real |
 
 ---
 
-## 5. Checklist de Validação por Tela (Auth)
+## 5. Layout — Resiliência Obrigatória
+
+Testes **não devem quebrar por overflow visual**.
+
+Componentes devem ser resilientes:
+- Textos longos: `overflow: TextOverflow.ellipsis`
+- Colunas com conteúdo variável: `Flexible` ou `Expanded`
+- Nunca `SizedBox` com altura fixa em widgets reutilizáveis
+
+---
+
+## 6. Checklist de Validação por Tela (Auth)
 
 ### LoginScreen
-- [ ] Renderiza logo e campos corretamente
-- [ ] E-mail inválido: exibe "E-mail inválido"
-- [ ] Senha < 8 chars: exibe erro
-- [ ] Credenciais erradas: exibe mensagem de erro (não "Internal server error")
-- [ ] Loading state: botão desabilitado, spinner visível
-- [ ] Sucesso: navega para tela correta
-- [ ] Link "Esqueceu a senha" navega para RecoverPasswordScreen
-- [ ] Link "Criar conta" navega para RegisterScreen
-- [ ] Funciona em mobile (360px) e desktop (1200px)
+- [ ] Renderiza sem erro
+- [ ] E-mail inválido exibe erro de validação
+- [ ] Senha curta exibe erro de validação
+- [ ] Loading state: botão desabilitado
+- [ ] Erro de autenticação exibido no `AppErrorBox`
+- [ ] Links de navegação presentes
 
 ### RegisterScreen
 - [ ] Todos os campos obrigatórios validados
-- [ ] E-mail duplicado: mensagem "Este e-mail já está em uso"
 - [ ] Senhas diferentes: mensagem clara
-- [ ] Senha fraca: feedback em tempo real
-- [ ] Termos: checkbox obrigatório
 - [ ] Loading durante signup
-- [ ] Sucesso: navega para EmailVerificationScreen
+- [ ] Sucesso navega para EmailVerificationScreen
 
 ### EmailVerificationScreen
-- [ ] E-mail censored exibido corretamente
-- [ ] Botão reenvio desabilitado durante cooldown
-- [ ] Timer de cooldown exibido em HH:mm:ss
-- [ ] Máximo de tentativas respeitado
-- [ ] Animação de sucesso quando e-mail confirmado
-- [ ] Navega para onboarding após confirmação
-- [ ] Botão voltar navega para login
+- [ ] E-mail exibido (censurado)
+- [ ] Botão reenvio presente
+- [ ] Timer de cooldown visível
 
 ### RecoverPasswordScreen
 - [ ] Campo e-mail obrigatório
 - [ ] E-mail inválido: mensagem de erro
-- [ ] Sucesso: loading modal + redirect para login
-- [ ] Feedback adequado de que o e-mail foi enviado
+- [ ] Feedback de sucesso exibido
 
 ---
 
-## 6. Ferramentas
+## 7. Cenários de Borda (obrigatórios em todos os módulos)
+
+- [ ] Campos em branco
+- [ ] Texto muito longo (overflow de UI)
+- [ ] Múltiplos taps rápidos em botão (double submit)
+- [ ] Voltar no meio de fluxo multi-etapa
+- [ ] Tela pequena (360px largura)
+
+---
+
+## 8. Ferramentas
 
 | Ferramenta | Uso |
-|-----------|-----|
+|---|---|
 | `flutter_test` | Unit e widget tests |
 | `mocktail` | Mock de dependências |
 | `integration_test` | Testes end-to-end |
-| `flutter analyze` | Análise estática (zero warnings) |
-| `flutter test --coverage` | Relatório de cobertura |
 
 ---
 
-## 7. CI/CD (futuro)
+## 9. CI/CD
 
-- Rodar `flutter analyze` em todo PR
-- Rodar unit + widget tests em todo PR
-- Rodar integration tests antes de merge para main
-- Build APK + web em todo push para main
+- `flutter analyze` → zero erros em todo PR
+- `flutter test` → verde em todo PR
+- Integration tests → antes de merge para main

@@ -41,6 +41,21 @@ class TestAuthNotifier extends AuthNotifier {
   AuthRepository get repository => _repo;
 }
 
+class CallbackAuthNotifier extends TestAuthNotifier {
+  CallbackAuthNotifier(
+    super.repo,
+    super.initial, {
+    this.onResetPassword,
+  });
+
+  final Future<void> Function(String email)? onResetPassword;
+
+  @override
+  Future<void> resetPassword(String email) async {
+    await onResetPassword?.call(email);
+  }
+}
+
 class FakeAssetBundle extends CachingAssetBundle {
   static final ByteData _empty = ByteData(0);
 

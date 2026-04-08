@@ -62,29 +62,39 @@ void main() {
           .subtract(const Duration(minutes: 1))
           .millisecondsSinceEpoch,
     );
+    storage.writeString(passwordRecoveryCooldownEmailStorageKey, 'user@test.com');
 
     final notifier = ResendCooldownNotifier(
       lockDuration: const Duration(minutes: 15),
       storage: storage,
       storageKey: passwordRecoveryCooldownStorageKey,
+      storageEmailKey: passwordRecoveryCooldownEmailStorageKey,
     );
 
     expect(notifier.state.isLocked, isFalse);
     expect(notifier.state.lockedUntil, isNull);
+    expect(notifier.state.email, isNull);
     expect(storage.readInt(passwordRecoveryCooldownStorageKey), isNull);
+    expect(storage.readString(passwordRecoveryCooldownEmailStorageKey), isNull);
   });
 
-  test('persiste lockedUntil ao iniciar cooldown de recuperacao', () {
+  test('persiste lockedUntil e email ao iniciar cooldown de recuperacao', () {
     final storage = _FakeCooldownStorage();
     final notifier = ResendCooldownNotifier(
       lockDuration: const Duration(minutes: 15),
       storage: storage,
       storageKey: passwordRecoveryCooldownStorageKey,
+      storageEmailKey: passwordRecoveryCooldownEmailStorageKey,
     );
 
-    notifier.onResendSuccess();
+    notifier.onResendSuccess(email: 'user@test.com');
 
     expect(notifier.state.isLocked, isTrue);
+    expect(notifier.state.email, 'user@test.com');
     expect(storage.readInt(passwordRecoveryCooldownStorageKey), isNotNull);
+    expect(
+      storage.readString(passwordRecoveryCooldownEmailStorageKey),
+      'user@test.com',
+    );
   });
 }

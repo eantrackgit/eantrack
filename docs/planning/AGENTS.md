@@ -144,6 +144,60 @@ Scaffold(
 - Sem sumário ao final — o código já é a entrega
 - Máximo 3 arquivos por task (DEC-011)
 
+## CI & TEST ENFORCEMENT
+
+> Ver também: `/docs/CI_QUALITY_GUARDRAILS.md` e `/docs/engineering/TEST_STRATEGY.md`
+
+### Regras para Claude (arquiteto)
+
+- Definir tasks que preservem estabilidade — sem mudanças amplas sem validação incremental
+- Sempre considerar impacto em testes antes de propor alterações
+- Evitar tasks que toquem em múltiplos módulos sem checkpoint de validação entre eles
+
+### Regras para Codex (executor)
+
+**NÃO entregar código com:**
+- `flutter analyze` quebrado
+- `flutter test` falhando
+
+**NÃO empilhar múltiplas correções sem checkpoint.**
+
+Ordem obrigatória de correção:
+```
+1. Compile errors
+2. Analyze errors
+3. Test failures
+4. Warnings
+5. Feature
+```
+
+Preferir **patch mínimo** — corrigir apenas o que está falhando, na categoria certa.
+
+### Critério de conclusão
+
+Nenhuma task é considerada concluída sem expectativa de:
+- `flutter analyze` → limpo
+- `flutter test` → passando
+
+### Regra de segurança
+
+Se houver conflito entre corrigir um teste e alterar código de produção:
+
+> Priorizar manter o comportamento real.
+> Testes devem refletir o app — não o contrário.
+
+### Template de entrega (obrigatório)
+
+```
+STATUS:
+- ANALYZE: limpo / com warnings
+- TESTS: passando / falhando
+- RISCO: baixo / médio / alto
+- ARQUIVOS ALTERADOS: lista
+```
+
+---
+
 ## REGRA OPERACIONAL CRÍTICA — NÃO EXECUTAR COMANDOS PESADOS
 
 O ambiente atual apresenta travamento/instabilidade ao executar comandos locais pesados de validação.

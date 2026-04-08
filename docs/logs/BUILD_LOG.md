@@ -1,5 +1,22 @@
 # EANTrack - Build Log
 
+## 2026-04-08 - Sessao 8: Recovery UX cirurgico
+
+### Alterado
+- [x] lib/features/auth/presentation/screens/recover_password_screen.dart - restaurado modal de sucesso "Link enviado" apos resetPassword bem-sucedido, preservando cooldown e redirecionamento ao login
+- [x] lib/features/auth/presentation/screens/login_screen.dart - banner de recovery condicionado ao e-mail atual do campo de login combinado com o e-mail salvo no cooldown de recovery
+- [x] test/features/auth/presentation/screens/recover_password_screen_test.dart - cobertura do modal de sucesso apos envio
+- [x] test/features/auth/presentation/screens/login_screen_test.dart - cobertura do banner para e-mail correspondente e nao correspondente
+- [x] test/features/auth/presentation/providers/resend_cooldown_notifier_test.dart - validado armazenamento e limpeza do e-mail associado ao recovery
+
+### Causa
+- O refactor passou a navegar direto para `/login` apos o envio, removendo o trigger visual de sucesso local
+- O banner do login dependia apenas do notice global de recovery, sem validar o e-mail digitado
+
+### Impacto funcional
+- Recovery volta a exibir confirmacao imediata de envio
+- Banner no login deixa de vazar para outros usuarios na mesma sessao/dispositivo
+
 > Registro cronologico do que foi construido, alterado e validado.
 
 ---

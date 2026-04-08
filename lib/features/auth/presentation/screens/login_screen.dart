@@ -35,13 +35,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   final _passwordFocus = FocusNode();
   AsyncAction<void> _action = const ActionIdle();
   AsyncAction<void> _googleAction = const ActionIdle();
-  late bool _showRecoveryEmailSentMessage;
 
   @override
   void initState() {
     super.initState();
-    _showRecoveryEmailSentMessage =
-        widget.notice == LoginScreenNotice.recoveryEmailSent;
+    _emailController.addListener(_onEmailChanged);
 
     if (widget.consumeRecoveryQueryParam) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -57,20 +55,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   @override
   void didUpdateWidget(covariant LoginScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!_showRecoveryEmailSentMessage &&
-        widget.notice == LoginScreenNotice.recoveryEmailSent) {
-      setState(() {
-        _showRecoveryEmailSentMessage = true;
-      });
+    if (oldWidget.notice != widget.notice) {
+      setState(() {});
     }
   }
 
   @override
   void dispose() {
+    _emailController.removeListener(_onEmailChanged);
     _emailController.dispose();
     _passwordController.dispose();
     _passwordFocus.dispose();
     super.dispose();
+  }
+
+  void _onEmailChanged() {
+    if (widget.notice == LoginScreenNotice.recoveryEmailSent) {
+      setState(() {});
+    }
+  }
+
+  String? _normalizeEmail(String? email) {
+    final normalized = email?.trim().toLowerCase();
+    if (normalized == null || normalized.isEmpty) return null;
+    return normalized;
   }
 
   Future<void> _signInWithGoogle() async {
@@ -153,6 +161,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     });
 
     final isBusy = _action.isLoading || _googleAction.isLoading;
+    final recoveryEmail = _normalizeEmail(
+      ref.watch(passwordRecoveryCooldownProvider).email,
+    );
+    final currentEmail = _normalizeEmail(_emailController.text);
+    final showRecoveryEmailSentMessage =
+        widget.notice == LoginScreenNotice.recoveryEmailSent &&
+        recoveryEmail != null &&
+        recoveryEmail == currentEmail;
 
     return AuthScaffold(
       child: Form(
@@ -177,7 +193,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 ),
               ),
             ),
-            if (_showRecoveryEmailSentMessage) ...[
+            if (showRecoveryEmailSentMessage) ...[
               const SizedBox(height: AppSpacing.md),
               Container(
                 padding: const EdgeInsets.all(AppSpacing.md),

@@ -68,6 +68,8 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
 
       if (!mounted) return;
       setState(() => _action = const ActionIdle());
+      await _showRecoverySuccessDialog();
+      if (!mounted) return;
       context.go(
         AppRoutes.login,
         extra: LoginScreenNotice.recoveryEmailSent,
@@ -77,6 +79,16 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
         e is AppException ? e.message : 'Erro ao enviar. Tente novamente.',
       );
     }
+  }
+
+  Future<void> _showRecoverySuccessDialog() {
+    return AppFeedback.showSuccess(
+      context,
+      title: 'Link enviado',
+      message:
+          'Enviamos um link para redefinir sua senha. Verifique sua caixa de entrada e spam para continuar.',
+      icon: Icons.mark_email_read_outlined,
+    );
   }
 
   Future<void> _showRecoveryErrorDialog(String message) async {

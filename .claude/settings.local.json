@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/Administrador/eantrack/lib -maxdepth 2 -type f -name \"*.dart\" -exec wc -l {} +)",
+      "Bash(grep -E \"\\\\.dart$\")"
+    ]
+  }
+}
