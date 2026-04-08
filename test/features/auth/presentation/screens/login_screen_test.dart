@@ -10,16 +10,19 @@ void main() {
     final repo = MockAuthRepository();
     final notifier = TestAuthNotifier(repo, const AuthUnauthenticated());
 
-    await tester.pumpWidget(
-      buildTestable(
-        child: const LoginScreen(),
-        repository: repo,
-        notifier: notifier,
-      ),
+    await pumpAuthTestable(
+      tester,
+      child: const LoginScreen(),
+      repository: repo,
+      notifier: notifier,
     );
 
     expect(find.text('Entrar'), findsOneWidget);
-    expect(find.text('Esqueceu a senha?'), findsOneWidget);
+    expect(
+      find.textContaining('Esqueceu sua senha?', findRichText: true),
+      findsOneWidget,
+    );
+    expect(find.text('Smart Tracking'), findsOneWidget);
     verifyNever(() => repo.signIn(
         email: any(named: 'email'), password: any(named: 'password')));
   });

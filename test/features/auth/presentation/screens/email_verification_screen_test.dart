@@ -12,15 +12,15 @@ void main() {
       const AuthEmailUnconfirmed(email: 'user@test.com'),
     );
 
-    await tester.pumpWidget(
-      buildTestable(
-        child: const EmailVerificationScreen(),
-        repository: repo,
-        notifier: notifier,
-      ),
+    await pumpAuthTestable(
+      tester,
+      child: const EmailVerificationScreen(),
+      repository: repo,
+      notifier: notifier,
     );
 
     expect(find.text('Confirme sua conta'), findsOneWidget);
+    expect(find.text('Voltar'), findsOneWidget);
     expect(find.text('Reenviar'), findsOneWidget);
   });
 }

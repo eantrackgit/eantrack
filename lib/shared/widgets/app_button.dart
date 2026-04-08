@@ -269,14 +269,21 @@ class _AppButtonState extends State<AppButton> {
     if (widget.leadingIcon != null || widget.trailingIcon != null) {
       return Row(
         key: ValueKey(widget.label),
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           if (widget.leadingIcon != null) ...[
             widget.leadingIcon!,
             const SizedBox(width: AppSpacing.sm),
           ],
-          Text(widget.label,
-              style: AppTextStyles.titleSmall.copyWith(color: color)),
+          Flexible(
+            child: Text(
+              widget.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.titleSmall.copyWith(color: color),
+            ),
+          ),
           if (widget.trailingIcon != null) ...[
             const SizedBox(width: AppSpacing.sm),
             widget.trailingIcon!,
@@ -287,6 +294,8 @@ class _AppButtonState extends State<AppButton> {
     return Text(
       widget.label,
       key: ValueKey(widget.label),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
       style: AppTextStyles.titleSmall.copyWith(color: color),
     );
   }

@@ -10,12 +10,11 @@ void main() {
     final repo = MockAuthRepository();
     final notifier = TestAuthNotifier(repo, const AuthUnauthenticated());
 
-    await tester.pumpWidget(
-      buildTestable(
-        child: const RecoverPasswordScreen(),
-        repository: repo,
-        notifier: notifier,
-      ),
+    await pumpAuthTestable(
+      tester,
+      child: const RecoverPasswordScreen(),
+      repository: repo,
+      notifier: notifier,
     );
 
     expect(find.text('Esqueceu sua senha?'), findsOneWidget);
@@ -27,21 +26,20 @@ void main() {
     final repo = MockAuthRepository();
     final notifier = TestAuthNotifier(repo, const AuthUnauthenticated());
 
-    await tester.pumpWidget(
-      buildTestable(
-        child: const RecoverPasswordScreen(),
-        repository: repo,
-        notifier: notifier,
-        overrides: [
-          passwordRecoveryCooldownProvider.overrideWith((ref) {
-            final cooldown = ResendCooldownNotifier(
-              lockDuration: const Duration(minutes: 15),
-            );
-            cooldown.onResendSuccess();
-            return cooldown;
-          }),
-        ],
-      ),
+    await pumpAuthTestable(
+      tester,
+      child: const RecoverPasswordScreen(),
+      repository: repo,
+      notifier: notifier,
+      overrides: [
+        passwordRecoveryCooldownProvider.overrideWith((ref) {
+          final cooldown = ResendCooldownNotifier(
+            lockDuration: const Duration(minutes: 15),
+          );
+          cooldown.onResendSuccess();
+          return cooldown;
+        }),
+      ],
     );
 
     expect(find.text('Esqueceu sua senha?'), findsOneWidget);

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:eantrack/core/error/app_exception.dart';
 import 'package:eantrack/features/regions/data/region_repository.dart';
 import 'package:eantrack/features/regions/domain/region_model.dart';
@@ -7,45 +9,19 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MockSupabaseClient extends Mock implements SupabaseClient {}
 
-/// Fake builder that resolves to [_value] when awaited.
-///
-/// Used to satisfy the `PostgrestFilterBuilder<dynamic>` return type of
-/// `SupabaseClient.rpc()` while still providing meaningful test data.
 class _FakePostgrestBuilder extends Fake
     implements PostgrestFilterBuilder<dynamic> {
-  _FakePostgrestBuilder(this._value);
   final dynamic _value;
 
+  _FakePostgrestBuilder(this._value);
+
   @override
-  Future<R> then<R>(
-    FutureOr<R> Function(dynamic) onValue, {
+  Future<U> then<U>(
+    FutureOr<U> Function(dynamic value) onValue, {
     Function? onError,
-  }) =>
-      Future<dynamic>.value(_value).then(onValue, onError: onError);
-
-  @override
-  Future<dynamic> catchError(
-    Function onError, {
-    bool Function(Object)? test,
-  }) =>
-      Future<dynamic>.value(_value);
-
-  @override
-  Future<dynamic> whenComplete(FutureOr<void> Function() action) =>
-      Future<dynamic>.value(_value).whenComplete(action);
-
-  @override
-  Stream<dynamic> asStream() => Stream.value(_value);
-
-  @override
-  Future<dynamic> timeout(
-    Duration timeLimit, {
-    FutureOr<dynamic> Function()? onTimeout,
-  }) =>
-      Future<dynamic>.value(_value).timeout(timeLimit, onTimeout: onTimeout);
-
-  // Allow builder chaining (.select(), .eq(), etc.) without breaking the chain.
-  _FakePostgrestBuilder select([String columns = '*']) => this;
+  }) {
+    return Future<dynamic>.value(_value).then<U>(onValue, onError: onError);
+  }
 }
 
 void main() {
@@ -88,7 +64,7 @@ void main() {
       final model = RegionModel.fromRpc({
         'id': 'r',
         'name': 'Teste',
-        'city_count': 5.0, // pode vir como double do Postgres
+        'city_count': 5.0,
         'is_active': false,
       });
 
@@ -98,16 +74,16 @@ void main() {
   });
 
   group('fetchRegions', () {
-    test('retorna lista de regiões ao receber dados da RPC', () async {
+    test('retorna lista de regioes ao receber dados da RPC', () async {
       when(
         () => client.rpc(
           'list_regions_by_agency_exhibition',
           params: any(named: 'params'),
         ),
-      ).thenReturn(_FakePostgrestBuilder([
-        {'id': 'r1', 'name': 'Norte', 'city_count': 3, 'is_active': true},
-        {'id': 'r2', 'name': 'Sul', 'city_count': 7, 'is_active': false},
-      ]));
+      ).thenAnswer((_) => _FakePostgrestBuilder([
+            {'id': 'r1', 'name': 'Norte', 'city_count': 3, 'is_active': true},
+            {'id': 'r2', 'name': 'Sul', 'city_count': 7, 'is_active': false},
+          ]));
 
       final result = await repository.fetchRegions(agencyId: agencyId);
 
@@ -122,14 +98,14 @@ void main() {
           'list_regions_by_agency_exhibition',
           params: any(named: 'params'),
         ),
-      ).thenReturn(_FakePostgrestBuilder(<dynamic>[]));
+      ).thenAnswer((_) => _FakePostgrestBuilder(<dynamic>[]));
 
       final result = await repository.fetchRegions(agencyId: agencyId);
 
       expect(result, isEmpty);
     });
 
-    test('lança ServerException em erro PostgrestException', () async {
+    test('lanca ServerException em erro PostgrestException', () async {
       when(
         () => client.rpc(
           'list_regions_by_agency_exhibition',
@@ -145,7 +121,7 @@ void main() {
       );
     });
 
-    test('lança ServerException em erro genérico', () async {
+    test('lanca ServerException em erro generico', () async {
       when(
         () => client.rpc(
           'list_regions_by_agency_exhibition',
@@ -167,7 +143,7 @@ void main() {
           'is_region_name_available_for_current_user',
           params: any(named: 'params'),
         ),
-      ).thenReturn(_FakePostgrestBuilder(true));
+      ).thenAnswer((_) => _FakePostgrestBuilder(true));
 
       final result = await repository.isNameAvailable('Norte');
 
@@ -180,7 +156,7 @@ void main() {
           'is_region_name_available_for_current_user',
           params: any(named: 'params'),
         ),
-      ).thenReturn(_FakePostgrestBuilder(false));
+      ).thenAnswer((_) => _FakePostgrestBuilder(false));
 
       final result = await repository.isNameAvailable('Norte');
 
@@ -193,7 +169,7 @@ void main() {
           'is_region_name_available_for_current_user',
           params: any(named: 'params'),
         ),
-      ).thenReturn(_FakePostgrestBuilder({'available': true}));
+      ).thenAnswer((_) => _FakePostgrestBuilder({'available': true}));
 
       final result = await repository.isNameAvailable('Norte');
 
@@ -210,7 +186,7 @@ void main() {
 
       final result = await repository.isNameAvailable('Norte');
 
-      expect(result, isTrue); // fail-open → banco rejeitará duplicata
+      expect(result, isTrue);
     });
   });
 }

@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'dart:html' as html;
 
 import 'password_recovery_cooldown_storage_base.dart';

@@ -9,23 +9,16 @@ import 'auth_test_helpers.dart';
 Finder _ruleRow(String label) =>
     find.ancestor(of: find.text(label), matching: find.byType(PasswordRuleRow));
 
-Finder _fieldByHint(String hint) => find.byWidgetPredicate(
-      (widget) =>
-          widget is TextFormField && widget.decoration?.hintText == hint,
-      description: 'TextFormField with hint "$hint"',
-    );
-
 void main() {
   testWidgets('renderiza RegisterScreen sem crash', (tester) async {
     final repo = MockAuthRepository();
     final notifier = TestAuthNotifier(repo, const AuthUnauthenticated());
 
-    await tester.pumpWidget(
-      buildTestable(
-        child: const RegisterScreen(),
-        repository: repo,
-        notifier: notifier,
-      ),
+    await pumpAuthTestable(
+      tester,
+      child: const RegisterScreen(),
+      repository: repo,
+      notifier: notifier,
     );
 
     expect(find.text('Criar conta'), findsWidgets);
@@ -37,12 +30,11 @@ void main() {
     final repo = MockAuthRepository();
     final notifier = TestAuthNotifier(repo, const AuthUnauthenticated());
 
-    await tester.pumpWidget(
-      buildTestable(
-        child: const RegisterScreen(),
-        repository: repo,
-        notifier: notifier,
-      ),
+    await pumpAuthTestable(
+      tester,
+      child: const RegisterScreen(),
+      repository: repo,
+      notifier: notifier,
     );
 
     const labels = [
@@ -59,7 +51,8 @@ void main() {
     var lastY = -1.0;
     for (final label in labels) {
       final currentY = tester.getTopLeft(find.text(label)).dy;
-      expect(currentY, greaterThan(lastY), reason: 'ordem incorreta para $label');
+      expect(currentY, greaterThan(lastY),
+          reason: 'ordem incorreta para $label');
       lastY = currentY;
     }
 
@@ -75,12 +68,11 @@ void main() {
     final repo = MockAuthRepository();
     final notifier = TestAuthNotifier(repo, const AuthUnauthenticated());
 
-    await tester.pumpWidget(
-      buildTestable(
-        child: const RegisterScreen(),
-        repository: repo,
-        notifier: notifier,
-      ),
+    await pumpAuthTestable(
+      tester,
+      child: const RegisterScreen(),
+      repository: repo,
+      notifier: notifier,
     );
 
     final matchRow = _ruleRow('As senhas coincidem');
@@ -100,7 +92,10 @@ void main() {
       findsNothing,
     );
 
-    await tester.enterText(_fieldByHint('Digite sua senha'), 'Senha@123');
+    final fields = find.byType(TextFormField);
+    expect(fields, findsNWidgets(3));
+
+    await tester.enterText(fields.at(1), 'Senha@123');
     await tester.pump();
 
     expect(
@@ -111,7 +106,7 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.enterText(_fieldByHint('Repita a senha'), 'Senha@123');
+    await tester.enterText(fields.at(2), 'Senha@123');
     await tester.pump();
 
     expect(

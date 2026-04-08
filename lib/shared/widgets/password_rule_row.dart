@@ -46,11 +46,13 @@ class PasswordRuleRow extends StatelessWidget {
             child: Icon(icon, key: ValueKey(icon), size: 14, color: color),
           ),
           const SizedBox(width: 6),
-          AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 150),
-            curve: Curves.easeInOut,
-            style: AppTextStyles.labelSmall.copyWith(color: color),
-            child: Text(label),
+          Expanded(
+            child: AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 150),
+              curve: Curves.easeInOut,
+              style: AppTextStyles.labelSmall.copyWith(color: color),
+              child: Text(label),
+            ),
           ),
         ],
       ),

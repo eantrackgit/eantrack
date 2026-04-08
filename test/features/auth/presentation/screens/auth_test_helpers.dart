@@ -1,11 +1,11 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:eantrack/features/auth/data/auth_repository.dart';
 import 'package:eantrack/features/auth/domain/auth_state.dart';
 import 'package:eantrack/features/auth/presentation/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -42,13 +42,18 @@ class TestAuthNotifier extends AuthNotifier {
 }
 
 class FakeAssetBundle extends CachingAssetBundle {
-  static final ByteData _empty = ByteData.sublistView(Uint8List(0));
+  static final ByteData _empty = ByteData(0);
 
-  @override
-  Future<ByteData> load(String key) async => _empty;
+  static ByteData _byteDataFromString(String value) {
+    final bytes = utf8.encode(value);
+    final data = ByteData(bytes.length);
+    for (var i = 0; i < bytes.length; i++) {
+      data.setUint8(i, bytes[i]);
+    }
+    return data;
+  }
 
-  @override
-  Future<String> loadString(String key, {bool cache = true}) async {
+  static String? _assetContents(String key) {
     if (key.endsWith('.svg')) {
       return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10"/></svg>';
     }
@@ -66,7 +71,21 @@ class FakeAssetBundle extends CachingAssetBundle {
         'layers': <Object>[],
       });
     }
-    return '';
+    return null;
+  }
+
+  @override
+  Future<ByteData> load(String key) async {
+    final contents = _assetContents(key);
+    if (contents != null) {
+      return _byteDataFromString(contents);
+    }
+    return _empty;
+  }
+
+  @override
+  Future<String> loadString(String key, {bool cache = true}) async {
+    return _assetContents(key) ?? '';
   }
 }
 
@@ -82,9 +101,37 @@ Widget buildTestable({
       authNotifierProvider.overrideWith((ref) => notifier),
       ...overrides,
     ],
-    child: DefaultAssetBundle(
-      bundle: FakeAssetBundle(),
-      child: MaterialApp(home: child),
+    child: MaterialApp(
+      home: DefaultAssetBundle(
+        bundle: FakeAssetBundle(),
+        child: child,
+      ),
     ),
   );
+}
+
+Future<void> pumpAuthTestable(
+  WidgetTester tester, {
+  required Widget child,
+  required AuthRepository repository,
+  required TestAuthNotifier notifier,
+  List<Override> overrides = const [],
+  Size surfaceSize = const Size(1920, 3000),
+}) async {
+  tester.view.physicalSize = surfaceSize;
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(() {
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
+
+  await tester.pumpWidget(
+    buildTestable(
+      child: child,
+      repository: repository,
+      notifier: notifier,
+      overrides: overrides,
+    ),
+  );
+  await tester.pump();
 }

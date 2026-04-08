@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../shared/shared.dart';
-import '../../../../shared/utils/async_action.dart';
 import '../../domain/region_model.dart';
 import '../../domain/region_state.dart';
 import '../providers/region_provider.dart';

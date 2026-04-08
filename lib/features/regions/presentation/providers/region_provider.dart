@@ -15,10 +15,10 @@ final regionRepositoryProvider = Provider<RegionRepository>((ref) {
 });
 
 // ---------------------------------------------------------------------------
-// Agency ID derivado do estado de auth
+// Agency ID derived from auth state
 // ---------------------------------------------------------------------------
 
-/// Retorna o agencyId do usuário autenticado, ou null se não disponível.
+/// Returns the authenticated user's agencyId, or null if unavailable.
 final agencyIdProvider = Provider<String?>((ref) {
   final authState = ref.watch(authNotifierProvider);
   if (authState is AuthAuthenticated) {
@@ -31,9 +31,9 @@ final agencyIdProvider = Provider<String?>((ref) {
 // Region notifier
 // ---------------------------------------------------------------------------
 
-// autoDispose removido: o provider persiste em memória enquanto o app estiver
-// rodando, evitando re-fetch ao navegar de volta para a tela.
-// ref.watch(agencyIdProvider) garante invalidação automática ao trocar conta.
+// autoDispose removed: the provider stays in memory while the app is running,
+// avoiding a re-fetch when navigating back to the screen.
+// ref.watch(agencyIdProvider) guarantees automatic invalidation on account swap.
 final regionNotifierProvider =
     StateNotifierProvider<RegionNotifier, RegionState>((ref) {
   return RegionNotifier(
@@ -56,14 +56,15 @@ class RegionNotifier extends StateNotifier<RegionState> {
   final String? _agencyId;
 
   Future<void> load() async {
-    if (_agencyId == null) {
-      state = RegionError('Agência não encontrada. Faça login novamente.');
+    final agencyId = _agencyId;
+    if (agencyId == null) {
+      state = RegionError('Agencia nao encontrada. Faca login novamente.');
       return;
     }
 
     state = RegionLoading();
     try {
-      final regions = await _repository.fetchRegions(agencyId: _agencyId!);
+      final regions = await _repository.fetchRegions(agencyId: agencyId);
       state = RegionLoaded(regions);
     } catch (e) {
       state = RegionError(e.toString());
@@ -71,14 +72,15 @@ class RegionNotifier extends StateNotifier<RegionState> {
   }
 
   Future<bool> createRegion(String name) async {
-    if (_agencyId == null) return false;
+    final agencyId = _agencyId;
+    if (agencyId == null) return false;
 
     try {
-      await _repository.createRegion(name: name, agencyId: _agencyId!);
-      await load(); // recarrega lista
+      await _repository.createRegion(name: name, agencyId: agencyId);
+      await load(); // reloads list
       return true;
     } catch (e) {
-      // Mantém estado atual — o erro é reportado via retorno
+      // Keeps current state; the error is reported via the return value.
       return false;
     }
   }
@@ -88,7 +90,7 @@ class RegionNotifier extends StateNotifier<RegionState> {
       await _repository.toggleActive(regionId: regionId, isActive: isActive);
       await load();
     } catch (_) {
-      // Estado já foi atualizado otimisticamente — reverter se necessário
+      // State was already updated optimistically; revert if needed.
       await load();
     }
   }

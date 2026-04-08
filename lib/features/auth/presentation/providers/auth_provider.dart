@@ -86,15 +86,13 @@ final authNotifierProvider =
   // busca o flowState e transita para AuthAuthenticated.
   ref.listen<AsyncValue<User?>>(authUserStreamProvider, (prev, next) {
     next.whenData((user) {
-      if (user != null && notifier.state is! AuthAuthenticated) {
-    final isRecovery = ref.read(authRecoveryContextProvider);
-    if (!isRecovery) {
-      notifier.onExternalAuthChange(user);
-    }
+      if (user != null && !notifier.isAuthenticated) {
+        final isRecovery = ref.read(authRecoveryContextProvider);
+        if (!isRecovery) {
+          notifier.onExternalAuthChange(user);
+        }
       } else if (user == null &&
-          notifier.state is! AuthUnauthenticated &&
-          notifier.state is! AuthInitial &&
-          notifier.state is! AuthEmailUnconfirmed) {
+          notifier.shouldHandleExternalSignOut) {
         notifier.onSignedOut();
       }
     });
@@ -107,6 +105,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
   AuthNotifier(this._repo) : super(const AuthInitial());
 
   final AuthRepository _repo;
+
+  bool get isAuthenticated => state is AuthAuthenticated;
+
+  bool get shouldHandleExternalSignOut =>
+      state is! AuthUnauthenticated &&
+      state is! AuthInitial &&
+      state is! AuthEmailUnconfirmed;
 
   // --- Sign in ---
 
@@ -245,27 +250,18 @@ class AuthRecoveryContextNotifier extends StateNotifier<bool> {
   void _onAuthStateChange(dynamic data) {
     final event = data.event as AuthChangeEvent;
 
-    switch (event) {
-      case AuthChangeEvent.passwordRecovery:
-        state = true;
-        break;
-      case AuthChangeEvent.signedIn:
-        break;
-      case AuthChangeEvent.signedOut:
-      case AuthChangeEvent.userDeleted:
-        state = false;
-        break;
-      case AuthChangeEvent.initialSession:
-        if (data.session == null) {
-          state = false;
-        }
-        break;
-      case AuthChangeEvent.tokenRefreshed:
-      case AuthChangeEvent.userUpdated:
-      case AuthChangeEvent.mfaChallengeVerified:
-        break;
-      default:
-        break;
+    if (event == AuthChangeEvent.passwordRecovery) {
+      state = true;
+      return;
+    }
+
+    if (event == AuthChangeEvent.signedOut) {
+      state = false;
+      return;
+    }
+
+    if (event == AuthChangeEvent.initialSession && data.session == null) {
+      state = false;
     }
   }
 

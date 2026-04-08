@@ -306,7 +306,7 @@ class _EmailVerificationScreenState
         Row(
           children: [
             SizedBox(
-              width: 120,
+              width: 140,
               child: AppButton(
                 label: 'Voltar',
                 variant: AppButtonVariant.outlined,
@@ -645,4 +645,3 @@ class _PasswordModalState extends ConsumerState<_PasswordModal> {
     );
   }
 }
-

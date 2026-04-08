@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:eantrack/core/error/app_exception.dart';
 import 'package:eantrack/features/auth/data/auth_repository.dart';
 import 'package:eantrack/features/auth/data/password_history_service.dart';
@@ -9,51 +11,28 @@ class MockSupabaseClient extends Mock implements SupabaseClient {}
 
 class MockGoTrueClient extends Mock implements GoTrueClient {}
 
-class MockPasswordHistoryService extends Mock implements PasswordHistoryService {}
+class MockPasswordHistoryService extends Mock
+    implements PasswordHistoryService {}
 
-/// Fake builder that resolves to [_value] when awaited.
-/// Satisfies the PostgrestFilterBuilder<dynamic> return type of rpc().
 class _FakePostgrestBuilder extends Fake
     implements PostgrestFilterBuilder<dynamic> {
-  _FakePostgrestBuilder(this._value);
   final dynamic _value;
 
+  _FakePostgrestBuilder(this._value);
+
   @override
-  Future<R> then<R>(
-    FutureOr<R> Function(dynamic) onValue, {
+  Future<U> then<U>(
+    FutureOr<U> Function(dynamic value) onValue, {
     Function? onError,
-  }) =>
-      Future<dynamic>.value(_value).then(onValue, onError: onError);
-
-  @override
-  Future<dynamic> catchError(
-    Function onError, {
-    bool Function(Object)? test,
-  }) =>
-      Future<dynamic>.value(_value);
-
-  @override
-  Future<dynamic> whenComplete(FutureOr<void> Function() action) =>
-      Future<dynamic>.value(_value).whenComplete(action);
-
-  @override
-  Stream<dynamic> asStream() => Stream.value(_value);
-
-  @override
-  Future<dynamic> timeout(
-    Duration timeLimit, {
-    FutureOr<dynamic> Function()? onTimeout,
-  }) =>
-      Future<dynamic>.value(_value).timeout(timeLimit, onTimeout: onTimeout);
-
-  // Allow builder chaining (.select(), .eq(), etc.) without breaking the chain.
-  _FakePostgrestBuilder select([String columns = '*']) => this;
+  }) {
+    return Future<dynamic>.value(_value).then<U>(onValue, onError: onError);
+  }
 }
 
 void main() {
-  late SupabaseClient client;
-  late GoTrueClient auth;
-  late PasswordHistoryService passwordHistoryService;
+  late MockSupabaseClient client;
+  late MockGoTrueClient auth;
+  late MockPasswordHistoryService passwordHistoryService;
   late AuthRepository repository;
 
   const email = 'user@test.com';
@@ -120,7 +99,7 @@ void main() {
           isA<AuthAppException>().having(
             (e) => e.message,
             'message',
-            'Erro ao realizar login. Tente novamente.',
+            'Erro de autenticação: Exception: unexpected',
           ),
         ),
       );
@@ -129,13 +108,13 @@ void main() {
 
   test('cadastro', () async {
     when(() => client.rpc('email_code_exists', params: any(named: 'params')))
-        .thenReturn(_FakePostgrestBuilder(false));
+        .thenAnswer((_) => _FakePostgrestBuilder(false));
     when(
       () => auth.signUp(
           email: any(named: 'email'), password: any(named: 'password')),
     ).thenAnswer((_) async => AuthResponse(user: user));
     when(() => client.rpc('insert_email_code', params: any(named: 'params')))
-        .thenReturn(_FakePostgrestBuilder(null));
+        .thenAnswer((_) => _FakePostgrestBuilder(null));
 
     await repository.signUp(email: email, password: password);
 
@@ -145,11 +124,10 @@ void main() {
   });
 
   test('logout', () async {
-    when(() => auth.signOut(scope: any(named: 'scope')))
-        .thenThrow(Exception('network'));
+    when(() => auth.signOut()).thenThrow(Exception('network'));
 
     await repository.signOut();
 
-    verify(() => auth.signOut(scope: any(named: 'scope'))).called(1);
+    verify(() => auth.signOut()).called(1);
   });
 }
