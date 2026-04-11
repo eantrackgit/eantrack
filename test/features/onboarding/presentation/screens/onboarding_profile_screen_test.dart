@@ -157,7 +157,7 @@ void main() {
 
     verifyNever(() => repository.identificadorExiste(any()));
     expect(
-      find.text('Esse identificador ainda não está disponível.'),
+      find.text('Identificador não disponível.'),
       findsOneWidget,
     );
     expect(find.text('Sugestões para você'), findsOneWidget);
