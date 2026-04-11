@@ -1,8 +1,11 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../shared/shared.dart';
 import '../providers/onboarding_provider.dart';
 
@@ -23,7 +26,7 @@ class _ChooseModeScreenState extends ConsumerState<ChooseModeScreen> {
     if (_selected == null || _saving) return;
     setState(() => _saving = true);
 
-    final mode = _selected == _Mode.individual ? 'individual' : 'agencia';
+    final mode = _selected == _Mode.individual ? 'individual' : 'agency';
     final ok = await ref.read(onboardingNotifierProvider.notifier).saveMode(mode);
 
     if (!mounted) return;
@@ -33,16 +36,120 @@ class _ChooseModeScreenState extends ConsumerState<ChooseModeScreen> {
       await AppFeedback.showError(
         context,
         title: 'Erro ao salvar',
-        message: 'Não foi possível salvar a seleção. Tente novamente.',
+        message: 'Nao foi possivel salvar a selecao. Tente novamente.',
       );
       return;
     }
 
     context.go(
-      _selected == _Mode.individual
-          ? AppRoutes.hub           // placeholder — individual onboarding
-          : AppRoutes.onboardingCnpj,
+      '${AppRoutes.onboardingIndividual}?mode=$mode',
     );
+  }
+
+  Future<void> _confirmBackToLogin() async {
+    if (_saving) return;
+
+    final shouldLeave = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) {
+            return Material(
+              color: Colors.transparent,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: ClipRect(
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                        child: ColoredBox(
+                          color: AppColors.modalOverlayBase.withValues(
+                            alpha: 0.52,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SafeArea(
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                          vertical: AppSpacing.xl,
+                        ),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 420),
+                          child: Container(
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            decoration: BoxDecoration(
+                              color: AppColors.secondaryBackground,
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(color: AppColors.alternate),
+                              boxShadow: const [AppShadows.xl],
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                const Icon(
+                                  Icons.warning_amber_rounded,
+                                  size: 36,
+                                  color: AppColors.warning,
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                Text(
+                                  'Voltar agora?',
+                                  textAlign: TextAlign.center,
+                                  style: AppTextStyles.headlineSmall.copyWith(
+                                    color: AppColors.secondary,
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.sm),
+                                Text(
+                                  'Recomendamos selecionar um modo antes de voltar.',
+                                  textAlign: TextAlign.center,
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    color: AppColors.secondaryText,
+                                    height: 1.45,
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.sm),
+                                Text(
+                                  'Se voce voltar agora, ira para o login e depois precisara fazer essa selecao novamente.',
+                                  textAlign: TextAlign.center,
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    color: AppColors.secondaryText,
+                                    height: 1.45,
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.lg),
+                                AppButton.secondary(
+                                  'Continuar nesta tela',
+                                  onPressed: () =>
+                                      Navigator.of(dialogContext).pop(false),
+                                ),
+                                const SizedBox(height: AppSpacing.sm),
+                                AppButton.primary(
+                                  'Voltar para login',
+                                  onPressed: () =>
+                                      Navigator.of(dialogContext).pop(true),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ) ??
+        false;
+
+    if (!mounted || !shouldLeave) return;
+    await ref.read(authNotifierProvider.notifier).signOut();
+    if (!mounted) return;
+    context.go(AppRoutes.login);
   }
 
   @override
@@ -76,15 +183,13 @@ class _ChooseModeScreenState extends ConsumerState<ChooseModeScreen> {
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      'Essa configuração ajuda o EANTrack a personalizar sua experiência operacional.',
+                      'Essa configuracao ajuda o EANTrack a personalizar sua experiencia operacional.',
                       style: AppTextStyles.bodySmall.copyWith(
                         color: AppColors.secondaryText,
                       ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: AppSpacing.xl),
-
-                    // Cards
                     _ModeCard(
                       icon: Icons.person,
                       title: 'Individual',
@@ -95,16 +200,14 @@ class _ChooseModeScreenState extends ConsumerState<ChooseModeScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
                     _ModeCard(
-                      icon: Icons.groups,
-                      title: 'Agência',
+                      icon: Icons.business,
+                      title: 'Agencia',
                       description:
-                          'Gerencie equipes, lojas e operações completas',
+                          'Gerencie equipes, lojas e operacoes completas',
                       selected: _selected == _Mode.agency,
                       onTap: () => setState(() => _selected = _Mode.agency),
                     ),
                     const SizedBox(height: AppSpacing.xl),
-
-                    // Actions
                     Row(
                       children: [
                         SizedBox(
@@ -117,8 +220,7 @@ class _ChooseModeScreenState extends ConsumerState<ChooseModeScreen> {
                               size: 14,
                               color: AppColors.secondary,
                             ),
-                            onPressed:
-                                _saving ? null : () => context.go(AppRoutes.login),
+                            onPressed: _saving ? null : _confirmBackToLogin,
                           ),
                         ),
                         const SizedBox(width: AppSpacing.sm),
@@ -130,7 +232,7 @@ class _ChooseModeScreenState extends ConsumerState<ChooseModeScreen> {
                                 : const Icon(
                                     Icons.arrow_forward_ios,
                                     size: 14,
-                                    color: AppColors.info,
+                                    color: AppColors.secondaryBackground,
                                   ),
                             isLoading: _saving,
                             onPressed:
@@ -167,48 +269,75 @@ class _ModeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.xl,
-        ),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.secondary : AppColors.primaryBackground,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? AppColors.secondary : AppColors.alternate,
-            width: selected ? 2.0 : 1.0,
+    final backgroundColor = selected
+        ? AppColors.success.withValues(alpha: 0.05)
+        : AppColors.secondaryBackground;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        overlayColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.pressed)) {
+            return AppColors.success.withValues(alpha: 0.08);
+          }
+          if (states.contains(WidgetState.hovered)) {
+            return AppColors.primaryText.withValues(alpha: 0.03);
+          }
+          return null;
+        }),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.xl,
           ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              size: 64,
-              color: selected ? AppColors.info : AppColors.secondaryText,
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? AppColors.success : AppColors.alternate,
+              width: selected ? 2.0 : 1.0,
             ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              title,
-              style: AppTextStyles.titleLarge.copyWith(
-                color: selected ? AppColors.info : AppColors.secondary,
-                fontWeight: FontWeight.w700,
+          ),
+          child: Column(
+            children: [
+              Align(
+                alignment: Alignment.topRight,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 180),
+                  opacity: selected ? 1 : 0,
+                  child: const Icon(
+                    Icons.check_circle,
+                    size: 20,
+                    color: AppColors.success,
+                  ),
+                ),
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              description,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: selected
-                    ? AppColors.info.withValues(alpha: 0.8)
-                    : AppColors.secondaryText,
+              Icon(
+                icon,
+                size: 64,
+                color: selected ? AppColors.success : AppColors.secondaryText,
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                title,
+                style: AppTextStyles.titleLarge.copyWith(
+                  color: AppColors.secondary,
+                  fontWeight: FontWeight.w700,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                description,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.secondaryText,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );

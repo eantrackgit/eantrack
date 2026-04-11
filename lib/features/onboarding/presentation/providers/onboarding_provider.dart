@@ -38,9 +38,11 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
     state = OnboardingLoading();
     try {
       await _repository.saveMode(mode);
+      if (!mounted) return true;
       state = OnboardingModeSelected(mode: mode);
       return true;
     } catch (e) {
+      if (!mounted) return false;
       state = OnboardingError(message: e.toString());
       return false;
     }
