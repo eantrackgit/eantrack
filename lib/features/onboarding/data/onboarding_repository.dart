@@ -30,7 +30,7 @@ class OnboardingRepository {
     try {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) {
-        throw const ServerException('Usuario nao autenticado.');
+        throw const ServerException('Usuário não autenticado.');
       }
 
       await _client.from('tab_cadastroauxiliar').insert({
@@ -39,11 +39,11 @@ class OnboardingRepository {
       });
     } on PostgrestException catch (e) {
       throw ServerException(
-        'Nao foi possivel salvar o modo de operacao. (${e.code})',
+        'Não foi possível salvar o modo de operação. (${e.code})',
       );
     } catch (e) {
       if (e is AppException) rethrow;
-      throw const ServerException('Erro ao salvar configuracao de onboarding.');
+      throw const ServerException('Erro ao salvar a configuração de onboarding.');
     }
   }
 
@@ -84,7 +84,7 @@ class OnboardingRepository {
       }
     } on PostgrestException catch (e) {
       throw ServerException(
-        'Nao foi possivel verificar o identificador. (${e.code})',
+        'Não foi possível verificar o identificador. (${e.code})',
       );
     } catch (e) {
       if (e is AppException) rethrow;
@@ -109,7 +109,7 @@ class OnboardingRepository {
       return response as bool? ?? false;
     } on PostgrestException catch (e) {
       throw ServerException(
-        'Nao foi possivel concluir o cadastro complementar. (${e.code})',
+        'Não foi possível concluir o cadastro complementar. (${e.code})',
       );
     } catch (e) {
       if (e is AppException) rethrow;
@@ -123,7 +123,7 @@ class OnboardingRepository {
     try {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) {
-        throw const ServerException('Usuario nao autenticado.');
+        throw const ServerException('Usuário não autenticado.');
       }
 
       await _client
@@ -134,11 +134,11 @@ class OnboardingRepository {
           .eq('user_id', userId);
     } on PostgrestException catch (e) {
       throw ServerException(
-        'Nao foi possivel salvar a descricao. (${e.code})',
+        'Não foi possível salvar a descrição. (${e.code})',
       );
     } catch (e) {
       if (e is AppException) rethrow;
-      throw const ServerException('Erro ao salvar a descricao.');
+      throw const ServerException('Erro ao salvar a descrição.');
     }
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text_styles.dart';
+import '../theme/app_theme.dart';
 
 /// Variantes visuais do AppButton.
 ///
@@ -184,18 +185,20 @@ class _AppButtonState extends State<AppButton> {
   }
 
   Widget _buildButton() {
+    final et = EanTrackTheme.of(context);
+
     switch (widget.variant) {
       case AppButtonVariant.primary:
         return ElevatedButton(
           onPressed: _disabled ? null : widget.onPressed,
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.secondary,
-            disabledBackgroundColor: AppColors.secondary,
-            foregroundColor: AppColors.secondaryBackground,
+            backgroundColor: et.ctaBackground,
+            disabledBackgroundColor: et.ctaBackground,
+            foregroundColor: et.ctaForeground,
             shape: RoundedRectangleBorder(borderRadius: AppRadius.smAll),
             elevation: 0,
           ),
-          child: _content(AppColors.secondaryBackground),
+          child: _content(et.ctaForeground),
         );
 
       case AppButtonVariant.secondary:
@@ -203,12 +206,12 @@ class _AppButtonState extends State<AppButton> {
         return OutlinedButton(
           onPressed: _disabled ? null : widget.onPressed,
           style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.secondary,
-            disabledForegroundColor: AppColors.secondary,
-            side: const BorderSide(color: AppColors.secondary, width: 1.5),
+            foregroundColor: et.outlinedFg,
+            disabledForegroundColor: et.outlinedFg,
+            side: BorderSide(color: et.outlinedFg, width: 1.5),
             shape: RoundedRectangleBorder(borderRadius: AppRadius.smAll),
           ),
-          child: _content(AppColors.secondary),
+          child: _content(et.outlinedFg),
         );
 
       case AppButtonVariant.action:

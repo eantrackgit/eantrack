@@ -56,10 +56,6 @@ class _EmailVerificationScreenState
     context.go(AppRoutes.flow);
   }
 
-  // ---------------------------------------------------------------------------
-  // Password modal — opened after confirmation detected
-  // ---------------------------------------------------------------------------
-
   Future<void> _openPasswordModal() async {
     if (!mounted) return;
     await showModalBottomSheet<void>(
@@ -72,14 +68,10 @@ class _EmailVerificationScreenState
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Resend / manual check
-  // ---------------------------------------------------------------------------
-
   Future<void> _resend() async {
     if (_email.isEmpty) {
       await _showFeedbackDialog(
-        title: 'E-mail indisponível',
+        title: 'E-mail indispon\u00edvel',
         message: 'Volte e tente novamente.',
         icon: Icons.mail_outline_rounded,
         accentColor: AppColors.error,
@@ -91,7 +83,7 @@ class _EmailVerificationScreenState
     if (cooldown.hasReachedAttemptLimit) {
       await _showFeedbackDialog(
         title: 'Limite atingido',
-        message: 'Você excedeu o número de tentativas. Tente mais tarde.',
+        message: 'Voc\u00ea excedeu o n\u00famero de tentativas. Tente mais tarde.',
         icon: Icons.schedule_rounded,
         accentColor: AppColors.error,
       );
@@ -126,7 +118,7 @@ class _EmailVerificationScreenState
       await _showFeedbackDialog(
         title: 'Link enviado',
         message:
-            'Enviamos um link para redefinir sua senha. Verifique sua caixa de entrada e spam. Por segurança, esse link expira em alguns minutos e pode ser usado apenas uma vez.',
+            'Enviamos um link para redefinir sua senha. Verifique sua caixa de entrada e spam. Por seguran\u00e7a, esse link expira em alguns minutos e pode ser usado apenas uma vez.',
         icon: Icons.mark_email_read_outlined,
         accentColor: AppColors.success,
       );
@@ -161,11 +153,12 @@ class _EmailVerificationScreenState
       } else {
         setState(() => _isManualChecking = false);
         if (!ok) {
+          final et = EanTrackTheme.of(context);
           await _showFeedbackDialog(
-            title: 'E-mail ainda não confirmado',
+            title: 'E-mail ainda n\u00e3o confirmado',
             message: 'Verifique sua caixa de entrada e tente novamente.',
             icon: Icons.mark_email_unread_outlined,
-            accentColor: AppColors.secondary,
+            accentColor: et.ctaBackground,
           );
         }
       }
@@ -190,15 +183,11 @@ class _EmailVerificationScreenState
     });
   }
 
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
-
   Future<void> _showFeedbackDialog({
     required String title,
     required String message,
     IconData icon = Icons.info_outline_rounded,
-    Color accentColor = AppColors.secondary,
+    Color accentColor = AppColors.info,
   }) {
     return showAppFeedbackDialog(
       context: context,
@@ -217,10 +206,6 @@ class _EmailVerificationScreenState
     return '$masked@${parts[1]}';
   }
 
-  // ---------------------------------------------------------------------------
-  // Build
-  // ---------------------------------------------------------------------------
-
   @override
   Widget build(BuildContext context) {
     final cooldown = ref.watch(emailCooldownProvider);
@@ -233,17 +218,14 @@ class _EmailVerificationScreenState
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Waiting state
-  // ---------------------------------------------------------------------------
-
   Widget _buildWaiting(ResendCooldownState cooldown, bool canResend) {
+    final et = EanTrackTheme.of(context);
+    final secondaryActionColor = et.ctaBackground.withValues(alpha: 0.8);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: AppSpacing.md),
-
-        // Logo
         Center(
           child: SvgPicture.asset(
             'assets/images/eantrack.svg',
@@ -253,46 +235,43 @@ class _EmailVerificationScreenState
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-
-        // Title
         Text(
           'Confirme sua conta',
-          style: AppTextStyles.headlineSmall
-              .copyWith(color: AppColors.secondary),
+          style: AppTextStyles.headlineSmall.copyWith(color: et.primaryText),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: AppSpacing.md),
-
-        // Info box
         Container(
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            color: AppColors.primaryBackground,
+            color: et.surface,
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: et.surfaceBorder),
           ),
           child: RichText(
             textAlign: TextAlign.center,
             text: TextSpan(
-              style: AppTextStyles.bodySmall
-                  .copyWith(color: AppColors.secondaryText),
+              style: AppTextStyles.bodySmall.copyWith(color: et.secondaryText),
               children: [
                 const TextSpan(
-                    text:
-                        'Verifique seu e-mail, um link de confirmação foi enviado para '),
+                  text:
+                      'Verifique seu e-mail, um link de confirma\u00e7\u00e3o foi enviado para ',
+                ),
                 TextSpan(
                   text: _censor(_email),
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.secondary,
+                    color: et.ctaBackground,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const TextSpan(
-                    text:
-                        '. Clique em confirmar sua conta para começar a usar o '),
+                  text:
+                      '. Clique em confirmar sua conta para come\u00e7ar a usar o ',
+                ),
                 TextSpan(
                   text: 'EANTrack',
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.primary,
+                    color: et.ctaBackground,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -301,8 +280,6 @@ class _EmailVerificationScreenState
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-
-        // Buttons row
         Row(
           children: [
             SizedBox(
@@ -310,11 +287,7 @@ class _EmailVerificationScreenState
               child: AppButton(
                 label: 'Voltar',
                 variant: AppButtonVariant.outlined,
-                leadingIcon: const Icon(
-                  Icons.arrow_back_ios,
-                  size: 14,
-                  color: AppColors.secondary,
-                ),
+                leadingIcon: const Icon(Icons.arrow_back_ios, size: 14),
                 onPressed: () => context.go(AppRoutes.login),
               ),
             ),
@@ -332,8 +305,6 @@ class _EmailVerificationScreenState
           ],
         ),
         const SizedBox(height: AppSpacing.md),
-
-        // Manual check CTA
         Center(
           child: TextButton(
             onPressed: _isManualChecking ? null : _checkNow,
@@ -341,19 +312,21 @@ class _EmailVerificationScreenState
                 ? Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const SizedBox(
+                      SizedBox(
                         width: 12,
                         height: 12,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: AppColors.secondaryText,
+                          color: secondaryActionColor,
                         ),
                       ),
                       const SizedBox(width: 6),
                       Text(
                         'Verificando...',
-                        style: AppTextStyles.bodySmall
-                            .copyWith(color: AppColors.secondaryText),
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: secondaryActionColor,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ],
                   )
@@ -361,15 +334,17 @@ class _EmailVerificationScreenState
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Já confirmei meu e-mail',
-                        style: AppTextStyles.bodySmall
-                            .copyWith(color: AppColors.secondaryText),
+                        'J\u00e1 confirmei meu e-mail',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: secondaryActionColor,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       const SizedBox(width: 4),
-                      const Icon(
+                      Icon(
                         Icons.arrow_forward,
                         size: 14,
-                        color: AppColors.secondaryText,
+                        color: secondaryActionColor,
                       ),
                     ],
                   ),
@@ -380,16 +355,13 @@ class _EmailVerificationScreenState
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Confirmed state (shown briefly before modal opens)
-  // ---------------------------------------------------------------------------
-
   Widget _buildConfirmed() {
+    final et = EanTrackTheme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: AppSpacing.xl),
-
         Center(
           child: Container(
             width: 100,
@@ -406,19 +378,16 @@ class _EmailVerificationScreenState
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-
         Text(
           'E-mail confirmado!',
           style: AppTextStyles.headlineSmall.copyWith(color: AppColors.success),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: AppSpacing.sm),
-
         Center(
           child: Text(
             'Confirme sua identidade para continuar',
-            style: AppTextStyles.bodySmall
-                .copyWith(color: AppColors.secondaryText),
+            style: AppTextStyles.bodySmall.copyWith(color: et.secondaryText),
             textAlign: TextAlign.center,
           ),
         ),
@@ -427,10 +396,6 @@ class _EmailVerificationScreenState
     );
   }
 }
-
-// =============================================================================
-// Password Modal — shown after email confirmation
-// =============================================================================
 
 class _PasswordModal extends ConsumerStatefulWidget {
   const _PasswordModal({required this.email, required this.onSuccess});
@@ -488,22 +453,22 @@ class _PasswordModalState extends ConsumerState<_PasswordModal> {
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error =
-            'Erro de conexão. Verifique sua internet e tente novamente.';
+        setState(() {
+          _loading = false;
+        _error = 'Erro de conex\u00e3o. Verifique sua internet e tente novamente.';
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     final bottom = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.secondaryBackground,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: et.cardSurface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -515,89 +480,79 @@ class _PasswordModalState extends ConsumerState<_PasswordModal> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Handle bar
           Center(
             child: Container(
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.alternate,
+                color: et.surfaceBorder,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-
-          // Icon + title
           Center(
             child: Container(
               width: 56,
               height: 56,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.secondary.withValues(alpha: 0.08),
+                color: et.surface,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.lock_outline_rounded,
                 size: 28,
-                color: AppColors.secondary,
+                color: et.ctaBackground,
               ),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-
           Text(
             'Confirme seu acesso',
-            style: AppTextStyles.headlineSmall
-                .copyWith(color: AppColors.secondary),
+            style: AppTextStyles.headlineSmall.copyWith(color: et.primaryText),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.sm),
-
           Text(
             'Seu e-mail foi confirmado. Digite sua senha para entrar.',
-            style: AppTextStyles.bodySmall
-                .copyWith(color: AppColors.secondaryText),
+            style: AppTextStyles.bodySmall.copyWith(color: et.secondaryText),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.lg),
-
-          // Password field
           TextField(
             controller: _controller,
             focusNode: _focusNode,
             obscureText: _obscure,
             onSubmitted: (_) => _confirm(),
-            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.secondary),
+            style: AppTextStyles.bodyMedium.copyWith(color: et.primaryText),
             decoration: InputDecoration(
               hintText: 'Senha',
               hintStyle: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.secondaryText,
+                color: et.secondaryText,
               ),
               filled: true,
-              fillColor: AppColors.primaryBackground,
+              fillColor: et.inputFill,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.md,
                 vertical: AppSpacing.md,
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.alternate),
+                borderSide: BorderSide(color: et.inputBorder),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.alternate),
+                borderSide: BorderSide(color: et.inputBorder),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide:
-                    const BorderSide(color: AppColors.secondary, width: 1.5),
+                borderSide: BorderSide(color: et.inputBorderFocused, width: 1.5),
               ),
               errorText: _error,
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscure ? Icons.visibility_off : Icons.visibility,
-                  color: AppColors.secondaryText,
+                  color: et.secondaryText,
                   size: 20,
                 ),
                 onPressed: () => setState(() => _obscure = !_obscure),
@@ -605,8 +560,6 @@ class _PasswordModalState extends ConsumerState<_PasswordModal> {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-
-          // Confirm button
           SizedBox(
             height: 52,
             child: AppButton(
@@ -615,10 +568,10 @@ class _PasswordModalState extends ConsumerState<_PasswordModal> {
               onPressed: _loading ? null : _confirm,
               trailingIcon: _loading
                   ? null
-                  : const Icon(
+                  : Icon(
                       Icons.arrow_forward_ios,
                       size: 14,
-                      color: AppColors.info,
+                      color: et.ctaForeground,
                     ),
             ),
           ),
@@ -634,7 +587,7 @@ class _PasswordModalState extends ConsumerState<_PasswordModal> {
               child: Text(
                 'Esqueceu sua senha?',
                 style: AppTextStyles.labelMedium.copyWith(
-                  color: AppColors.actionBlue,
+                  color: et.ctaBackground,
                 ),
               ),
             ),

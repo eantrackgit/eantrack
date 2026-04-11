@@ -132,6 +132,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
+
     ref.listen<AuthState>(authNotifierProvider, (_, next) async {
       if (!mounted) return;
       switch (next) {
@@ -171,6 +173,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         recoveryEmail == currentEmail;
 
     return AuthScaffold(
+      action: const _ThemeToggleButton(),
       child: Form(
         key: formKey,
         child: Column(
@@ -189,7 +192,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               child: Text(
                 'Smart Tracking',
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.secondaryText,
+                  color: et.secondaryText,
                 ),
               ),
             ),
@@ -198,9 +201,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               Container(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: AppColors.secondaryBackground,
+                  color: et.surface,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.alternate),
+                  border: Border.all(color: et.surfaceBorder),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -223,7 +226,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       child: Text(
                         'Enviamos o link de recuperação. Verifique sua caixa de entrada e spam para continuar.',
                         style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.secondaryText,
+                          color: et.secondaryText,
                           height: 1.45,
                         ),
                       ),
@@ -300,14 +303,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 child: RichText(
                   text: TextSpan(
                     style: AppTextStyles.labelMedium,
-                    children: const [
+                    children: [
                       TextSpan(
                         text: 'Esqueceu sua senha? ',
-                        style: TextStyle(
-                          color: AppColors.secondaryText,
-                        ),
+                        style: TextStyle(color: et.secondaryText),
                       ),
-                      TextSpan(
+                      const TextSpan(
                         text: 'Clique aqui',
                         style: TextStyle(
                           color: AppColors.actionBlue,
@@ -333,22 +334,69 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }
 }
 
+// ---------------------------------------------------------------------------
+// Toggle de tema — posicionado pelo AuthScaffold no canto superior direito
+// ---------------------------------------------------------------------------
+
+class _ThemeToggleButton extends ConsumerWidget {
+  const _ThemeToggleButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(themeModeProvider);
+    final isDark = mode == ThemeMode.dark;
+    final et = EanTrackTheme.of(context);
+
+    return Tooltip(
+      message: isDark ? 'Modo claro' : 'Modo escuro',
+      child: Material(
+        color: et.surface.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            ref.read(themeModeProvider.notifier).state =
+                isDark ? ThemeMode.light : ThemeMode.dark;
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                key: ValueKey(isDark),
+                size: 20,
+                color: et.secondaryText,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Divisor "ou"
+// ---------------------------------------------------------------------------
+
 class _DividerOu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     return Row(
       children: [
-        const Expanded(child: Divider(color: AppColors.accent1)),
+        Expanded(child: Divider(color: et.divider)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
           child: Text(
             'ou',
             style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.secondaryText,
+              color: et.secondaryText,
             ),
           ),
         ),
-        const Expanded(child: Divider(color: AppColors.accent1)),
+        Expanded(child: Divider(color: et.divider)),
       ],
     );
   }

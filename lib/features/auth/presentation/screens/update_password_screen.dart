@@ -44,7 +44,8 @@ class _UpdatePasswordScreenState
       await AppFeedback.showSuccess(
         context,
         title: 'Senha alterada',
-        message: 'Sua senha foi atualizada com sucesso. Faça login novamente para continuar.',
+        message:
+            'Sua senha foi atualizada com sucesso. Faça login novamente para continuar.',
       );
       if (!mounted) return;
       await ref.read(authNotifierProvider.notifier).signOut();
@@ -72,6 +73,8 @@ class _UpdatePasswordScreenState
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
+
     return AuthScaffold(
       showLogo: true,
       title: 'Defina sua nova senha',
@@ -97,7 +100,7 @@ class _UpdatePasswordScreenState
             Text(
               'A senha deve ter:',
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.secondaryText,
+                color: et.secondaryText,
               ),
             ),
             const SizedBox(height: AppSpacing.xs),
@@ -156,11 +159,7 @@ class _UpdatePasswordScreenState
                   child: AppButton(
                     label: 'Voltar',
                     variant: AppButtonVariant.outlined,
-                    leadingIcon: const Icon(
-                      Icons.arrow_back_ios,
-                      size: 14,
-                      color: AppColors.secondary,
-                    ),
+                    leadingIcon: const Icon(Icons.arrow_back_ios, size: 14),
                     onPressed: _action.isLoading
                         ? null
                         : () => context.go(AppRoutes.login),
@@ -171,17 +170,13 @@ class _UpdatePasswordScreenState
                   child: AppButton(
                     label: 'Alterar',
                     isLoading: _action.isLoading,
-                    onPressed:
-                        _canSubmit &&
-                                !_action.isLoading
-                            ? _submit
-                            : null,
+                    onPressed: _canSubmit && !_action.isLoading ? _submit : null,
                     trailingIcon: _action.isLoading
                         ? null
-                        : const Icon(
+                        : Icon(
                             Icons.arrow_forward_ios,
                             size: 14,
-                            color: AppColors.secondaryBackground,
+                            color: et.ctaForeground,
                           ),
                   ),
                 ),

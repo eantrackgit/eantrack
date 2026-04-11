@@ -3,11 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
-import '../../../../shared/theme/app_colors.dart';
-import '../../../../shared/theme/app_spacing.dart';
-import '../../../../shared/theme/app_text_styles.dart';
-import '../../../../shared/widgets/app_button.dart';
-import '../../../../shared/widgets/auth_scaffold.dart';
+import '../../../../shared/shared.dart';
 
 class CnpjScreen extends StatefulWidget {
   const CnpjScreen({super.key});
@@ -33,7 +29,9 @@ class _CnpjScreenState extends State<CnpjScreen> {
     if (!_submitted) return null;
     final raw = _controller.text.replaceAll(RegExp(r'[^\d]'), '');
     if (raw.isEmpty) return 'Informe o CNPJ.';
-    if (raw.length != 14) return 'CNPJ inválido. Use o formato XX.XXX.XXX/XXXX-XX.';
+    if (raw.length != 14) {
+      return 'CNPJ inválido. Use o formato XX.XXX.XXX/XXXX-XX.';
+    }
     return null;
   }
 
@@ -50,7 +48,6 @@ class _CnpjScreenState extends State<CnpjScreen> {
 
     setState(() => _status = _CnpjStatus.loading);
 
-    // Placeholder — integração real em tarefa futura
     await Future.delayed(const Duration(milliseconds: 800));
 
     if (!mounted) return;
@@ -105,14 +102,14 @@ class _CnpjScreenState extends State<CnpjScreen> {
             children: [
               Expanded(
                 child: AppButton.secondary(
-                  '← Voltar',
+                  'Voltar',
                   onPressed: () => context.go(AppRoutes.onboarding),
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: AppButton.primary(
-                  'Avançar →',
+                  'Avançar',
                   onPressed: _status == _CnpjStatus.loading ? null : _onAdvance,
                 ),
               ),
@@ -123,10 +120,6 @@ class _CnpjScreenState extends State<CnpjScreen> {
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// Widgets privados
-// ---------------------------------------------------------------------------
 
 class _CnpjField extends StatelessWidget {
   const _CnpjField({
@@ -141,6 +134,8 @@ class _CnpjField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
+
     return TextField(
       controller: controller,
       onChanged: onChanged,
@@ -149,15 +144,24 @@ class _CnpjField extends StatelessWidget {
         FilteringTextInputFormatter.digitsOnly,
         _CnpjInputFormatter(),
       ],
-      style: AppTextStyles.bodyMedium,
+      style: AppTextStyles.bodyMedium.copyWith(color: et.primaryText),
       decoration: InputDecoration(
         labelText: 'CNPJ',
         hintText: 'XX.XXX.XXX/XXXX-XX',
         errorText: errorText,
-        border: OutlineInputBorder(borderRadius: AppRadius.smAll),
+        filled: true,
+        fillColor: et.inputFill,
+        border: OutlineInputBorder(
+          borderRadius: AppRadius.smAll,
+          borderSide: BorderSide(color: et.inputBorder),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: AppRadius.smAll,
+          borderSide: BorderSide(color: et.inputBorder),
+        ),
         focusedBorder: OutlineInputBorder(
           borderRadius: AppRadius.smAll,
-          borderSide: const BorderSide(color: AppColors.secondary, width: 1.5),
+          borderSide: BorderSide(color: et.inputBorderFocused, width: 1.5),
         ),
       ),
     );
@@ -166,15 +170,17 @@ class _CnpjField extends StatelessWidget {
 
 class _StatusMessage extends StatelessWidget {
   const _StatusMessage({required this.message, required this.status});
+
   final String message;
   final _CnpjStatus status;
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     final color = switch (status) {
       _CnpjStatus.success => AppColors.success,
       _CnpjStatus.error => AppColors.error,
-      _ => AppColors.secondaryText,
+      _ => et.secondaryText,
     };
 
     final icon = switch (status) {
@@ -219,6 +225,8 @@ class _AcceptCheckbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -230,7 +238,11 @@ class _AcceptCheckbox extends StatelessWidget {
               height: 24,
               child: Checkbox(
                 value: accepted,
-                activeColor: AppColors.secondary,
+                activeColor: et.ctaBackground,
+                checkColor: et.ctaForeground,
+                side: BorderSide(
+                  color: hasError ? AppColors.error : et.surfaceBorder,
+                ),
                 onChanged: onChanged,
               ),
             ),
@@ -239,7 +251,7 @@ class _AcceptCheckbox extends StatelessWidget {
               child: Text(
                 'Confirmo que os dados do CNPJ correspondem à minha empresa e aceito os termos de cadastro.',
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.primaryText,
+                  color: et.primaryText,
                 ),
               ),
             ),
@@ -260,7 +272,6 @@ class _AcceptCheckbox extends StatelessWidget {
 
 enum _CnpjStatus { idle, loading, success, error }
 
-/// Formata input como XX.XXX.XXX/XXXX-XX
 class _CnpjInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(

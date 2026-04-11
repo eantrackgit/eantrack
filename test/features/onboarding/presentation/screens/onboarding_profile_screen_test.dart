@@ -3,6 +3,8 @@ import 'package:eantrack/core/error/app_exception.dart';
 import 'package:eantrack/features/onboarding/data/onboarding_repository.dart';
 import 'package:eantrack/features/onboarding/presentation/providers/onboarding_provider.dart';
 import 'package:eantrack/features/onboarding/presentation/screens/onboarding_profile_screen.dart';
+import 'package:eantrack/shared/providers/theme_provider.dart';
+import 'package:eantrack/shared/theme/app_theme.dart';
 import 'package:eantrack/shared/widgets/app_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,9 +14,24 @@ import 'package:mocktail/mocktail.dart';
 
 class MockOnboardingRepository extends Mock implements OnboardingRepository {}
 
-Finder get _nameField => find.byType(TextFormField).at(0);
-Finder get _descriptionField => find.byType(TextFormField).at(1);
-Finder get _identifierField => find.byType(TextFormField).at(2);
+Finder _textFieldByHint(String hintText) {
+  return find.byWidgetPredicate(
+    (widget) =>
+        widget is TextField && widget.decoration?.hintText == hintText,
+    description: 'TextField com hint "$hintText"',
+  );
+}
+
+Finder get _nameField => _textFieldByHint('Digite seu nome completo');
+Finder get _descriptionField => find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField &&
+          widget.maxLines == 3 &&
+          widget.maxLength == 200,
+      description: 'TextField de descricao',
+    );
+Finder get _identifierField =>
+    _textFieldByHint('Escolha seu identificador');
 
 void main() {
   late MockOnboardingRepository repository;
@@ -37,12 +54,7 @@ void main() {
       routes: [
         GoRoute(
           path: AppRoutes.onboardingIndividual,
-          builder: (_, __) => ProviderScope(
-            overrides: [
-              onboardingRepositoryProvider.overrideWith((ref) => repository),
-            ],
-            child: OnboardingProfileScreen(mode: mode),
-          ),
+          builder: (_, __) => OnboardingProfileScreen(mode: mode),
         ),
         GoRoute(
           path: AppRoutes.onboarding,
@@ -68,8 +80,22 @@ void main() {
     });
 
     await tester.pumpWidget(
-      MaterialApp.router(
-        routerConfig: router,
+      ProviderScope(
+        overrides: [
+          onboardingRepositoryProvider.overrideWith((ref) => repository),
+        ],
+        child: Consumer(
+          builder: (context, ref, _) {
+            final themeMode = ref.watch(themeModeProvider);
+
+            return MaterialApp.router(
+              theme: AppTheme.light(),
+              darkTheme: AppTheme.dark(),
+              themeMode: themeMode,
+              routerConfig: router,
+            );
+          },
+        ),
       ),
     );
     await tester.pump();
@@ -97,7 +123,7 @@ void main() {
 
     final button = tester.widget<ElevatedButton>(
       find.descendant(
-        of: find.widgetWithText(AppButton, 'Avancar'),
+        of: find.widgetWithText(AppButton, 'Avançar'),
         matching: find.byType(ElevatedButton),
       ),
     );
@@ -121,17 +147,20 @@ void main() {
     await pumpScreen(tester);
 
     await tester.enterText(_identifierField, 'curto123');
+    await tester.pump();
+
+    expect(find.text('Analisando identificador...'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pump();
 
     verifyNever(() => repository.identificadorExiste(any()));
     expect(
-      find.textContaining(
-        'Identificadores curtos ou muito obvios costumam ja estar em uso',
-      ),
+      find.text('Esse identificador ainda não está disponível.'),
       findsOneWidget,
     );
-    expect(find.text('Sugestoes mais profissionais'), findsOneWidget);
+    expect(find.text('Sugestões para você'), findsOneWidget);
     expect(find.text('curto123oficial'), findsOneWidget);
     expect(find.byIcon(Icons.check_circle), findsNothing);
   });
@@ -146,7 +175,7 @@ void main() {
     await tester.pump();
 
     verifyNever(() => repository.identificadorExiste(any()));
-    expect(find.text('Sugestoes mais profissionais'), findsOneWidget);
+    expect(find.text('Sugestões para você'), findsOneWidget);
     expect(find.text('joaosilva'), findsOneWidget);
     expect(find.text('curto123oficial'), findsNothing);
   });
@@ -156,7 +185,7 @@ void main() {
 
     await enterAvailableIdentifier(tester);
 
-    expect(find.text('Identificador disponivel!'), findsOneWidget);
+    expect(find.text('Identificador disponível!'), findsOneWidget);
     expect(find.byIcon(Icons.check_circle), findsOneWidget);
     verify(() => repository.identificadorExiste('clientebase1')).called(1);
   });
@@ -174,11 +203,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pump();
 
-    expect(find.text('Esse identificador ja existe!'), findsOneWidget);
-    expect(find.text('Alternativas disponiveis'), findsOneWidget);
+    expect(find.text('Esse identificador não está disponível.'), findsOneWidget);
+    expect(find.text('Outras opções disponíveis'), findsOneWidget);
     expect(find.text('joaosilva'), findsOneWidget);
     expect(find.byIcon(Icons.check_circle), findsNothing);
-    expect(find.text('Identificador disponivel!'), findsNothing);
+    expect(find.text('Identificador disponível!'), findsNothing);
   });
 
   testWidgets(
@@ -197,7 +226,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pump();
 
-    expect(find.text('Identificador disponivel!'), findsOneWidget);
+    expect(find.text('Identificador disponível!'), findsOneWidget);
     expect(find.byIcon(Icons.check_circle), findsOneWidget);
 
     await tester.enterText(_identifierField, '@AdminTeste ');
@@ -205,8 +234,8 @@ void main() {
     await tester.pump();
 
     verify(() => repository.identificadorExiste('adminteste')).called(1);
-    expect(find.text('Esse identificador ja existe!'), findsOneWidget);
-    expect(find.text('Identificador disponivel!'), findsNothing);
+    expect(find.text('Esse identificador não está disponível.'), findsOneWidget);
+    expect(find.text('Identificador disponível!'), findsNothing);
     expect(find.byIcon(Icons.check_circle), findsNothing);
   });
 
@@ -228,7 +257,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('joaosilva'), findsWidgets);
-    expect(find.text('Identificador disponivel!'), findsOneWidget);
+    expect(find.text('Identificador disponível!'), findsOneWidget);
   });
 
   testWidgets('botao avancar chama fluxo final corretamente', (tester) async {
@@ -236,7 +265,7 @@ void main() {
     await tester.enterText(_descriptionField, 'Especialista em operacoes');
     await enterAvailableIdentifier(tester);
 
-    await tester.tap(find.widgetWithText(AppButton, 'Avancar'));
+    await tester.tap(find.widgetWithText(AppButton, 'Avançar'));
     await tester.pump();
     await tester.pump();
 
@@ -270,13 +299,13 @@ void main() {
     await pumpScreen(tester);
     await enterAvailableIdentifier(tester);
 
-    await tester.tap(find.widgetWithText(AppButton, 'Avancar'));
+    await tester.tap(find.widgetWithText(AppButton, 'Avançar'));
     await tester.pump();
     await tester.pump();
 
     expect(find.text('CNPJ destination'), findsNothing);
-    expect(find.text('Alternativas disponiveis'), findsOneWidget);
-    expect(find.text('Esse identificador ja existe!'), findsOneWidget);
+    expect(find.text('Outras opções disponíveis'), findsOneWidget);
+    expect(find.text('Esse identificador não está disponível.'), findsOneWidget);
   });
 
   testWidgets('conflito 23505 no submit volta identificador para ocupado',
@@ -299,8 +328,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pump();
 
-    expect(find.text('Esse identificador ja existe!'), findsOneWidget);
-    expect(find.text('Identificador disponivel!'), findsNothing);
+    expect(find.text('Esse identificador não está disponível.'), findsOneWidget);
+    expect(find.text('Identificador disponível!'), findsNothing);
     expect(find.byIcon(Icons.check_circle), findsNothing);
   });
 }

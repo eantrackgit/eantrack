@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text_styles.dart';
+import '../theme/app_theme.dart';
 import 'app_button.dart';
 
 /// Shortcut helpers for the two most common feedback patterns.
@@ -55,6 +56,7 @@ Future<void> showAppFeedbackDialog({
     barrierDismissible: dismissible,
     barrierColor: Colors.transparent,
     builder: (dialogContext) {
+      final et = EanTrackTheme.of(dialogContext);
       return Material(
         color: Colors.transparent,
         child: Stack(
@@ -127,7 +129,7 @@ Future<void> showAppFeedbackDialog({
                     child: Container(
                       padding: const EdgeInsets.all(AppSpacing.lg),
                       decoration: BoxDecoration(
-                        color: AppColors.secondaryBackground,
+                        color: et.cardSurface,
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
                           color: accentColor.withValues(alpha: 0.14),
@@ -153,8 +155,7 @@ Future<void> showAppFeedbackDialog({
                               splashRadius: 20,
                               icon: Icon(
                                 Icons.close_rounded,
-                                color: AppColors.secondaryText
-                                    .withValues(alpha: 0.8),
+                                color: et.secondaryText.withValues(alpha: 0.8),
                               ),
                             ),
                           ),
@@ -176,7 +177,7 @@ Future<void> showAppFeedbackDialog({
                             title,
                             textAlign: TextAlign.center,
                             style: AppTextStyles.headlineSmall.copyWith(
-                              color: AppColors.secondary,
+                              color: et.primaryText,
                             ),
                           ),
                           const SizedBox(height: AppSpacing.sm),
@@ -184,7 +185,7 @@ Future<void> showAppFeedbackDialog({
                             message,
                             textAlign: TextAlign.center,
                             style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.secondaryText,
+                              color: et.secondaryText,
                               height: 1.45,
                             ),
                           ),

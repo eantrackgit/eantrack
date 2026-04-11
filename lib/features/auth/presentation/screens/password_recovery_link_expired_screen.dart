@@ -9,6 +9,8 @@ class PasswordRecoveryLinkExpiredScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
+
     return AuthScaffold(
       showLogo: true,
       title: 'Link expirado',
@@ -26,7 +28,7 @@ class PasswordRecoveryLinkExpiredScreen extends StatelessWidget {
                 end: Alignment.bottomRight,
                 colors: [
                   AppColors.error.withValues(alpha: 0.12),
-                  AppColors.secondary.withValues(alpha: 0.08),
+                  et.ctaBackground.withValues(alpha: 0.08),
                 ],
               ),
               border: Border.all(
@@ -45,10 +47,10 @@ class PasswordRecoveryLinkExpiredScreen extends StatelessWidget {
                       color: AppColors.error.withValues(alpha: 0.2),
                     ),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.link_off_rounded,
                     size: 32,
-                    color: AppColors.error,
+                    color: et.ctaForeground,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -56,7 +58,7 @@ class PasswordRecoveryLinkExpiredScreen extends StatelessWidget {
                   'Por segurança, links de redefinição só podem ser usados dentro do prazo e uma única vez.',
                   textAlign: TextAlign.center,
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.primaryText,
+                    color: et.primaryText,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
@@ -64,7 +66,7 @@ class PasswordRecoveryLinkExpiredScreen extends StatelessWidget {
                   'Volte ao login para solicitar um novo link.',
                   textAlign: TextAlign.center,
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.secondaryText,
+                    color: et.secondaryText,
                   ),
                 ),
               ],
@@ -74,10 +76,10 @@ class PasswordRecoveryLinkExpiredScreen extends StatelessWidget {
           AppButton(
             label: 'Voltar ao login',
             onPressed: () => context.go(AppRoutes.login),
-            leadingIcon: const Icon(
+            leadingIcon: Icon(
               Icons.arrow_back_ios_new,
               size: 14,
-              color: AppColors.info,
+              color: et.ctaForeground,
             ),
           ),
         ],

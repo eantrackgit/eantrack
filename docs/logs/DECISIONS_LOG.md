@@ -170,3 +170,23 @@
 **Decisão:** `userMode` em `UserFlowState` é nullable. FlowPage só avança além de `/onboarding/mode` se `userMode != null`. Modo individual roteia para `/onboarding/individual` (placeholder) — nunca para `/hub` sem onboarding completo.
 **Motivo:** Garantir que nenhum usuário entre no app com estado operacional indefinido.
 **Impacto:** `UserFlowState.fromJson` sem default para `user_mode`. `isOnboardingComplete` retorna false quando `userMode == null`.
+
+---
+
+## DEC-018 — EanTrackTheme como ThemeExtension para dark mode
+
+**Data:** 2026-04-09
+**Contexto:** Dark mode requerido. Opções: (A) mapear cores com `MediaQuery.platformBrightness`, (B) criar próprio sistema de tokens, (C) usar Flutter `ThemeExtension`.
+**Decisão:** `EanTrackTheme` como `ThemeExtension<EanTrackTheme>` com tokens semânticos (14 tokens). Dois presets: `EanTrackTheme.light` e `EanTrackTheme.dark`. Acesso via `EanTrackTheme.of(context)`. Toggle via `StateProvider<ThemeMode>` (`themeModeProvider`).
+**Motivo:** ThemeExtension é o padrão oficial Flutter, integra com `MaterialApp.darkTheme`, suporta `lerp()` para transições suaves, e não exige `BuildContext` no lugar errado. Tokens semânticos isolam widgets das cores primitivas — mudança de paleta não requer alterar widgets.
+**Impacto:** `AppButton`, `AppTextField`, `AuthScaffold`, `AppFeedbackDialog`, e todas as telas de auth/onboarding migradas. Telas internas (hub, regiões) ainda usam `AppColors.*` direto — pendente de migração.
+
+---
+
+## DEC-019 — Algoritmo determinístico de sugestões de identificador
+
+**Data:** 2026-04-10
+**Contexto:** `onboarding_profile_screen.dart` precisa sugerir identificadores disponíveis. Opções: (A) random com retry, (B) baseado em timestamp, (C) lista fixa de candidatos em ordem determinística.
+**Decisão:** Lista fixa de candidatos em ordem pré-definida (sem aleatoriedade). Candidatos derivados do nome: `joaosilva`, `joao.silva`, `joao_silva`, `joaosilva1`, `joaosilva.oficial`, `joaosilva.pro`. Se ocupados, sufixos numéricos até 10.
+**Motivo:** Testabilidade — dado nome fixo, sugestões são sempre as mesmas. Previsibilidade — `joaosilva` é sempre o primeiro candidato quando nome+sobrenome existem. Instagram e Microsoft usam abordagem similar.
+**Impacto:** `_buildNameDrivenCandidates()` e `_buildUncheckedSuggestions()` em `onboarding_profile_screen.dart`. Filtro de `_minIdentifierLength` NÃO se aplica a sugestões (apenas a input do usuário). `_applySuggestion()` chama `_validateIdentifier()` diretamente para contornar guards de comprimento mínimo.

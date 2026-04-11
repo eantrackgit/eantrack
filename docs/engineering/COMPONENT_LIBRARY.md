@@ -3,6 +3,7 @@
 > Inventário de widgets e utils implementados na arquitetura Flutter puro.
 > Para spec visual de cada componente → `/docs/design/DESIGN_SYSTEM.md`
 > Para padrões de uso → `/docs/engineering/GLOBAL_PATTERNS.md`
+> Última atualização: 2026-04-11
 
 ---
 
@@ -10,14 +11,24 @@
 
 | Componente | Arquivo | Variantes / Props chave |
 |-----------|---------|------------------------|
-| `AppButton` | `app_button.dart` | Variantes: `primary` (navy), `secondary`/`outlined` (outlined navy), `action` (azul), `social` (vermelho). Props: `label`, `isLoading`, `onPressed`, `leadingIcon`, `trailingIcon`. Loading via spinner interno no botão — nunca overlay global. |
-| `AppTextField` | `app_text_field.dart` | label floating, obscure toggle, validator support, `AppValidators` embutidos |
-| `AppCard` | `app_card.dart` | `child`, `color?`, `padding?`, `onTap?`, `selected?`, `borderColor?`. Com ripple quando `onTap` definido. |
-| `AppErrorBox` | `app_error_box.dart` | Caixa de erro inline com ícone + texto PT-BR + shake animation. Usar acima do botão primary em formulários. |
-| `AppFeedbackDialog` | `app_feedback_dialog.dart` | Modal centralizado de sucesso/erro. Chamar via `showAppFeedbackDialog(context, title, message, icon, accentColor)`. Padrão para feedback crítico. |
-| `AuthScaffold` | `auth_scaffold.dart` | Scaffold padrão auth/onboarding: bg `AppColors.secondary`, card centralizado maxWidth 480, scroll seguro. Usar em todas as telas Auth e Onboarding. |
-| `PasswordRuleRow` | `password_rule_row.dart` | Row de checklist de senha com animação (ícone + texto colorido). Independente de auth. |
-| `AppVersionBadge` | `app_version_badge.dart` | Badge de versão lida de `assets/config/version.json`. Renderizado no rodapé do AuthScaffold. |
+| `AppButton` | `app_button.dart` | Variantes: `primary`, `secondary`/`outlined`, `action`, `social`. Props: `label`, `isLoading`, `onPressed`, `leadingIcon`, `trailingIcon`. Theming via `EanTrackTheme`. Spinner interno — sem overlay global. |
+| `AppTextField` | `app_text_field.dart` | Floating label, obscure toggle, validator, theming via `EanTrackTheme`. |
+| `AppCard` | `app_card.dart` | `child`, `color?`, `padding?`, `onTap?`, `selected?`, `borderColor?`. Ripple via `Material + InkWell` quando `onTap` definido. |
+| `AppErrorBox` | `app_error_box.dart` | Erro inline com ícone + texto PT-BR + shake animation. Usar acima do botão primary em formulários. |
+| `AppFeedbackDialog` | `app_feedback_dialog.dart` | Modal sucesso/erro com blur backdrop. Chamar via `showAppFeedbackDialog(context, ...)` ou `AppFeedback.showSuccess/showError`. Theming via `EanTrackTheme.of(dialogContext)` — dark mode completo. |
+| `AppEmptyState` | `app_empty_state.dart` | Estado vazio com ícone, título, subtítulo e ação opcional. |
+| `AppListStateView` | `app_list_state_view.dart` | Wrapper para estados de lista: loading (skeleton) / empty (AppEmptyState) / error (AppErrorBox) / loaded (child). |
+| `AuthScaffold` | `auth_scaffold.dart` | Scaffold padrão auth/onboarding. Dark mode via `EanTrackTheme`. Parâmetro `action?` para widget no canto superior direito (ex: toggle de tema). maxWidth 480. |
+| `PasswordRuleRow` | `password_rule_row.dart` | Checklist de senha animado (ícone + texto colorido). Independente de auth. |
+| `AppVersionBadge` | `app_version_badge.dart` | Badge de versão lida de assets. |
+| `AppBottomNav` | `app_bottom_nav.dart` | Bottom navigation bar para mobile. |
+| `AppSidebar` | `app_sidebar.dart` | Sidebar fixa para desktop (240px). |
+
+### Widgets específicos de feature
+
+| Componente | Arquivo | Descrição |
+|-----------|---------|-----------|
+| `ResendCooldownButton` | `lib/features/auth/presentation/widgets/resend_cooldown_button.dart` | Botão com countdown integrado. Props: `cooldown`, `isLoading`, `readyLabel`, `lockedLabelBuilder`, `onPressed`. Usar em telas de reenvio (email verify, recover password). |
 
 ---
 
@@ -25,7 +36,7 @@
 
 | Mixin | Arquivo | Fornece |
 |-------|---------|---------|
-| `FormStateMixin<T>` | `form_state_mixin.dart` | `formKey`, `submitted`, `validateAndSubmit()`, validators (email, password, confirm, required), rastreamento força/confirmação de senha em tempo real |
+| `FormStateMixin<T>` | `form_state_mixin.dart` | `formKey`, `submitted`, `validateAndSubmit()`, `emailValidator`, `passwordValidator`, `confirmValidator`, `requiredValidator`, rastreamento força/confirmação de senha em tempo real |
 
 **Uso obrigatório em toda tela com formulário:**
 ```dart
@@ -43,12 +54,12 @@ class _MyScreenState extends ConsumerState<MyScreen>
 |------|---------|---------|
 | `AsyncAction<T>` | `async_action.dart` | Estado de ação local: `ActionIdle / ActionLoading / ActionSuccess / ActionFailure` + extensão `.isLoading`, `.isFailure`, `.errorMessage` |
 | `AsyncValue<T>` | `async_value.dart` | Estado de dados assíncronos: `DataIdle / DataLoading / DataSuccess / DataEmpty / DataFailure` |
+| `PasswordValidator` | `password_validator.dart` | Regras de força de senha (mínimo, maiúscula, minúscula) |
 
 **Uso obrigatório para ações locais (botão, submit, reenvio):**
 ```dart
 AsyncAction<void> _action = const ActionIdle();
 
-// No handler:
 setState(() => _action = const ActionLoading());
 try {
   await doWork();
@@ -59,8 +70,16 @@ try {
 
 // No build:
 AppButton(isLoading: _action.isLoading, onPressed: _action.isLoading ? null : _submit)
-if (_action.isFailure) AppErrorBox(_action.errorMessage!)
+if (_action.isFailure) AppErrorBox(message: _action.errorMessage!)
 ```
+
+---
+
+## Providers globais (`lib/shared/providers/`)
+
+| Provider | Arquivo | Tipo | Descrição |
+|----------|---------|------|-----------|
+| `themeModeProvider` | `theme_provider.dart` | `StateProvider<ThemeMode>` | Toggle light/dark. Default: `ThemeMode.light`. Consumido por `app.dart`. |
 
 ---
 
@@ -70,28 +89,33 @@ if (_action.isFailure) AppErrorBox(_action.errorMessage!)
 import '../../../shared/shared.dart'; // ajustar nível relativo
 ```
 
-Exporta: tema, widgets, AuthScaffold, AppErrorBox, PasswordRuleRow, FormStateMixin, AsyncAction, AsyncValue, Breakpoints.
+Exporta: tema, `EanTrackTheme`, widgets, `AuthScaffold`, `AppErrorBox`, `PasswordRuleRow`, `FormStateMixin`, `AsyncAction`, `AsyncValue`, `Breakpoints`, `themeModeProvider`.
 
 ---
 
 ## Theme tokens (`lib/shared/theme/`)
 
-| Arquivo | Classe | Tokens |
-|---------|--------|--------|
-| `app_colors.dart` | `AppColors` | Ver [TOKEN_MAPPING.md](../architecture/TOKEN_MAPPING.md) para mapeamento completo |
-| `app_text_styles.dart` | `AppTextStyles` | `displayLarge/Medium/Small`, `headlineLarge/Medium/Small`, `titleLarge/Medium/Small`, `labelLarge/Medium/Small`, `bodyLarge/Medium/Small` |
-| `app_spacing.dart` | `AppSpacing` + `AppRadius` + `AppShadows` | `AppSpacing.xs/sm/md/lg/xl` · `AppRadius.sm/md/lg/full` + `.smAll/.mdAll/.lgAll` · `AppShadows.sm/md/lg/xl` |
-| `app_theme.dart` | `AppTheme` | `ThemeData` builder |
+| Arquivo | Classe | Uso |
+|---------|--------|-----|
+| `app_colors.dart` | `AppColors` | Tokens primitivos de cor — usar para acentos fixos (error, success, actionBlue). Para cores context-aware (light vs dark) → usar `EanTrackTheme`. |
+| `app_text_styles.dart` | `AppTextStyles` | Tipografia — sempre com `.copyWith(color: et.primaryText)` para respeitar o tema |
+| `app_spacing.dart` | `AppSpacing` + `AppRadius` + `AppShadows` | `AppSpacing.xs/sm/md/lg/xl` · `AppRadius.smAll/.mdAll/.lgAll` · `AppShadows.*` |
+| `app_theme.dart` | `EanTrackTheme` + `AppTheme` | `EanTrackTheme.of(context)` para tokens semânticos. `AppTheme.light()` / `AppTheme.dark()` para ThemeData. |
 
-**Nomes reais dos tokens de texto** (usar estes — não h1/h2/h3):
+**Tokens de texto (nomes reais — não usar h1/h2/buttonText):**
 
 | Para usar como... | Token real |
 |-------------------|-----------|
-| Título de tela (24px, bold) | `AppTextStyles.headlineSmall` |
+| Título de tela (24px) | `AppTextStyles.headlineSmall` |
 | Subtítulo de seção (22px) | `AppTextStyles.titleLarge` |
 | Corpo padrão (14px) | `AppTextStyles.bodyMedium` |
 | Caption / erro (12px) | `AppTextStyles.bodySmall` |
-| Label UI (12px, secondaryText) | `AppTextStyles.labelSmall` |
+| Label UI (12px) | `AppTextStyles.labelSmall` |
+| Botão (16px, semi-bold) | `AppTextStyles.titleSmall` |
+
+**Regra de ouro para cores:**
+- Cor fixa (sempre igual em light e dark) → `AppColors.*`
+- Cor semântica (muda entre temas) → `EanTrackTheme.of(context).*`
 
 ---
 
@@ -103,14 +127,11 @@ Exporta: tema, widgets, AuthScaffold, AppErrorBox, PasswordRuleRow, FormStateMix
 
 ---
 
-## Widgets a implementar (Fase 2 — BACKLOG)
+## Widgets a implementar (Fase futura)
 
-| Componente | Task | Arquivo destino | Observação |
-|-----------|------|----------------|-----------|
-| `AppCard` (extensão) | UI-001 | `app_card.dart` | Adicionar `onTap?`, `selected?`, `borderColor?` ao AppCard existente |
-| `AppEmptyState` | UI-002 | `app_empty_state.dart` | |
-| `AppSearchBar` | UI-003 | `app_search_bar.dart` | |
-| `AppTabBar` | UI-004 | `app_tab_bar.dart` | |
-| `AppBottomNav` | UI-006 | `app_bottom_nav.dart` | |
-| `AppSidebar` | UI-007 | `app_sidebar.dart` | |
-| `AppStatusBadge` | UI-008 | `app_status_badge.dart` | |
+| Componente | Arquivo destino | Observação |
+|-----------|----------------|-----------|
+| `AppSearchBar` | `app_search_bar.dart` | Campo de busca com debounce |
+| `AppTabBar` | `app_tab_bar.dart` | Tabs internas |
+| `AppStatusBadge` | `app_status_badge.dart` | active/inactive/pending/approved/rejected |
+| `AppDatePicker` | `app_date_picker.dart` | Seleção de data contextual |

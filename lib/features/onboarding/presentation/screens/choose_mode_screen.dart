@@ -77,12 +77,15 @@ class _ChooseModeScreenState extends ConsumerState<ChooseModeScreen> {
                         ),
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 420),
-                          child: Container(
+                          child: Builder(
+                            builder: (ctx) {
+                              final det = EanTrackTheme.of(ctx);
+                              return Container(
                             padding: const EdgeInsets.all(AppSpacing.lg),
                             decoration: BoxDecoration(
-                              color: AppColors.secondaryBackground,
+                              color: det.cardSurface,
                               borderRadius: BorderRadius.circular(24),
-                              border: Border.all(color: AppColors.alternate),
+                              border: Border.all(color: det.surfaceBorder),
                               boxShadow: const [AppShadows.xl],
                             ),
                             child: Column(
@@ -99,7 +102,7 @@ class _ChooseModeScreenState extends ConsumerState<ChooseModeScreen> {
                                   'Voltar agora?',
                                   textAlign: TextAlign.center,
                                   style: AppTextStyles.headlineSmall.copyWith(
-                                    color: AppColors.secondary,
+                                    color: det.primaryText,
                                   ),
                                 ),
                                 const SizedBox(height: AppSpacing.sm),
@@ -107,7 +110,7 @@ class _ChooseModeScreenState extends ConsumerState<ChooseModeScreen> {
                                   'Recomendamos selecionar um modo antes de voltar.',
                                   textAlign: TextAlign.center,
                                   style: AppTextStyles.bodyMedium.copyWith(
-                                    color: AppColors.secondaryText,
+                                    color: det.secondaryText,
                                     height: 1.45,
                                   ),
                                 ),
@@ -116,7 +119,7 @@ class _ChooseModeScreenState extends ConsumerState<ChooseModeScreen> {
                                   'Se voce voltar agora, ira para o login e depois precisara fazer essa selecao novamente.',
                                   textAlign: TextAlign.center,
                                   style: AppTextStyles.bodyMedium.copyWith(
-                                    color: AppColors.secondaryText,
+                                    color: det.secondaryText,
                                     height: 1.45,
                                   ),
                                 ),
@@ -134,6 +137,8 @@ class _ChooseModeScreenState extends ConsumerState<ChooseModeScreen> {
                                 ),
                               ],
                             ),
+                          );
+                            },
                           ),
                         ),
                       ),
@@ -154,8 +159,10 @@ class _ChooseModeScreenState extends ConsumerState<ChooseModeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
+
     return Scaffold(
-      backgroundColor: AppColors.secondary,
+      backgroundColor: et.scaffoldOuter,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -168,7 +175,7 @@ class _ChooseModeScreenState extends ConsumerState<ChooseModeScreen> {
               child: Container(
                 padding: const EdgeInsets.all(AppSpacing.xl),
                 decoration: BoxDecoration(
-                  color: AppColors.secondaryBackground,
+                  color: et.cardSurface,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Column(
@@ -177,7 +184,7 @@ class _ChooseModeScreenState extends ConsumerState<ChooseModeScreen> {
                     Text(
                       'Defina seu estilo operacional',
                       style: AppTextStyles.headlineSmall.copyWith(
-                        color: AppColors.secondary,
+                        color: et.primaryText,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -185,7 +192,7 @@ class _ChooseModeScreenState extends ConsumerState<ChooseModeScreen> {
                     Text(
                       'Essa configuracao ajuda o EANTrack a personalizar sua experiencia operacional.',
                       style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.secondaryText,
+                        color: et.secondaryText,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -215,10 +222,10 @@ class _ChooseModeScreenState extends ConsumerState<ChooseModeScreen> {
                           child: AppButton(
                             label: 'Voltar',
                             variant: AppButtonVariant.outlined,
-                            leadingIcon: const Icon(
+                            leadingIcon: Icon(
                               Icons.arrow_back_ios,
                               size: 14,
-                              color: AppColors.secondary,
+                              color: et.primaryText,
                             ),
                             onPressed: _saving ? null : _confirmBackToLogin,
                           ),
@@ -269,9 +276,10 @@ class _ModeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     final backgroundColor = selected
         ? AppColors.success.withValues(alpha: 0.05)
-        : AppColors.secondaryBackground;
+        : et.surface;
 
     return Material(
       color: Colors.transparent,
@@ -283,7 +291,7 @@ class _ModeCard extends StatelessWidget {
             return AppColors.success.withValues(alpha: 0.08);
           }
           if (states.contains(WidgetState.hovered)) {
-            return AppColors.primaryText.withValues(alpha: 0.03);
+            return et.primaryText.withValues(alpha: 0.03);
           }
           return null;
         }),
@@ -296,7 +304,7 @@ class _ModeCard extends StatelessWidget {
             color: backgroundColor,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: selected ? AppColors.success : AppColors.alternate,
+              color: selected ? AppColors.success : et.surfaceBorder,
               width: selected ? 2.0 : 1.0,
             ),
           ),
@@ -317,13 +325,13 @@ class _ModeCard extends StatelessWidget {
               Icon(
                 icon,
                 size: 64,
-                color: selected ? AppColors.success : AppColors.secondaryText,
+                color: selected ? AppColors.success : et.secondaryText,
               ),
               const SizedBox(height: AppSpacing.md),
               Text(
                 title,
                 style: AppTextStyles.titleLarge.copyWith(
-                  color: AppColors.secondary,
+                  color: et.primaryText,
                   fontWeight: FontWeight.w700,
                 ),
                 textAlign: TextAlign.center,
@@ -332,7 +340,7 @@ class _ModeCard extends StatelessWidget {
               Text(
                 description,
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.secondaryText,
+                  color: et.secondaryText,
                 ),
                 textAlign: TextAlign.center,
               ),

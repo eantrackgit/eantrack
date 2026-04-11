@@ -125,6 +125,7 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     final cooldown = ref.watch(passwordRecoveryCooldownProvider);
     final isEmailLocked = cooldown.isLocked;
     final canResend = !_isLoading && !cooldown.isLocked;
@@ -134,7 +135,7 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          color: AppColors.primaryBackground,
+          color: et.cardSurface,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Form(
@@ -145,9 +146,9 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
               Align(
                 alignment: Alignment.centerLeft,
                 child: IconButton(
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.arrow_back_ios,
-                    color: AppColors.tertiary,
+                    color: et.secondaryText,
                     size: 20,
                   ),
                   onPressed: _isLoading ? null : () => context.go(AppRoutes.login),
@@ -158,7 +159,7 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
                 'Esqueceu sua senha?',
                 textAlign: TextAlign.center,
                 style: AppTextStyles.headlineSmall.copyWith(
-                  color: AppColors.secondary,
+                  color: et.primaryText,
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -168,7 +169,7 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
                     : 'Insira o seu e-mail abaixo que enviaremos um link para você criar uma nova senha.',
                 textAlign: TextAlign.center,
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.actionBlue,
+                  color: et.secondaryText,
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -191,11 +192,9 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
-                    color: AppColors.secondaryBackground,
+                    color: et.surface,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppColors.alternate,
-                    ),
+                    border: Border.all(color: et.surfaceBorder),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -224,7 +223,7 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
                                   ? 'Reenvio disponível em ${formatCooldownMmSs(cooldown.remainingLock)}'
                                   : 'Você já pode solicitar um novo link',
                               style: AppTextStyles.labelLarge.copyWith(
-                                color: AppColors.secondary,
+                                color: et.primaryText,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -235,7 +234,7 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
                       Text(
                         _helperMessage(cooldown),
                         style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.secondaryText,
+                          color: et.secondaryText,
                           height: 1.45,
                         ),
                       ),
@@ -268,10 +267,10 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
                           )
                         : AppButton(
                             label: 'Enviar',
-                            trailingIcon: const Icon(
+                            trailingIcon: Icon(
                               Icons.send,
                               size: 16,
-                              color: AppColors.secondaryBackground,
+                              color: et.ctaForeground,
                             ),
                             onPressed: _isLoading ? null : _submit,
                             isLoading: _isLoading,

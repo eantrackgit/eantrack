@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text_styles.dart';
+import '../theme/app_theme.dart';
 import 'app_card.dart';
 import 'app_version_badge.dart';
 
@@ -11,6 +11,10 @@ import 'app_version_badge.dart';
 const double _kVersionFooterHeight = 24.0;
 
 /// Standard layout for auth and onboarding screens.
+///
+/// Usa [EanTrackTheme] para adaptar cores ao modo claro/escuro.
+/// O parâmetro [action] permite inserir um widget no canto superior direito
+/// (ex: botão de alternância de tema).
 class AuthScaffold extends StatelessWidget {
   const AuthScaffold({
     super.key,
@@ -21,6 +25,7 @@ class AuthScaffold extends StatelessWidget {
     this.logoWidth = 180,
     this.logoHeight = 60,
     this.padding,
+    this.action,
   });
 
   final Widget child;
@@ -31,10 +36,16 @@ class AuthScaffold extends StatelessWidget {
   final double logoHeight;
   final EdgeInsetsGeometry? padding;
 
+  /// Widget opcional posicionado no canto superior direito do scaffold.
+  /// Ideal para controles globais como alternância de tema.
+  final Widget? action;
+
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
+
     return Scaffold(
-      backgroundColor: AppColors.secondary,
+      backgroundColor: et.scaffoldOuter,
       body: SafeArea(
         child: Stack(
           children: [
@@ -48,7 +59,7 @@ class AuthScaffold extends StatelessWidget {
                     bottom: AppSpacing.xl + _kVersionFooterHeight,
                   ),
                   child: AppCard(
-                    color: AppColors.secondaryBackground,
+                    color: et.cardSurface,
                     padding: padding,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -68,7 +79,7 @@ class AuthScaffold extends StatelessWidget {
                           Text(
                             title!,
                             style: AppTextStyles.headlineSmall.copyWith(
-                              color: AppColors.secondary,
+                              color: et.primaryText,
                             ),
                             textAlign:
                                 showLogo ? TextAlign.center : TextAlign.start,
@@ -78,7 +89,7 @@ class AuthScaffold extends StatelessWidget {
                             Text(
                               subtitle!,
                               style: AppTextStyles.bodySmall.copyWith(
-                                color: AppColors.secondaryText,
+                                color: et.secondaryText,
                               ),
                               textAlign:
                                   showLogo ? TextAlign.center : TextAlign.start,
@@ -100,10 +111,16 @@ class AuthScaffold extends StatelessWidget {
               right: 0,
               child: AppVersionBadge(),
             ),
+            // Slot opcional para controles no canto superior direito.
+            if (action != null)
+              Positioned(
+                top: AppSpacing.sm,
+                right: AppSpacing.sm,
+                child: action!,
+              ),
           ],
         ),
       ),
     );
   }
 }
-

@@ -270,3 +270,95 @@
 ### Pendente
 - [ ] proximos itens
 ```
+
+---
+
+## 2026-04-09 a 2026-04-11 — Sessões: Dark Mode + Onboarding Profile
+
+### Contexto
+Múltiplas sessões cobrindo: sistema de tema claro/escuro, tela de perfil do onboarding, algoritmo de sugestões de identificador, correções de auth, e auditoria global da documentação.
+
+### Implementado — Sistema de Tema (Dark Mode)
+
+**`lib/shared/theme/app_theme.dart`**
+- Adicionados tokens `ctaBackground`, `ctaForeground`, `outlinedFg` ao `EanTrackTheme`
+- Preset `EanTrackTheme.dark` com 14 tokens para dark mode premium
+- `AppTheme.dark()` completo (ColorScheme + InputDecorationTheme + ElevatedButtonTheme)
+- `AppTheme.light()` atualizado com `extensions: const [EanTrackTheme.light]`
+- `lerp()` implementado para transições suaves de tema
+
+**`lib/shared/providers/theme_provider.dart`** (NOVO)
+- `StateProvider<ThemeMode>` — toggle light/dark persistível
+
+**`lib/shared/shared.dart`**
+- Export de `theme_provider.dart`
+
+**`lib/app/app.dart`**
+- `MaterialApp.router` com `theme`, `darkTheme`, `themeMode` (de `themeModeProvider`)
+
+**`lib/shared/widgets/auth_scaffold.dart`**
+- Dark mode completo via `EanTrackTheme`
+- Parâmetro `action?` (Widget opcional no canto superior direito)
+
+**`lib/shared/widgets/app_button.dart`**
+- Theming via `EanTrackTheme`: primary usa `et.ctaBackground`/`et.ctaForeground`, outlined usa `et.outlinedFg`
+
+**`lib/shared/widgets/app_text_field.dart`**
+- Theming completo via `EanTrackTheme`: fill, borders, label color, text color, focus shadow
+
+**`lib/shared/widgets/app_feedback_dialog.dart`**
+- `final et = EanTrackTheme.of(dialogContext)` dentro do builder
+- Card: `et.cardSurface`; título: `et.primaryText`; mensagem/ícone: `et.secondaryText`
+
+### Implementado — Auth Screens (Dark Mode)
+
+**`lib/features/auth/presentation/screens/login_screen.dart`**
+- `_ThemeToggleButton` (ConsumerWidget) passado como `AuthScaffold(action: ...)`
+- `_DividerOu` e recovery banner usam tokens `EanTrackTheme`
+
+**`lib/features/auth/presentation/screens/recover_password_screen.dart`**
+- Dark mode completo: card, título, copy, info box, botões
+
+**`lib/features/auth/presentation/screens/register_screen.dart`**
+- Dark mode em campos, `_TermsRow`: texto base `et.primaryText`, links `AppColors.actionBlue`
+
+### Implementado — Onboarding (Dark Mode)
+
+**`lib/features/onboarding/presentation/screens/choose_mode_screen.dart`**
+- Dark mode em scaffold, cards de modo, modal de confirmação (via `Builder`)
+
+**`lib/features/onboarding/presentation/screens/onboarding_profile_screen.dart`**
+- Dark mode em todos os campos e containers
+- Borders dinâmicos: `fieldBorder`, `fieldFocusedBorder`, `fieldErrorBorder`, `fieldFocusedErrorBorder` como `final` no `build()`
+
+### Implementado — Algoritmo de Sugestões
+
+**`onboarding_profile_screen.dart`**
+- `_buildNameDrivenCandidates()`: 6 candidatos fixos derivados do nome (determinístico)
+- `_buildUncheckedSuggestions()`: sem filtro de comprimento mínimo (sugestões podem ter < 10 chars)
+- `_applySuggestion()`: contorna guards de comprimento, chama `_validateIdentifier()` diretamente
+- `_identifierMessageColor(EanTrackTheme et)`: agora recebe `et` como parâmetro
+
+### Corrigido — Auth
+
+- Modal de recuperação de senha restaurado (havia sido removido em refactor anterior)
+- `_TermsRow` links: `AppColors.primary` (vermelho) → `AppColors.actionBlue`
+- Copy subtitle de recover_password: `AppColors.actionBlue` → `et.secondaryText`
+
+### Auditoria Global (2026-04-11)
+
+- `CURRENT_STATE.md` — reescrito (estado real, nota corrigida para 8.6)
+- `ARCHITECTURE.md` — folder structure atualizado, seção `EanTrackTheme` adicionada
+- `COMPONENT_LIBRARY.md` — `ResendCooldownButton`, `AppListStateView`, `AppEmptyState`, `themeModeProvider` adicionados; tabel de widgets a implementar atualizada
+- `DECISIONS_LOG.md` — DEC-018 (EanTrackTheme) e DEC-019 (algoritmo sugestões) adicionadas
+- `BUILD_LOG.md` — esta entrada
+
+### Não alterado nesta sessão
+- Hub, Regiões (dark mode pendente)
+- Testes das telas de onboarding restantes
+- Integration tests
+
+### Pendente
+- [ ] Dark mode: `hub_screen.dart`, `region_list_screen.dart`, `flow_page.dart`
+- [ ] Decomposição: `onboarding_profile_screen.dart` (911 linhas), `register_screen.dart` (579 linhas)
+- [ ] Smoke tests: `choose_mode_screen`, `cnpj_screen`, `company_data_screen`, `legal_rep_screen`

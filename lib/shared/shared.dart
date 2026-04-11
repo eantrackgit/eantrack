@@ -5,6 +5,8 @@ export 'theme/app_spacing.dart';
 export 'theme/app_text_styles.dart';
 export 'theme/app_theme.dart';
 
+export 'providers/theme_provider.dart';
+
 export 'widgets/app_button.dart';
 export 'widgets/app_card.dart';
 export 'widgets/app_empty_state.dart';

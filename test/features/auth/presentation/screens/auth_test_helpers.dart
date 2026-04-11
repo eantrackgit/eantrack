@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:eantrack/features/auth/data/auth_repository.dart';
 import 'package:eantrack/features/auth/domain/auth_state.dart';
 import 'package:eantrack/features/auth/presentation/providers/auth_provider.dart';
+import 'package:eantrack/shared/providers/theme_provider.dart';
+import 'package:eantrack/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -116,11 +118,20 @@ Widget buildTestable({
       authNotifierProvider.overrideWith((ref) => notifier),
       ...overrides,
     ],
-    child: MaterialApp(
-      home: DefaultAssetBundle(
-        bundle: FakeAssetBundle(),
-        child: child,
-      ),
+    child: Consumer(
+      builder: (context, ref, _) {
+        final themeMode = ref.watch(themeModeProvider);
+
+        return MaterialApp(
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: themeMode,
+          home: DefaultAssetBundle(
+            bundle: FakeAssetBundle(),
+            child: child,
+          ),
+        );
+      },
     ),
   );
 }

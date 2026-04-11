@@ -1,163 +1,172 @@
-# CURRENT_STATE.md — EANTrack (FINAL)
+# CURRENT_STATE.md — EANTrack
 
 > **Leia este arquivo primeiro ao retomar o projeto.**
 > Atualizar a cada sessão que avança o código.
+> Última atualização: 2026-04-11 (auditoria global)
 
 ---
 
 ## Fase Atual
 
-**Fase 1 — Auth** ✅ Código completo
-**Fase 2 — Onboarding** ✅ Completo (ONB-001..009 + UI widgets + Hub + Regiões)
-**Fase 3 — Hub + Regiões** ✅ Hub funcional + RegionList (listagem, criação, toggle ativo)
-**Fase 4 — Testes** 🔄 Smoke tests existentes + unit tests auth + FormStateMixin + RegionRepository
+**Fase 1 — Auth** ✅ Completo (telas + dark mode)
+**Fase 2 — Onboarding** 🔄 Em progresso — screens criadas, integração Supabase parcial
+**Fase 3 — Hub + Regiões** 🔄 Funcional (layout + navegação), sem dark mode, sem testes de UI
+**Fase 4 — Testes** 🔄 Auth coberto; Onboarding profile coberto; Hub/Regiões sem testes
 
 ---
 
-## O que está concluído
+## O que está implementado
 
-### Documentação (/docs)
-- ARCHITECTURE.md ✅
-- AUTH_FLOW.md ✅
-- ANIMATION_GUIDELINES.md ✅
-- BACKLOG.md ✅
-- BACKEND_SCHEMA.md ✅
-- CURRENT_STATE.md ✅ (este arquivo)
-- DECISIONS_LOG.md ✅
-- DEFINITION_OF_DONE.md ✅
-- DESIGN_SYSTEM.md ✅
-- GLOBAL_PATTERNS.md ✅
-- SCREEN_SPECS.md ✅
-- docs/auth/password_history.md ✅
-- docs/web/cache_and_deploy_strategy.md ✅
-- docs/engineering/app_versioning.md ✅
-- docs/engineering/ENGINEERING_PRINCIPLES.md ✅
-- docs/ux/UX_GUIDELINES.md ✅
-- docs/deploy/DEPLOY_GUARDRAILS.md ✅
+### Fundação
+- `lib/main.dart` ✅
+- `lib/app/app.dart` ✅ — MaterialApp.router com light/dark theme e `themeModeProvider`
+- `lib/core/config/app_config.dart` ✅
+- `lib/core/config/app_version.dart` ✅
+- `lib/core/error/app_exception.dart` ✅ — sealed hierarchy
+- `lib/core/router/app_routes.dart` ✅
+- `lib/core/router/app_router.dart` ✅ — GoRouter + RouterRedirectGuard
+- `lib/core/router/router_redirect_guard.dart` ✅
+- `lib/core/router/recovery_link_parser.dart` ✅
 
-### Código — Fundação
-- pubspec.yaml (+riverpod, +crypto, +mocktail) ✅
-- lib/main.dart ✅
-- lib/app/app.dart ✅
-- lib/core/config/app_config.dart ✅
-- lib/core/error/app_exception.dart ✅
-- lib/core/router/app_routes.dart ✅
-- lib/core/router/app_router.dart ✅
-- lib/shared/theme/app_colors.dart ✅
-- lib/shared/theme/app_spacing.dart ✅
-- lib/shared/theme/app_text_styles.dart ✅
-- lib/shared/theme/app_theme.dart ✅
-- lib/shared/layout/breakpoints.dart ✅
-
-### Código — Auth (Data + Domain + Providers)
-- lib/features/auth/domain/auth_state.dart ✅ (domain puro — sem redirectPath)
-- lib/features/auth/domain/auth_flow_state.dart ✅
-- lib/features/auth/domain/user_flow_state.dart ✅
-- lib/features/auth/data/auth_repository.dart ✅ (injectable via constructor)
-- lib/features/auth/data/password_history_service.dart ✅ (check + register RPCs)
-- lib/features/auth/data/password_reuse_parser.dart ✅ (parser defensivo)
-- lib/features/auth/presentation/providers/auth_provider.dart ✅ (+passwordHistoryServiceProvider +EmailCooldownNotifier)
+### Tema (light + dark)
+- `lib/shared/theme/app_colors.dart` ✅ — tokens primitivos
+- `lib/shared/theme/app_spacing.dart` ✅ — espaçamento + radius
+- `lib/shared/theme/app_text_styles.dart` ✅ — tipografia (Poppins + Roboto)
+- `lib/shared/theme/app_theme.dart` ✅ — `EanTrackTheme` (ThemeExtension light/dark) + `AppTheme.light()` + `AppTheme.dark()`
+- `lib/shared/providers/theme_provider.dart` ✅ — `StateProvider<ThemeMode>`
+- `lib/shared/layout/breakpoints.dart` ✅
 
 ### Shared Widgets
-- lib/shared/widgets/app_button.dart ✅ (loading no botão, sem overlay global)
-- lib/shared/widgets/app_text_field.dart ✅ (+AppValidators embutidos)
-- lib/shared/widgets/app_error_box.dart ✅ (inline + shake animation)
-- lib/shared/widgets/app_feedback_dialog.dart ✅ (modal centralizado sucesso/erro)
-- lib/shared/widgets/auth_scaffold.dart ✅ (somente AuthScaffold — widgets extraídos)
-- lib/shared/widgets/password_rule_row.dart ✅ (widget independente)
-- lib/shared/widgets/app_version_badge.dart ✅
+- `lib/shared/widgets/app_button.dart` ✅ — variantes: primary, secondary/outlined, action, social. Loading interno. Theming via `EanTrackTheme`.
+- `lib/shared/widgets/app_text_field.dart` ✅ — floating label, validators, theming via `EanTrackTheme`
+- `lib/shared/widgets/app_error_box.dart` ✅ — erro inline com shake animation
+- `lib/shared/widgets/app_feedback_dialog.dart` ✅ — modal sucesso/erro, dark mode via `EanTrackTheme.of(dialogContext)`
+- `lib/shared/widgets/auth_scaffold.dart` ✅ — layout padrão auth/onboarding com dark mode. Parâmetro `action` opcional para widget no canto superior direito.
+- `lib/shared/widgets/password_rule_row.dart` ✅ — checklist de senha animado
+- `lib/shared/widgets/app_version_badge.dart` ✅
+- `lib/shared/widgets/app_card.dart` ✅ — `onTap?`, `selected?`, `borderColor?`, ripple
+- `lib/shared/widgets/app_empty_state.dart` ✅
+- `lib/shared/widgets/app_bottom_nav.dart` ✅
+- `lib/shared/widgets/app_sidebar.dart` ✅
+- `lib/shared/widgets/app_list_state_view.dart` ✅
 
-### Auth Screens
-- lib/features/auth/presentation/screens/login_screen.dart ✅
-- lib/features/auth/presentation/screens/register_screen.dart ✅
-- lib/features/auth/presentation/screens/email_verification_screen.dart ✅
-- lib/features/auth/presentation/screens/recover_password_screen.dart ✅
-- lib/features/auth/presentation/screens/update_password_screen.dart ✅
-- lib/features/auth/presentation/screens/password_recovery_link_expired_screen.dart ✅
+### Shared Utils / Mixins
+- `lib/shared/mixins/form_state_mixin.dart` ✅ — `formKey`, `submitted`, `validateAndSubmit()`, validators, password strength tracking
+- `lib/shared/utils/async_action.dart` ✅ — `ActionIdle / ActionLoading / ActionSuccess / ActionFailure`
+- `lib/shared/utils/async_value.dart` ✅ — `DataIdle / DataLoading / DataSuccess / DataEmpty / DataFailure`
+- `lib/shared/utils/password_validator.dart` ✅
 
-### Onboarding — início (Sessão 6, 2026-03-30)
-- lib/features/onboarding/presentation/screens/choose_mode_screen.dart ✅ (ONB-002)
-- lib/features/onboarding/data/.gitkeep ✅ (ONB-001)
-- lib/features/onboarding/domain/.gitkeep ✅ (ONB-001)
-- lib/core/router/app_routes.dart — rota `/onboarding` ✅ (ONB-003)
-- lib/core/router/app_router.dart — ChooseModeScreen registrada ✅ (ONB-003)
+### Auth
+- `lib/features/auth/domain/auth_state.dart` ✅
+- `lib/features/auth/domain/auth_flow_state.dart` ✅
+- `lib/features/auth/domain/user_flow_state.dart` ✅
+- `lib/features/auth/data/auth_repository.dart` ✅
+- `lib/features/auth/data/password_history_service.dart` ✅
+- `lib/features/auth/data/password_reuse_parser.dart` ✅
+- `lib/features/auth/data/password_recovery_cooldown_storage.dart` ✅ (stub + web via conditional import)
+- `lib/features/auth/presentation/providers/auth_provider.dart` ✅ — `AuthNotifier`, `EmailCooldownNotifier`, `passwordRecoveryCooldownProvider`, cooldown state
+- `lib/features/auth/presentation/widgets/resend_cooldown_button.dart` ✅
+- `lib/features/auth/presentation/screens/login_screen.dart` ✅ — dark mode, toggle de tema (`_ThemeToggleButton`)
+- `lib/features/auth/presentation/screens/register_screen.dart` ✅ — dark mode, `_TermsRow` com links azuis
+- `lib/features/auth/presentation/screens/email_verification_screen.dart` ✅
+- `lib/features/auth/presentation/screens/recover_password_screen.dart` ✅ — dark mode completo
+- `lib/features/auth/presentation/screens/update_password_screen.dart` ✅
+- `lib/features/auth/presentation/screens/password_recovery_link_expired_screen.dart` ✅
 
----
+### Onboarding
+- `lib/features/onboarding/domain/onboarding_state.dart` ✅ — sealed: Initial / Loading / ModeSelected / Error
+- `lib/features/onboarding/data/onboarding_repository.dart` ✅ — `saveMode()`, `identificadorExiste()` (RPC + fallback), `saveProfile()`
+- `lib/features/onboarding/presentation/providers/onboarding_provider.dart` ✅
+- `lib/features/onboarding/presentation/screens/choose_mode_screen.dart` ✅ — dark mode
+- `lib/features/onboarding/presentation/screens/onboarding_profile_screen.dart` ✅ — dark mode, identifier com sugestões determinísticas (Instagram/Microsoft style), validação em tempo real
+- `lib/features/onboarding/presentation/screens/cnpj_screen.dart` ✅ — UI criada
+- `lib/features/onboarding/presentation/screens/company_data_screen.dart` ✅ — UI criada
+- `lib/features/onboarding/presentation/screens/legal_representative_screen.dart` ✅ — UI criada
 
-## O que está pendente
+### Hub
+- `lib/features/hub/presentation/screens/hub_screen.dart` ✅ — layout responsive (sidebar desktop / bottom nav mobile). **⚠️ Usa `AppColors.*` direto — sem dark mode.**
+- `lib/features/flow/presentation/screens/flow_page.dart` ✅ — tela de decisão de fluxo. **⚠️ Cor hardcoded.**
 
-### Fase 2 — Onboarding (continuação)
-
-Tasks em BACKLOG.md — próxima ordem:
-
-```
-UI-001   AppCard widget
-UI-002   AppEmptyState widget
-UI-006   AppBottomNav widget
-UI-007   AppSidebar widget
-
-HUB-001  Estrutura de pastas Hub
-HUB-002  HubScreen layout básico
-HUB-003  Rota /hub
-
-ONB-004  OnboardingState sealed
-ONB-005  OnboardingNotifier + Provider
-ONB-006  OnboardingRepository + persistir modo
-ONB-007  CnpjScreen (UI)
-ONB-008  CompanyDataScreen (UI)
-ONB-009  LegalRepresentativeScreen (UI)
-```
-
-### Testes existentes ✅
-- test/features/auth/data/auth_repository_test.dart
-- test/features/auth/presentation/screens/login_screen_test.dart (smoke)
-- test/features/auth/presentation/screens/register_screen_test.dart (smoke)
-- test/features/auth/presentation/screens/email_verification_screen_test.dart (smoke)
-- test/features/auth/presentation/screens/recover_password_screen_test.dart (smoke)
-- test/shared/mixins/form_state_mixin_test.dart (unit — Sessão 7)
-- test/features/regions/data/region_repository_test.dart (unit — Sessão 7)
-
----
-
-## Próximo passo exato
-
-Auth flow completo, validado e com todas as regressões visuais corrigidas (2026-04-06).
-Continuar: Onboarding (ONB-004..009) → Hub → Regiões → Redes → Categorias → PDVs.
+### Regiões
+- `lib/features/regions/domain/region_model.dart` ✅
+- `lib/features/regions/domain/region_state.dart` ✅
+- `lib/features/regions/data/region_repository.dart` ✅
+- `lib/features/regions/presentation/providers/region_provider.dart` ✅
+- `lib/features/regions/presentation/screens/region_list_screen.dart` ✅ — **⚠️ Sem dark mode.**
 
 ---
 
-## Pontos de Atenção
+## Testes existentes
 
-1. **`flutter pub get`** antes de rodar (riverpod + crypto + mocktail)
-2. **Compilação**: arquivos legados em `lib/p_a_s_tpag_app_feed/`, `lib/flutter_flow/` causam erros de análise — são referência visual, não precisam compilar. Deletar na Fase 13 (Hardening).
-3. **Supabase keys**: `--dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...`
-4. **RPCs**: verificar assinaturas no Supabase Dashboard antes de integrar (ver BACKEND_SCHEMA.md)
+| Arquivo | Tipo | Cobertura |
+|---------|------|-----------|
+| `test/features/auth/data/auth_repository_test.dart` | Unit | signIn, signUp, reset, email check, password history |
+| `test/features/auth/presentation/screens/login_screen_test.dart` | Widget smoke | render, validação, loading |
+| `test/features/auth/presentation/screens/register_screen_test.dart` | Widget smoke | render básico |
+| `test/features/auth/presentation/screens/email_verification_screen_test.dart` | Widget smoke | render |
+| `test/features/auth/presentation/screens/recover_password_screen_test.dart` | Widget smoke | render, cooldown |
+| `test/features/auth/presentation/providers/resend_cooldown_notifier_test.dart` | Unit | cooldown state |
+| `test/features/onboarding/presentation/screens/onboarding_profile_screen_test.dart` | Widget | identifier, sugestões, validação |
+| `test/features/regions/data/region_repository_test.dart` | Unit | CRUD regiões |
+| `test/shared/mixins/form_state_mixin_test.dart` | Unit | validação form |
+| `test/shared/utils/password_validator_test.dart` | Unit | regras de senha |
+
+**Sem testes:** `choose_mode_screen`, `cnpj_screen`, `company_data_screen`, `legal_rep_screen`, `hub_screen`, `region_list_screen`.
+
+---
+
+## Pendências reais (próximas ações)
+
+### Dívida técnica imediata
+1. **Dark mode interno:** `hub_screen.dart`, `region_list_screen.dart`, `flow_page.dart` precisam migrar para `EanTrackTheme.of(context)`
+2. **Decomposição de screens longas:** `onboarding_profile_screen.dart` (911 linhas), `register_screen.dart` (579 linhas) violam o limite de 200 linhas
+3. **Testes:** smoke tests para as 4 telas de onboarding restantes + hub + regiões
+
+### Próximas features (por prioridade)
+- Integração Supabase completa do fluxo de onboarding (perfil → mode → CNPJ → dados empresa)
+- Screens: Redes, Categorias, PDVs, Indústrias
+- Integration tests para fluxos críticos (login→hub, register→verify)
+- Tela de configurações (usuário, tema, logout)
+
+---
+
+## Pontos de Atenção Operacionais
+
+1. **Comandos proibidos no ambiente:** `flutter analyze`, `flutter test`, `dart format` — travam o terminal. Validar manualmente.
+2. **Supabase keys:** `--dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...`
+3. **Código legado FlutterFlow:** `lib/p_a_s_tpag_app_feed/`, `lib/flutter_flow/` — não compila no rebuild, ignorar até Fase Hardening
+4. **RPCs:** verificar assinaturas no Supabase Dashboard (ver BACKEND_SCHEMA.md)
+5. **Lottie asset:** `flow_page.dart` referencia `assets/animations/flow_loading.json` — verificar se existe antes de rodar
 
 ---
 
 ## Contexto de Domínio
 
-- **Login pós-signup**: após criar conta, Supabase retorna erro "email not confirmed" → estado `AuthEmailUnconfirmed`
-- **Email verification**: polling via tentativa de signIn (não webhook) — `isEmailConfirmed` testa via RPC
-- **user_flow_state**: determina para onde o usuário vai após login (onboarding vs. hub)
-- **SHA-256 email hash**: usado nas RPCs para verificar duplicidade sem armazenar email raw
-- **Cooldown reenvio**: estado local (sem SharedPreferences) — reinicia por sessão (intencional, ver DEC-007)
+- **Login pós-signup:** Supabase retorna erro "email not confirmed" → estado `AuthEmailUnconfirmed`
+- **Email verification:** polling silencioso a cada 3s + botão manual "Já confirmei"
+- **user_flow_state:** determina destino após login (onboarding incompleto vs. hub)
+- **SHA-256 email hash:** unicidade de email sem armazenar raw na tabela `email_codes`
+- **Cooldown reenvio:** estado local em memória — reinicia na sessão (intencional, DEC-007)
+- **Identifier:** normalizado (lowercase, sem @, apenas `[a-z0-9._-]`); sugestões determinísticas baseadas no nome
 
 ---
 
 ## Qualidade do Projeto
 
-**Nota atual: 9.7 / 10** *(2026-04-06)*
+**Nota auditada: 8.6 / 10** *(2026-04-11 — auditoria independente)*
+**Faixa após correções prioritárias: 9.0–9.2**
 
-| Área | Nota |
-|------|------|
-| Arquitetura | 9.8 |
-| Auth | 9.8 |
-| Segurança | 9.6 |
-| UX | 9.7 |
-| UI | 9.7 |
-| Consistência (código + docs) | 9.7 |
-| Documentação | 9.7 |
+| Área | Nota | Observação |
+|------|------|-----------|
+| Arquitetura | 9.2 | Feature-first sólido, repository e router limpos |
+| Auth foundation | 9.5 | Completo, edge cases cobertos, cooldown, history |
+| Segurança | 9.4 | RPC-first, SHA-256, dart-define, erros sanitizados |
+| UI Design System | 8.5 | EanTrackTheme excelente em auth/onboarding; ausente nas telas internas |
+| Estado / Riverpod | 9.0 | Sealed states, AsyncAction/Value, providers organizados |
+| Navegação | 9.2 | RouterRedirectGuard, FlowPage, AppRoutes constants |
+| Manutenibilidade | 8.0 | FormStateMixin/AsyncAction bons; screens muito longas |
+| Testabilidade | 7.2 | Auth coberto; hub/onboarding screens descobertas; sem integration tests |
+| Documentação | 8.5 | Pós-auditoria (antes: 6.5) |
 
 ---
 
@@ -165,6 +174,8 @@ Continuar: Onboarding (ONB-004..009) → Hub → Regiões → Redes → Categori
 
 | Risco | Nível | Mitigação |
 |-------|-------|-----------|
-| Compilação quebrada: arquivos FlutterFlow antigos | Médio | Executar `flutter analyze`; deletar lib/ legado quando pronto para rodar |
-| RPCs podem ter assinatura diferente do esperado | Baixo | Verificar no Supabase Dashboard antes de testar |
-| `supabase.auth.resend()` API pode ter mudado | Baixo | Testar em ambiente de desenvolvimento |
+| Arquivos FlutterFlow legados causam erros de análise | Médio | Deletar na Fase Hardening; ignorar até lá |
+| Dark mode quebrado em telas internas (hub, regiões) | Médio | Migrar para EanTrackTheme nas próximas sessões |
+| Screens longas (911, 579 linhas) dificultas manutenção | Médio | Decompor em widgets privados quando tocar no arquivo |
+| RPCs podem ter assinatura diferente do esperado | Baixo | Verificar no Supabase Dashboard antes de integrar |
+| Lottie asset `flow_loading.json` pode não existir | Baixo | Verificar em `assets/animations/` antes de rodar |

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text_styles.dart';
+import '../theme/app_theme.dart';
 
 class AppTextField extends StatefulWidget {
   const AppTextField({
@@ -78,12 +79,13 @@ class _AppTextFieldState extends State<AppTextField> {
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     final isEnabled = widget.enabled;
     final labelColor = !isEnabled
-        ? AppColors.secondaryText
+        ? et.secondaryText
         : _hasFocus
-            ? AppColors.secondary
-            : AppColors.secondaryText;
+            ? et.inputBorderFocused
+            : et.secondaryText;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
@@ -93,7 +95,7 @@ class _AppTextFieldState extends State<AppTextField> {
         boxShadow: _hasFocus
             ? [
                 BoxShadow(
-                  color: AppColors.secondary.withValues(alpha: 0.08),
+                  color: et.inputBorderFocused.withValues(alpha: 0.10),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 )
@@ -116,25 +118,22 @@ class _AppTextFieldState extends State<AppTextField> {
         autofillHints: widget.autofillHints,
         autovalidateMode: AutovalidateMode.onUserInteraction,
         style: AppTextStyles.bodyMedium.copyWith(
-          color: isEnabled ? AppColors.secondary : AppColors.secondaryText,
+          color: isEnabled ? et.primaryText : et.secondaryText,
         ),
         decoration: InputDecoration(
           labelText: widget.label,
           hintText: widget.hint,
           counterText: '',
           filled: true,
-          fillColor: isEnabled
-              ? AppColors.secondaryBackground
-              : AppColors.primaryBackground,
+          fillColor: isEnabled ? et.inputFill : et.inputFillDisabled,
           labelStyle: AppTextStyles.labelMedium.copyWith(color: labelColor),
           enabledBorder: OutlineInputBorder(
             borderRadius: AppRadius.smAll,
-            borderSide: const BorderSide(color: AppColors.alternate),
+            borderSide: BorderSide(color: et.inputBorder),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: AppRadius.smAll,
-            borderSide:
-                const BorderSide(color: AppColors.secondary, width: 1.5),
+            borderSide: BorderSide(color: et.inputBorderFocused, width: 1.5),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: AppRadius.smAll,
@@ -146,13 +145,13 @@ class _AppTextFieldState extends State<AppTextField> {
           ),
           disabledBorder: OutlineInputBorder(
             borderRadius: AppRadius.smAll,
-            borderSide: const BorderSide(color: AppColors.alternate),
+            borderSide: BorderSide(color: et.inputBorder),
           ),
           suffixIcon: widget.isPassword
               ? IconButton(
                   icon: Icon(
                     _obscure ? Icons.visibility_off : Icons.visibility,
-                    color: AppColors.secondaryText,
+                    color: et.secondaryText,
                     size: 20,
                   ),
                   onPressed: isEnabled

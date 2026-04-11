@@ -2,20 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
-import '../../../../shared/theme/app_colors.dart';
-import '../../../../shared/theme/app_spacing.dart';
-import '../../../../shared/theme/app_text_styles.dart';
-import '../../../../shared/widgets/app_button.dart';
-import '../../../../shared/widgets/auth_scaffold.dart';
+import '../../../../shared/shared.dart';
 
-/// Tela de confirmação dos dados da empresa (pré-preenchidos via consulta CNPJ).
-///
-/// Exibe os dados em modo leitura. O usuário confirma e avança.
-/// Integração real com a API de CNPJ será feita em tarefa futura.
 class CompanyDataScreen extends StatelessWidget {
   const CompanyDataScreen({super.key});
 
-  // Mock — será substituído por dados reais da consulta CNPJ
   static const _mockData = {
     'Razão Social': 'EMPRESA EXEMPLO COMERCIAL LTDA',
     'Nome Fantasia': 'Exemplo Comercial',
@@ -43,14 +34,14 @@ class CompanyDataScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: AppButton.secondary(
-                  '← Voltar',
+                  'Voltar',
                   onPressed: () => context.go(AppRoutes.onboardingCnpj),
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: AppButton.primary(
-                  'Confirmar →',
+                  'Confirmar',
                   onPressed: () => context.go(AppRoutes.onboardingLegalRep),
                 ),
               ),
@@ -64,11 +55,14 @@ class CompanyDataScreen extends StatelessWidget {
 
 class _DataRow extends StatelessWidget {
   const _DataRow({required this.label, required this.value});
+
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Column(
@@ -77,17 +71,17 @@ class _DataRow extends StatelessWidget {
           Text(
             label,
             style: AppTextStyles.labelSmall.copyWith(
-              color: AppColors.secondaryText,
+              color: et.secondaryText,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             value,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.primaryText,
+              color: et.primaryText,
             ),
           ),
-          const Divider(height: AppSpacing.md),
+          Divider(height: AppSpacing.md, color: et.divider),
         ],
       ),
     );

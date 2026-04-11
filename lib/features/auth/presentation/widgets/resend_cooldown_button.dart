@@ -46,6 +46,7 @@ class _ResendCooldownButtonState extends State<ResendCooldownButton>
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     final locked = widget.cooldown.isLocked;
     final progress = locked
         ? 1.0 -
@@ -62,11 +63,11 @@ class _ResendCooldownButtonState extends State<ResendCooldownButton>
             child: Container(
               decoration: BoxDecoration(
                 color: isActive
-                    ? AppColors.secondaryBackground
-                    : AppColors.secondary,
+                    ? (locked ? et.surface : et.ctaBackground)
+                    : et.ctaBackground,
                 borderRadius: AppRadius.smAll,
-                border: isActive
-                    ? Border.all(color: AppColors.alternate, width: 1.5)
+                border: locked
+                    ? Border.all(color: et.surfaceBorder, width: 1.5)
                     : null,
               ),
             ),
@@ -79,7 +80,7 @@ class _ResendCooldownButtonState extends State<ResendCooldownButton>
                   alignment: Alignment.centerLeft,
                   child: FractionallySizedBox(
                     widthFactor: progress.clamp(0.0, 1.0),
-                    child: Container(color: AppColors.actionBlue),
+                    child: Container(color: et.ctaBackground),
                   ),
                 ),
               ),
@@ -91,18 +92,18 @@ class _ResendCooldownButtonState extends State<ResendCooldownButton>
                     child: Text(
                       widget.lockedLabelBuilder(widget.cooldown.remainingLock),
                       style: AppTextStyles.labelLarge.copyWith(
-                        color: AppColors.secondary,
+                        color: et.primaryText,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   )
                 : widget.isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.5,
-                          color: AppColors.secondary,
+                          color: et.ctaForeground,
                         ),
                       )
                     : Row(
@@ -111,12 +112,16 @@ class _ResendCooldownButtonState extends State<ResendCooldownButton>
                           Text(
                             widget.readyLabel,
                             style: AppTextStyles.labelLarge.copyWith(
-                              color: AppColors.info,
+                              color: et.ctaForeground,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                           const SizedBox(width: 6),
-                          Icon(widget.readyIcon, size: 14, color: AppColors.info),
+                          Icon(
+                            widget.readyIcon,
+                            size: 14,
+                            color: et.ctaForeground,
+                          ),
                         ],
                       ),
           ),

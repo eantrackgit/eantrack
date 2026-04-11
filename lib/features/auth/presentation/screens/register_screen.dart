@@ -181,6 +181,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
 
     final isBusy = _action.isLoading || _googleAction.isLoading;
 
+    final et = EanTrackTheme.of(context);
+
     return AuthScaffold(
       child: Form(
         key: formKey,
@@ -204,7 +206,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                   'Criar conta',
                   textAlign: TextAlign.center,
                   style: AppTextStyles.headlineSmall.copyWith(
-                    color: AppColors.secondary,
+                    color: et.primaryText,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
@@ -212,7 +214,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                   'Todos os campos sao obrigatorios',
                   textAlign: TextAlign.center,
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.secondaryText,
+                    color: et.secondaryText,
                   ),
                 ),
               ],
@@ -224,7 +226,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                 Text(
                   'E-mail',
                   style: AppTextStyles.labelMedium.copyWith(
-                    color: AppColors.primaryText,
+                    color: et.primaryText,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -252,7 +254,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                 Text(
                   'Senha',
                   style: AppTextStyles.labelMedium.copyWith(
-                    color: AppColors.primaryText,
+                    color: et.primaryText,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -277,7 +279,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
             Text(
               'A senha deve ter:',
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.secondaryText,
+                color: et.secondaryText,
               ),
             ),
             const SizedBox(height: AppSpacing.xs),
@@ -322,7 +324,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                 Text(
                   'Confirmar senha',
                   style: AppTextStyles.labelMedium.copyWith(
-                    color: AppColors.primaryText,
+                    color: et.primaryText,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -396,12 +398,13 @@ class _EmailStatusHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 200),
       child: switch (status) {
         _EmailStatus.idle => const SizedBox.shrink(),
         _EmailStatus.checking =>
-          _hint(Icons.hourglass_empty, 'Verificando...', AppColors.accent2),
+          _hint(Icons.hourglass_empty, 'Verificando...', et.secondaryText),
         _EmailStatus.available =>
           _hint(Icons.check_circle_outline, 'Disponível', AppColors.success),
         _EmailStatus.taken => _hint(
@@ -445,6 +448,7 @@ class _TermsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -456,7 +460,7 @@ class _TermsRow extends StatelessWidget {
               activeColor: AppColors.primary,
               checkColor: AppColors.secondaryBackground,
               side: BorderSide(
-                color: hasError ? AppColors.error : AppColors.accent1,
+                color: hasError ? AppColors.error : et.inputBorder,
               ),
             ),
             Expanded(
@@ -465,7 +469,7 @@ class _TermsRow extends StatelessWidget {
                 child: RichText(
                   text: TextSpan(
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.secondaryText,
+                      color: et.primaryText,
                     ),
                     children: [
                       const TextSpan(text: 'Ao continuar, você concorda com os '),
@@ -475,9 +479,9 @@ class _TermsRow extends StatelessWidget {
                           child: Text(
                             'Termos de Uso',
                             style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.primary,
+                              color: AppColors.actionBlue,
                               decoration: TextDecoration.underline,
-                              decorationColor: AppColors.primary,
+                              decorationColor: AppColors.actionBlue,
                             ),
                           ),
                         ),
@@ -489,9 +493,9 @@ class _TermsRow extends StatelessWidget {
                           child: Text(
                             'Politica de Privacidade.',
                             style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.primary,
+                              color: AppColors.actionBlue,
                               decoration: TextDecoration.underline,
-                              decorationColor: AppColors.primary,
+                              decorationColor: AppColors.actionBlue,
                             ),
                           ),
                         ),

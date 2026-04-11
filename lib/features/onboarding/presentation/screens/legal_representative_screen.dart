@@ -3,17 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
-import '../../../../shared/mixins/form_state_mixin.dart';
-import '../../../../shared/theme/app_colors.dart';
-import '../../../../shared/theme/app_spacing.dart';
-import '../../../../shared/theme/app_text_styles.dart';
-import '../../../../shared/widgets/app_button.dart';
-import '../../../../shared/widgets/auth_scaffold.dart';
+import '../../../../shared/shared.dart';
 
-/// Tela de cadastro do representante legal da agência.
-///
-/// Coleta: CPF, RG, data de nascimento, órgão expedidor, aceite de termos.
-/// Upload de documentos: placeholder — implementar em tarefa futura.
 class LegalRepresentativeScreen extends StatefulWidget {
   const LegalRepresentativeScreen({super.key});
 
@@ -43,10 +34,9 @@ class _LegalRepresentativeScreenState
   void _onAdvance() {
     if (!validateAndSubmit()) return;
     if (!_termsAccepted) {
-      setState(() {}); // re-render para mostrar erro do checkbox
+      setState(() {});
       return;
     }
-    // Placeholder — integração real em tarefa futura
     debugPrint('[ONBOARDING] Legal rep saved, advancing to hub');
     context.go(AppRoutes.hub);
   }
@@ -92,7 +82,7 @@ class _LegalRepresentativeScreenState
               validator: (v) => requiredValidator(v, 'o órgão expedidor'),
             ),
             const SizedBox(height: AppSpacing.lg),
-            _DocumentUploadPlaceholder(),
+            const _DocumentUploadPlaceholder(),
             const SizedBox(height: AppSpacing.lg),
             _TermsCheckbox(
               accepted: _termsAccepted,
@@ -104,14 +94,14 @@ class _LegalRepresentativeScreenState
               children: [
                 Expanded(
                   child: AppButton.secondary(
-                    '← Voltar',
+                    'Voltar',
                     onPressed: () => context.go(AppRoutes.onboardingAgency),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: AppButton.primary(
-                    'Finalizar →',
+                    'Finalizar',
                     onPressed: _onAdvance,
                   ),
                 ),
@@ -131,45 +121,53 @@ class _LegalRepresentativeScreenState
     TextInputType? keyboardType,
     TextInputFormatter? formatter,
   }) {
+    final et = EanTrackTheme.of(context);
+
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       inputFormatters: formatter != null ? [formatter] : null,
-      style: AppTextStyles.bodyMedium,
+      style: AppTextStyles.bodyMedium.copyWith(color: et.primaryText),
       validator: validator,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        border: OutlineInputBorder(borderRadius: AppRadius.smAll),
+        filled: true,
+        fillColor: et.inputFill,
+        border: OutlineInputBorder(
+          borderRadius: AppRadius.smAll,
+          borderSide: BorderSide(color: et.inputBorder),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: AppRadius.smAll,
+          borderSide: BorderSide(color: et.inputBorder),
+        ),
         focusedBorder: OutlineInputBorder(
           borderRadius: AppRadius.smAll,
-          borderSide: const BorderSide(color: AppColors.secondary, width: 1.5),
+          borderSide: BorderSide(color: et.inputBorderFocused, width: 1.5),
         ),
       ),
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// Widgets privados
-// ---------------------------------------------------------------------------
-
 class _DocumentUploadPlaceholder extends StatelessWidget {
+  const _DocumentUploadPlaceholder();
+
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.primaryBackground,
+        color: et.surface,
         borderRadius: AppRadius.smAll,
-        border: Border.all(
-          color: AppColors.tertiary,
-          style: BorderStyle.solid,
-        ),
+        border: Border.all(color: et.surfaceBorder),
       ),
       child: Row(
         children: [
-          const Icon(Icons.upload_file_outlined, color: AppColors.secondaryText),
+          Icon(Icons.upload_file_outlined, color: et.secondaryText),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(
@@ -178,13 +176,13 @@ class _DocumentUploadPlaceholder extends StatelessWidget {
                 Text(
                   'Upload de documentos',
                   style: AppTextStyles.labelMedium.copyWith(
-                    color: AppColors.primaryText,
+                    color: et.primaryText,
                   ),
                 ),
                 Text(
                   'RG, CPF, Contrato Social — disponível em breve.',
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.secondaryText,
+                    color: et.secondaryText,
                   ),
                 ),
               ],
@@ -209,6 +207,8 @@ class _TermsCheckbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -220,7 +220,11 @@ class _TermsCheckbox extends StatelessWidget {
               height: 24,
               child: Checkbox(
                 value: accepted,
-                activeColor: AppColors.secondary,
+                activeColor: et.ctaBackground,
+                checkColor: et.ctaForeground,
+                side: BorderSide(
+                  color: hasError ? AppColors.error : et.surfaceBorder,
+                ),
                 onChanged: onChanged,
               ),
             ),
@@ -229,7 +233,7 @@ class _TermsCheckbox extends StatelessWidget {
               child: Text(
                 'Declaro que sou o representante legal desta empresa e que as informações fornecidas são verdadeiras.',
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.primaryText,
+                  color: et.primaryText,
                 ),
               ),
             ),
@@ -247,10 +251,6 @@ class _TermsCheckbox extends StatelessWidget {
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// Input formatters
-// ---------------------------------------------------------------------------
 
 class _CpfInputFormatter extends TextInputFormatter {
   @override

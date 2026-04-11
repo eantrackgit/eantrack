@@ -27,6 +27,7 @@ class OnboardingProfileScreen extends ConsumerStatefulWidget {
 
 enum _IdentifierStatus {
   idle,
+  typing,
   tooShort,
   checking,
   available,
@@ -125,7 +126,21 @@ class _OnboardingProfileScreenState
     }
 
     if (normalized.length < _minIdentifierLength) {
-      _setTooShortState(normalized);
+      setState(() {
+        _identifierStatus = _IdentifierStatus.typing;
+        _identifierMessage = 'Analisando identificador...';
+        _identifierSuggestions = const [];
+        _confirmedAvailableIdentifier = null;
+      });
+
+      final requestId = _identifierRequestId;
+      _identifierDebounce = Timer(
+        const Duration(milliseconds: 350),
+        () => _setTooShortState(
+          normalized,
+          requestId: requestId,
+        ),
+      );
       return;
     }
 
@@ -189,7 +204,7 @@ class _OnboardingProfileScreenState
 
         setState(() {
           _identifierStatus = _IdentifierStatus.taken;
-          _identifierMessage = 'Esse identificador ja existe!';
+          _identifierMessage = 'Esse identificador não está disponível.';
           _identifierSuggestions = suggestions;
           _confirmedAvailableIdentifier = null;
         });
@@ -198,7 +213,7 @@ class _OnboardingProfileScreenState
 
       setState(() {
         _identifierStatus = _IdentifierStatus.available;
-        _identifierMessage = 'Identificador disponivel!';
+        _identifierMessage = 'Identificador disponível!';
         _identifierSuggestions = const [];
         _confirmedAvailableIdentifier = normalized;
       });
@@ -214,20 +229,23 @@ class _OnboardingProfileScreenState
       if (!mounted || requestId != _identifierRequestId) return;
       setState(() {
         _identifierStatus = _IdentifierStatus.error;
-        _identifierMessage = 'Nao foi possivel verificar o identificador agora.';
+        _identifierMessage = 'Não foi possível verificar o identificador agora.';
         _identifierSuggestions = const [];
         _confirmedAvailableIdentifier = null;
       });
     }
   }
 
-  void _setTooShortState(String normalized) {
-    if (!mounted) return;
+  void _setTooShortState(
+    String normalized, {
+    required int requestId,
+  }) {
+    if (!mounted || requestId != _identifierRequestId) return;
+    if (_normalizeIdentifier(_identifierCtrl.text) != normalized) return;
 
     setState(() {
       _identifierStatus = _IdentifierStatus.tooShort;
-      _identifierMessage =
-          'Identificadores curtos ou muito obvios costumam ja estar em uso. Busque uma opcao mais exclusiva e profissional, com pelo menos $_minIdentifierLength caracteres.';
+      _identifierMessage = 'Identificador não disponível.';
       _identifierSuggestions = _buildUncheckedSuggestions(normalized);
       _confirmedAvailableIdentifier = null;
     });
@@ -408,7 +426,7 @@ class _OnboardingProfileScreenState
 
     setState(() {
       _identifierStatus = _IdentifierStatus.taken;
-      _identifierMessage = 'Esse identificador ja existe!';
+      _identifierMessage = 'Esse identificador não está disponível.';
       _identifierSuggestions = suggestions;
       _confirmedAvailableIdentifier = null;
       _submitting = false;
@@ -465,7 +483,7 @@ class _OnboardingProfileScreenState
       setState(() => _submitting = false);
       await AppFeedback.showError(
         context,
-        title: 'Erro ao avancar',
+        title: 'Erro ao avançar',
         message: e.message,
       );
     } catch (_) {
@@ -473,8 +491,8 @@ class _OnboardingProfileScreenState
       setState(() => _submitting = false);
       await AppFeedback.showError(
         context,
-        title: 'Erro ao avancar',
-        message: 'Nao foi possivel concluir esta etapa agora.',
+        title: 'Erro ao avançar',
+        message: 'Não foi possível concluir esta etapa agora.',
       );
     }
   }
@@ -488,6 +506,7 @@ class _OnboardingProfileScreenState
 
   Widget? _buildIdentifierSuffix() {
     switch (_identifierStatus) {
+      case _IdentifierStatus.typing:
       case _IdentifierStatus.checking:
         return const Padding(
           padding: EdgeInsets.all(14),
@@ -503,6 +522,7 @@ class _OnboardingProfileScreenState
           color: AppColors.success,
           size: 20,
         );
+      case _IdentifierStatus.tooShort:
       case _IdentifierStatus.taken:
         return const Icon(
           Icons.error_outline,
@@ -516,62 +536,60 @@ class _OnboardingProfileScreenState
           size: 20,
         );
       case _IdentifierStatus.idle:
-      case _IdentifierStatus.tooShort:
         return null;
     }
   }
 
-  Color _identifierMessageColor() {
+  Color _identifierMessageColor(EanTrackTheme et) {
     switch (_identifierStatus) {
       case _IdentifierStatus.available:
         return AppColors.success;
+      case _IdentifierStatus.tooShort:
       case _IdentifierStatus.taken:
       case _IdentifierStatus.error:
         return AppColors.error;
       case _IdentifierStatus.idle:
-      case _IdentifierStatus.tooShort:
+      case _IdentifierStatus.typing:
       case _IdentifierStatus.checking:
-        return AppColors.secondaryText;
+        return et.secondaryText;
     }
   }
 
   String _identifierSuggestionsTitle() {
     if (_identifierStatus == _IdentifierStatus.tooShort) {
-      return 'Sugestoes mais profissionais';
+      return 'Sugestões para você';
     }
 
     if (_identifierStatus == _IdentifierStatus.taken) {
-      return 'Alternativas disponiveis';
+      return 'Outras opções disponíveis';
     }
 
-    return 'Sugestoes disponiveis';
+    return 'Sugestões disponíveis';
   }
-
-  static final _fieldBorder = OutlineInputBorder(
-    borderRadius: AppRadius.smAll,
-    borderSide: const BorderSide(color: AppColors.alternate),
-  );
-
-  static final _fieldFocusedBorder = OutlineInputBorder(
-    borderRadius: AppRadius.smAll,
-    borderSide: const BorderSide(color: AppColors.secondary, width: 1.5),
-  );
-
-  static final _fieldErrorBorder = OutlineInputBorder(
-    borderRadius: AppRadius.smAll,
-    borderSide: const BorderSide(color: AppColors.error),
-  );
-
-  static final _fieldFocusedErrorBorder = OutlineInputBorder(
-    borderRadius: AppRadius.smAll,
-    borderSide: const BorderSide(color: AppColors.error, width: 1.5),
-  );
 
   static const _fieldContentPadding =
       EdgeInsets.symmetric(horizontal: 16, vertical: 15);
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
+    final fieldBorder = OutlineInputBorder(
+      borderRadius: AppRadius.smAll,
+      borderSide: BorderSide(color: et.inputBorder),
+    );
+    final fieldFocusedBorder = OutlineInputBorder(
+      borderRadius: AppRadius.smAll,
+      borderSide: BorderSide(color: et.inputBorderFocused, width: 1.5),
+    );
+    final fieldErrorBorder = OutlineInputBorder(
+      borderRadius: AppRadius.smAll,
+      borderSide: const BorderSide(color: AppColors.error),
+    );
+    final fieldFocusedErrorBorder = OutlineInputBorder(
+      borderRadius: AppRadius.smAll,
+      borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+    );
+
     return AuthScaffold(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Form(
@@ -590,9 +608,9 @@ class _OnboardingProfileScreenState
                     color: const Color(0xFFCFE5F2),
                   ),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.person,
-                  color: AppColors.secondary,
+                  color: et.inputBorderFocused,
                   size: 40,
                 ),
               ),
@@ -601,7 +619,7 @@ class _OnboardingProfileScreenState
             Text(
               'Complete seu perfil para continuar',
               style: AppTextStyles.headlineSmall.copyWith(
-                color: AppColors.secondary,
+                color: et.primaryText,
                 fontWeight: FontWeight.w600,
               ),
               textAlign: TextAlign.center,
@@ -610,7 +628,7 @@ class _OnboardingProfileScreenState
             Text(
               'Leva menos de 1 minuto',
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.secondaryText,
+                color: et.secondaryText,
               ),
               textAlign: TextAlign.center,
             ),
@@ -618,9 +636,9 @@ class _OnboardingProfileScreenState
             Container(
               padding: const EdgeInsets.all(AppSpacing.lg),
               decoration: BoxDecoration(
-                color: AppColors.primaryBackground,
+                color: et.surface,
                 borderRadius: AppRadius.mdAll,
-                border: Border.all(color: AppColors.alternate),
+                border: Border.all(color: et.surfaceBorder),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -628,7 +646,7 @@ class _OnboardingProfileScreenState
                   Text(
                     'Digite seu nome*',
                     style: AppTextStyles.labelMedium.copyWith(
-                      color: AppColors.primaryText,
+                      color: et.primaryText,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -639,25 +657,25 @@ class _OnboardingProfileScreenState
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                     validator: _validateName,
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.primaryText,
+                      color: et.primaryText,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Digite seu nome completo',
                       contentPadding: _fieldContentPadding,
                       filled: true,
-                      fillColor: AppColors.secondaryBackground,
-                      border: _fieldBorder,
-                      enabledBorder: _fieldBorder,
-                      focusedBorder: _fieldFocusedBorder,
-                      errorBorder: _fieldErrorBorder,
-                      focusedErrorBorder: _fieldFocusedErrorBorder,
+                      fillColor: et.inputFill,
+                      border: fieldBorder,
+                      enabledBorder: fieldBorder,
+                      focusedBorder: fieldFocusedBorder,
+                      errorBorder: fieldErrorBorder,
+                      focusedErrorBorder: fieldFocusedErrorBorder,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   Text(
-                    'Descricao',
+                    'Descrição',
                     style: AppTextStyles.labelMedium.copyWith(
-                      color: AppColors.primaryText,
+                      color: et.primaryText,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -669,7 +687,7 @@ class _OnboardingProfileScreenState
                     maxLines: 3,
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.primaryText,
+                      color: et.primaryText,
                     ),
                     buildCounter: (
                       context, {
@@ -680,17 +698,17 @@ class _OnboardingProfileScreenState
                       return const SizedBox.shrink();
                     },
                     decoration: InputDecoration(
-                      hintText: 'Destaque sua experiencia ou cargo',
+                      hintText: 'Destaque sua experiência ou cargo',
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 14,
                       ),
                       filled: true,
-                      fillColor: AppColors.secondaryBackground,
+                      fillColor: et.inputFill,
                       alignLabelWithHint: true,
-                      border: _fieldBorder,
-                      enabledBorder: _fieldBorder,
-                      focusedBorder: _fieldFocusedBorder,
+                      border: fieldBorder,
+                      enabledBorder: fieldBorder,
+                      focusedBorder: fieldFocusedBorder,
                     ),
                   ),
                   Padding(
@@ -700,7 +718,7 @@ class _OnboardingProfileScreenState
                       child: Text(
                         '$_descriptionLength/$_maxDescriptionLength',
                         style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.secondaryText,
+                          color: et.secondaryText,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -708,9 +726,9 @@ class _OnboardingProfileScreenState
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    'Nome de usuario',
+                    'Identificador',
                     style: AppTextStyles.labelMedium.copyWith(
-                      color: AppColors.primaryText,
+                      color: et.primaryText,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -726,26 +744,29 @@ class _OnboardingProfileScreenState
                     ],
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.primaryText,
+                      color: et.primaryText,
                     ),
                     decoration: InputDecoration(
-                      hintText: 'Digite um identificador',
+                      hintText: 'Escolha seu identificador',
                       contentPadding: _fieldContentPadding,
-                      prefixIcon: const Icon(
+                      prefixIcon: Icon(
                         Icons.alternate_email_rounded,
-                        color: AppColors.secondary,
+                        color: et.inputBorderFocused,
                         size: 22,
                       ),
                       suffixIcon: _buildIdentifierSuffix(),
                       filled: true,
-                      fillColor: AppColors.secondaryBackground,
-                      border: _fieldBorder,
+                      fillColor: et.inputFill,
+                      border: fieldBorder,
                       enabledBorder: OutlineInputBorder(
                         borderRadius: AppRadius.smAll,
                         borderSide: BorderSide(
-                          color: _identifierStatus == _IdentifierStatus.taken
+                          color: _identifierStatus == _IdentifierStatus.taken ||
+                                  _identifierStatus ==
+                                      _IdentifierStatus.tooShort ||
+                                  _identifierStatus == _IdentifierStatus.error
                               ? AppColors.error
-                              : AppColors.alternate,
+                              : et.inputBorder,
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
@@ -753,7 +774,14 @@ class _OnboardingProfileScreenState
                         borderSide: BorderSide(
                           color: _identifierStatus == _IdentifierStatus.available
                               ? AppColors.success
-                              : AppColors.secondary,
+                              : _identifierStatus ==
+                                          _IdentifierStatus.taken ||
+                                      _identifierStatus ==
+                                          _IdentifierStatus.tooShort ||
+                                      _identifierStatus ==
+                                          _IdentifierStatus.error
+                                  ? AppColors.error
+                                  : et.inputBorderFocused,
                           width: 1.5,
                         ),
                       ),
@@ -764,7 +792,7 @@ class _OnboardingProfileScreenState
                     Text(
                       _identifierMessage!,
                       style: AppTextStyles.bodySmall.copyWith(
-                        color: _identifierMessageColor(),
+                        color: _identifierMessageColor(et),
                         fontWeight: FontWeight.w500,
                         height: 1.35,
                       ),
@@ -775,7 +803,7 @@ class _OnboardingProfileScreenState
                     Text(
                       _identifierSuggestionsTitle(),
                       style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.primaryText,
+                        color: et.primaryText,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -793,14 +821,14 @@ class _OnboardingProfileScreenState
                               vertical: 8,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF2F4F7),
+                              color: et.surface,
                               borderRadius: BorderRadius.circular(999),
-                              border: Border.all(color: const Color(0xFFDADFE6)),
+                              border: Border.all(color: et.surfaceBorder),
                             ),
                             child: Text(
                               suggestion,
                               style: AppTextStyles.bodySmall.copyWith(
-                                color: AppColors.secondaryText,
+                                color: et.secondaryText,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -820,10 +848,10 @@ class _OnboardingProfileScreenState
                     height: 52,
                     child: AppButton.secondary(
                       'Voltar',
-                      leadingIcon: const Icon(
+                      leadingIcon: Icon(
                         Icons.arrow_back_ios,
                         size: 14,
-                        color: AppColors.secondary,
+                        color: et.primaryText,
                       ),
                       onPressed: _submitting
                           ? null
@@ -846,7 +874,7 @@ class _OnboardingProfileScreenState
                       ],
                     ),
                     child: AppButton.primary(
-                      'Avancar',
+                      'Avançar',
                       trailingIcon: _submitting
                           ? null
                           : const Icon(

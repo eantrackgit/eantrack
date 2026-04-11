@@ -59,29 +59,36 @@ static const borderCard          = Color(0x1AFFFFFF);  // borda em card dark
 
 ---
 
-### ⚠ TOKEN MAPPING — Nomes de spec vs nomes reais no código
+### Tokens reais no código (usar sempre estes)
 
-> Os tokens acima são nomes de especificação. O código usa os tokens extraídos do FlutterFlow.
-> Ao escrever código Dart, use **sempre a coluna "Token real (AppColors.*)"**.
+> Ao escrever código Dart, use os nomes abaixo — não os nomes de spec da coluna esquerda.
 
-| Token de spec (docs) | Token real (AppColors.*) | Hex | Uso |
-|----------------------|--------------------------|-----|-----|
-| `bgPrimary` | `primaryBackground` | `#F1F4F8` | Fundo de página |
-| `bgCard` | `secondaryBackground` | `#FFFFFF` | Card auth/onboarding (branco) |
-| `bgCardDark` | `secondary` | `#0E0A36` | Scaffold auth + cards escuros hub |
-| `bgInputDark` | `primaryBackground` | `#F1F4F8` | Usar dentro de container escuro |
-| `textPrimary` | `primaryText` | `#14181B` | Texto principal |
-| `textSecondary` | `secondaryText` | `#57636C` | Labels, placeholders |
-| `textOnDark` | `info` | `#FFFFFF` | Texto sobre fundo escuro |
-| `textOnDarkMuted` | `accent2` | `#8E8D8D` | Texto secundário sobre fundo escuro |
-| `borderDefault` | `alternate` | `#E0E3E7` | Borda padrão de containers |
-| `borderCard` | `tertiary` | `#D1D5DB` | Borda de cards |
-| `brandRed` | `primary` | `#F90716` | Logo, botão Google |
-| `primary` (CTA) | `secondary` | `#0E0A36` | Botão CTA principal (navy) |
-| `actionBlue` | `actionBlue` | `#1A56DB` | Botões de consulta API ✓ |
-| `success` | `success` | `#22C55E` | ✓ mesmo nome |
-| `error` | `error` | `#FF5963` | ✓ mesmo nome |
-| `warning` | `warning` | `#F9CF58` | ✓ mesmo nome |
+| Uso | Token real (AppColors.*) | Hex |
+|-----|--------------------------|-----|
+| Fundo de página (interno) | `primaryBackground` | `#F1F4F8` |
+| Card / container branco | `secondaryBackground` | `#FFFFFF` |
+| Scaffold auth (light) | `secondary` | `#0E0A36` |
+| Texto principal | `primaryText` | `#14181B` |
+| Texto secundário / labels | `secondaryText` | `#57636C` |
+| Texto sobre fundo escuro | `info` | `#FFFFFF` |
+| Borda padrão | `alternate` | `#E0E3E7` |
+| Logo / botão Google | `primary` | `#F90716` |
+| Botão CTA principal | `secondary` | `#0E0A36` |
+| Botão consulta API (CNPJ, CEP) | `actionBlue` | `#1A56DB` |
+| Sucesso | `success` | `#22C55E` |
+| Erro | `error` | `#FF5963` |
+| Aviso | `warning` | `#F9CF58` |
+
+### ⚠️ Regra: cores context-aware → usar EanTrackTheme
+
+Para cores que mudam entre light e dark (backgrounds, textos, bordas de campo, botões), **não usar `AppColors.*` diretamente**. Usar `EanTrackTheme.of(context)`:
+
+```dart
+final et = EanTrackTheme.of(context);
+// et.primaryText, et.secondaryText, et.cardSurface, et.inputBorder, etc.
+```
+
+Ver seção completa de tokens dark mode em `ARCHITECTURE.md`.
 
 **Tokens de texto reais (`AppTextStyles.*`):**
 
