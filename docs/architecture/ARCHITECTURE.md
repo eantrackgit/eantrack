@@ -261,19 +261,23 @@ final et = EanTrackTheme.of(context);
 | Token | Light | Dark | Uso |
 |-------|-------|------|-----|
 | `scaffoldOuter` | navy `#0E0A36` | `#0D1117` | Fundo do Scaffold em auth/onboarding |
-| `cardSurface` | branco | `#161D2F` | Card/container principal |
-| `inputFill` | branco | `#1C2537` | Fill de campos habilitados |
-| `inputFillDisabled` | cinza claro | `#141C2B` | Fill de campos desabilitados |
+| `cardSurface` | branco `#FFFFFF` | `#161D2F` | Card/container principal |
+| `inputFill` | branco `#FFFFFF` | `#1C2537` | Fill de campos habilitados |
+| `inputFillDisabled` | cinza claro `#F1F4F8` | `#141C2B` | Fill de campos desabilitados |
 | `inputBorder` | `#E0E3E7` | `#2E3B58` | Borda idle de campos |
-| `inputBorderFocused` | navy | `#4D72F5` | Borda focada de campos |
+| `inputBorderFocused` | navy `#0E0A36` | `#4D72F5` | Borda focada de campos |
 | `primaryText` | `#14181B` | `#E4EAF6` | Texto principal |
-| `secondaryText` | `#57636C` | `#7A8DB0` | Labels, subtítulos |
-| `divider` | `#E0E3E7` | `#232C45` | Divisores |
-| `surface` | branco | `#1C2537` | Containers secundários internos |
+| `secondaryText` | `#57636C` | `#7A8DB0` | Labels, subtítulos, ícones idle |
+| `divider` | `#C7CBD1` | `#232C45` | Divisores |
+| `surface` | branco `#FFFFFF` | `#1C2537` | Containers secundários internos |
 | `surfaceBorder` | `#E0E3E7` | `#2E3B58` | Borda de containers secundários |
 | `ctaBackground` | navy `#0E0A36` | `#4D72F5` | Background do botão primary |
 | `ctaForeground` | branco | branco | Texto/ícone do botão primary |
-| `outlinedFg` | navy `#0E0A36` | `#E4EAF6` | Borda e texto do botão outlined |
+| `outlinedFg` | navy `#0E0A36` | `#8896B3` | Borda e texto do botão outlined |
+| `socialBg` | `AppColors.primary` (vermelho) | `#1C2537` | Background do botão social (Google) |
+| `socialFg` | branco | `#E4EAF6` | Texto/ícone do botão social |
+| `socialBorder` | transparente | `#2E3B58` | Borda do botão social (visível só no dark) |
+| `accentLink` | `#1A56DB` | `#7CA5E8` | Links inline (recuperação de senha, etc.) |
 
 ### Toggle de Tema
 
@@ -291,14 +295,23 @@ ref.read(themeModeProvider.notifier).state =
 
 ### Status atual do dark mode
 
-| Tela / Feature | Dark Mode |
-|---------------|-----------|
-| Auth (login, register, recover, update) | ✅ Completo |
-| Onboarding (choose_mode, profile) | ✅ Completo |
-| Modais (`app_feedback_dialog`) | ✅ Completo |
-| Hub | ❌ Usa AppColors direto |
-| Regiões | ❌ Usa AppColors direto |
-| flow_page | ❌ Cor hardcoded |
+| Tela / Feature | Dark Mode | Observação |
+|---------------|-----------|------------|
+| Auth (login, register, recover, update) | ✅ Completo | login é referência visual |
+| Onboarding (choose_mode, profile) | ✅ Completo | — |
+| Modais (`app_feedback_dialog`) | ✅ Completo | blur backdrop + EanTrackTheme |
+| `PasswordRuleRow` | ✅ Completo | idle via `et.secondaryText` |
+| `AppCard` | ✅ Completo | default seguro: `et.cardSurface` no dark |
+| Hub | ❌ Usa AppColors direto | pendente |
+| Regiões | ❌ Usa AppColors direto | pendente |
+| flow_page | ❌ Cor hardcoded | pendente |
+
+### Exceções de implementação (documentadas e intencionais)
+
+| Local | Exceção | Motivo |
+|-------|---------|--------|
+| `onboarding_profile_screen.dart` | Usa `TextFormField` raw (não `AppTextField`) | Border dinâmico por status do identificador; `maxLines`/`buildCounter` customizado no campo descrição — não suportados por `AppTextField` |
+| `email_verification_screen._PasswordModal` | Usa `TextField` raw | `errorText` direto + controle próprio de `obscure`; bordas alinhadas ao padrão (`AppRadius.smAll`, `AppColors.error`) |
 
 ---
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../theme/app_theme.dart';
 
 class PasswordRuleRow extends StatelessWidget {
   const PasswordRuleRow({
@@ -21,7 +22,7 @@ class PasswordRuleRow extends StatelessWidget {
     final IconData icon;
 
     if (!isTyping) {
-      color = AppColors.accent2;
+      color = EanTrackTheme.of(context).secondaryText;
       icon = Icons.radio_button_unchecked;
     } else if (satisfied) {
       color = AppColors.success;

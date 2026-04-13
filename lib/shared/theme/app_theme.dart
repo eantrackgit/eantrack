@@ -29,6 +29,10 @@ class EanTrackTheme extends ThemeExtension<EanTrackTheme> {
     required this.ctaBackground,
     required this.ctaForeground,
     required this.outlinedFg,
+    required this.socialBg,
+    required this.socialFg,
+    required this.socialBorder,
+    required this.accentLink,
   });
 
   /// Fundo do Scaffold externo (atrás do card nas telas de auth).
@@ -73,6 +77,18 @@ class EanTrackTheme extends ThemeExtension<EanTrackTheme> {
   /// Cor de borda e texto do botão outlined/secundário.
   final Color outlinedFg;
 
+  /// Fundo do botão social (Google). Neutro em dark, brand em light.
+  final Color socialBg;
+
+  /// Foreground (texto/ícone) do botão social.
+  final Color socialFg;
+
+  /// Borda do botão social (visível em dark, transparente em light).
+  final Color socialBorder;
+
+  /// Cor de links inline (recuperação de senha, etc.).
+  final Color accentLink;
+
   // -------------------------------------------------------------------------
   // Accessor
   // -------------------------------------------------------------------------
@@ -99,6 +115,10 @@ class EanTrackTheme extends ThemeExtension<EanTrackTheme> {
     ctaBackground: AppColors.secondary,
     ctaForeground: AppColors.secondaryBackground,
     outlinedFg: AppColors.secondary,
+    socialBg: AppColors.primary,
+    socialFg: AppColors.secondaryBackground,
+    socialBorder: Colors.transparent,
+    accentLink: AppColors.actionBlue,
   );
 
   static const EanTrackTheme dark = EanTrackTheme(
@@ -115,7 +135,11 @@ class EanTrackTheme extends ThemeExtension<EanTrackTheme> {
     surfaceBorder: Color(0xFF2E3B58),
     ctaBackground: Color(0xFF4D72F5),
     ctaForeground: Color(0xFFFFFFFF),
-    outlinedFg: Color(0xFFE4EAF6),
+    outlinedFg: Color(0xFF8896B3),
+    socialBg: Color(0xFF1C2537),
+    socialFg: Color(0xFFE4EAF6),
+    socialBorder: Color(0xFF2E3B58),
+    accentLink: Color(0xFF7CA5E8),
   );
 
   // -------------------------------------------------------------------------
@@ -138,6 +162,10 @@ class EanTrackTheme extends ThemeExtension<EanTrackTheme> {
     Color? ctaBackground,
     Color? ctaForeground,
     Color? outlinedFg,
+    Color? socialBg,
+    Color? socialFg,
+    Color? socialBorder,
+    Color? accentLink,
   }) {
     return EanTrackTheme(
       scaffoldOuter: scaffoldOuter ?? this.scaffoldOuter,
@@ -154,6 +182,10 @@ class EanTrackTheme extends ThemeExtension<EanTrackTheme> {
       ctaBackground: ctaBackground ?? this.ctaBackground,
       ctaForeground: ctaForeground ?? this.ctaForeground,
       outlinedFg: outlinedFg ?? this.outlinedFg,
+      socialBg: socialBg ?? this.socialBg,
+      socialFg: socialFg ?? this.socialFg,
+      socialBorder: socialBorder ?? this.socialBorder,
+      accentLink: accentLink ?? this.accentLink,
     );
   }
 
@@ -177,6 +209,10 @@ class EanTrackTheme extends ThemeExtension<EanTrackTheme> {
       ctaBackground: Color.lerp(ctaBackground, other.ctaBackground, t)!,
       ctaForeground: Color.lerp(ctaForeground, other.ctaForeground, t)!,
       outlinedFg: Color.lerp(outlinedFg, other.outlinedFg, t)!,
+      socialBg: Color.lerp(socialBg, other.socialBg, t)!,
+      socialFg: Color.lerp(socialFg, other.socialFg, t)!,
+      socialBorder: Color.lerp(socialBorder, other.socialBorder, t)!,
+      accentLink: Color.lerp(accentLink, other.accentLink, t)!,
     );
   }
 }

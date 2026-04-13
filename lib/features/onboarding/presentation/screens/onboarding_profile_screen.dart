@@ -573,6 +573,13 @@ class _OnboardingProfileScreenState
   @override
   Widget build(BuildContext context) {
     final et = EanTrackTheme.of(context);
+
+    // Exceção intencional: TextFormField raw é usado nesta tela porque:
+    // - O campo identificador exige border dinâmico por status (taken/available/error),
+    //   não suportado por AppTextField.
+    // - O campo descrição exige maxLines e buildCounter customizado,
+    //   também não suportados por AppTextField.
+    // Todos os tokens de cor e borda seguem EanTrackTheme e AppColors (semânticos).
     final fieldBorder = OutlineInputBorder(
       borderRadius: AppRadius.smAll,
       borderSide: BorderSide(color: et.inputBorder),
@@ -602,11 +609,18 @@ class _OnboardingProfileScreenState
                 width: 72,
                 height: 72,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE9F7FD),
+                  color: et.surface,
                   borderRadius: AppRadius.mdAll,
                   border: Border.all(
-                    color: const Color(0xFFCFE5F2),
+                    color: et.surfaceBorder,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: et.inputBorderFocused.withValues(alpha: 0.10),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
                 child: Icon(
                   Icons.person,
@@ -848,10 +862,9 @@ class _OnboardingProfileScreenState
                     height: 52,
                     child: AppButton.secondary(
                       'Voltar',
-                      leadingIcon: Icon(
+                      leadingIcon: const Icon(
                         Icons.arrow_back_ios,
                         size: 14,
-                        color: et.primaryText,
                       ),
                       onPressed: _submitting
                           ? null
@@ -861,18 +874,8 @@ class _OnboardingProfileScreenState
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
-                  child: Container(
+                  child: SizedBox(
                     height: 52,
-                    decoration: BoxDecoration(
-                      borderRadius: AppRadius.smAll,
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x260E0A36),
-                          blurRadius: 10,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
                     child: AppButton.primary(
                       'Avançar',
                       trailingIcon: _submitting
@@ -880,7 +883,6 @@ class _OnboardingProfileScreenState
                           : const Icon(
                               Icons.arrow_forward_ios,
                               size: 14,
-                              color: AppColors.secondaryBackground,
                             ),
                       isLoading: _submitting,
                       onPressed: _canSubmit ? _submit : null,

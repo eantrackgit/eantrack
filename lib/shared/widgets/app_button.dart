@@ -192,13 +192,30 @@ class _AppButtonState extends State<AppButton> {
         return ElevatedButton(
           onPressed: _disabled ? null : widget.onPressed,
           style: ElevatedButton.styleFrom(
-            backgroundColor: et.ctaBackground,
-            disabledBackgroundColor: et.ctaBackground,
+            backgroundColor: Colors.transparent,
+            disabledBackgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
             foregroundColor: et.ctaForeground,
             shape: RoundedRectangleBorder(borderRadius: AppRadius.smAll),
             elevation: 0,
+            padding: EdgeInsets.zero,
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
-          child: _content(et.ctaForeground),
+          child: Ink(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color.lerp(et.ctaBackground, Colors.white, 0.12)!,
+                  et.ctaBackground,
+                ],
+              ),
+              borderRadius: AppRadius.smAll,
+            ),
+            child: Center(child: _content(et.ctaForeground)),
+          ),
         );
 
       case AppButtonVariant.secondary:
@@ -231,13 +248,14 @@ class _AppButtonState extends State<AppButton> {
         return ElevatedButton(
           onPressed: _disabled ? null : widget.onPressed,
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            disabledBackgroundColor: AppColors.primary,
-            foregroundColor: AppColors.secondaryBackground,
+            backgroundColor: et.socialBg,
+            disabledBackgroundColor: et.socialBg,
+            foregroundColor: et.socialFg,
+            side: BorderSide(color: et.socialBorder),
             shape: RoundedRectangleBorder(borderRadius: AppRadius.smAll),
             elevation: 0,
           ),
-          child: _content(AppColors.secondaryBackground),
+          child: _content(et.socialFg),
         );
     }
   }

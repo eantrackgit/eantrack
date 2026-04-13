@@ -12,14 +12,14 @@
 | Componente | Arquivo | Variantes / Props chave |
 |-----------|---------|------------------------|
 | `AppButton` | `app_button.dart` | Variantes: `primary`, `secondary`/`outlined`, `action`, `social`. Props: `label`, `isLoading`, `onPressed`, `leadingIcon`, `trailingIcon`. Theming via `EanTrackTheme`. Spinner interno — sem overlay global. |
-| `AppTextField` | `app_text_field.dart` | Floating label, obscure toggle, validator, theming via `EanTrackTheme`. |
-| `AppCard` | `app_card.dart` | `child`, `color?`, `padding?`, `onTap?`, `selected?`, `borderColor?`. Ripple via `Material + InkWell` quando `onTap` definido. |
+| `AppTextField` | `app_text_field.dart` | Floating label, obscure toggle, validator, theming via `EanTrackTheme`. **Convenção:** `label` sempre preenchido com o nome do campo — nunca `label: ''`. |
+| `AppCard` | `app_card.dart` | `child`, `color?`, `padding?`, `onTap?`, `selected?`, `borderColor?`. Ripple via `Material + InkWell` quando `onTap` definido. `color` default context-aware: `et.cardSurface` no dark, `AppColors.primaryBackground` no light. |
 | `AppErrorBox` | `app_error_box.dart` | Erro inline com ícone + texto PT-BR + shake animation. Usar acima do botão primary em formulários. |
 | `AppFeedbackDialog` | `app_feedback_dialog.dart` | Modal sucesso/erro com blur backdrop. Chamar via `showAppFeedbackDialog(context, ...)` ou `AppFeedback.showSuccess/showError`. Theming via `EanTrackTheme.of(dialogContext)` — dark mode completo. |
 | `AppEmptyState` | `app_empty_state.dart` | Estado vazio com ícone, título, subtítulo e ação opcional. |
 | `AppListStateView` | `app_list_state_view.dart` | Wrapper para estados de lista: loading (skeleton) / empty (AppEmptyState) / error (AppErrorBox) / loaded (child). |
 | `AuthScaffold` | `auth_scaffold.dart` | Scaffold padrão auth/onboarding. Dark mode via `EanTrackTheme`. Parâmetro `action?` para widget no canto superior direito (ex: toggle de tema). maxWidth 480. |
-| `PasswordRuleRow` | `password_rule_row.dart` | Checklist de senha animado (ícone + texto colorido). Independente de auth. |
+| `PasswordRuleRow` | `password_rule_row.dart` | Checklist de senha animado (ícone + texto colorido). Dark mode compliant: idle usa `et.secondaryText`; satisfied usa `AppColors.success`; unsatisfied usa `AppColors.error`. |
 | `AppVersionBadge` | `app_version_badge.dart` | Badge de versão lida de assets. |
 | `AppBottomNav` | `app_bottom_nav.dart` | Bottom navigation bar para mobile. |
 | `AppSidebar` | `app_sidebar.dart` | Sidebar fixa para desktop (240px). |

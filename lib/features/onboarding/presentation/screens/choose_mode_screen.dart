@@ -60,10 +60,34 @@ class _ChooseModeScreenState extends ConsumerState<ChooseModeScreen> {
                     child: ClipRect(
                       child: BackdropFilter(
                         filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                        child: ColoredBox(
-                          color: AppColors.modalOverlayBase.withValues(
-                            alpha: 0.52,
-                          ),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            ColoredBox(
+                              color: AppColors.modalOverlayBase.withValues(
+                                alpha: 0.52,
+                              ),
+                            ),
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    AppColors.modalOverlayMid.withValues(
+                                      alpha: 0.92,
+                                    ),
+                                    AppColors.modalOverlayBase.withValues(
+                                      alpha: 0.84,
+                                    ),
+                                    AppColors.modalOverlayGlow.withValues(
+                                      alpha: 0.18,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -81,63 +105,86 @@ class _ChooseModeScreenState extends ConsumerState<ChooseModeScreen> {
                             builder: (ctx) {
                               final det = EanTrackTheme.of(ctx);
                               return Container(
-                            padding: const EdgeInsets.all(AppSpacing.lg),
-                            decoration: BoxDecoration(
-                              color: det.cardSurface,
-                              borderRadius: BorderRadius.circular(24),
-                              border: Border.all(color: det.surfaceBorder),
-                              boxShadow: const [AppShadows.xl],
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                const Icon(
-                                  Icons.warning_amber_rounded,
-                                  size: 36,
-                                  color: AppColors.warning,
-                                ),
-                                const SizedBox(height: AppSpacing.md),
-                                Text(
-                                  'Voltar agora?',
-                                  textAlign: TextAlign.center,
-                                  style: AppTextStyles.headlineSmall.copyWith(
-                                    color: det.primaryText,
+                                padding: const EdgeInsets.all(AppSpacing.lg),
+                                decoration: BoxDecoration(
+                                  color: det.cardSurface,
+                                  borderRadius: BorderRadius.circular(24),
+                                  border: Border.all(
+                                    color:
+                                        AppColors.warning.withValues(alpha: 0.16),
                                   ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.modalOverlayBase
+                                          .withValues(alpha: 0.28),
+                                      blurRadius: 32,
+                                      offset: const Offset(0, 18),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: AppSpacing.sm),
-                                Text(
-                                  'Recomendamos selecionar um modo antes de voltar.',
-                                  textAlign: TextAlign.center,
-                                  style: AppTextStyles.bodyMedium.copyWith(
-                                    color: det.secondaryText,
-                                    height: 1.45,
-                                  ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    Center(
+                                      child: Container(
+                                        width: 72,
+                                        height: 72,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: AppColors.warning.withValues(
+                                            alpha: 0.10,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.warning_amber_rounded,
+                                          size: 34,
+                                          color: AppColors.warning,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: AppSpacing.md),
+                                    Text(
+                                      'Voltar agora?',
+                                      textAlign: TextAlign.center,
+                                      style:
+                                          AppTextStyles.headlineSmall.copyWith(
+                                        color: det.primaryText,
+                                      ),
+                                    ),
+                                    const SizedBox(height: AppSpacing.sm),
+                                    Text(
+                                      'Recomendamos selecionar um modo antes de voltar.',
+                                      textAlign: TextAlign.center,
+                                      style: AppTextStyles.bodyMedium.copyWith(
+                                        color: det.secondaryText,
+                                        height: 1.45,
+                                      ),
+                                    ),
+                                    const SizedBox(height: AppSpacing.sm),
+                                    Text(
+                                      'Se voce voltar agora, ira para o login e depois precisara fazer essa selecao novamente.',
+                                      textAlign: TextAlign.center,
+                                      style: AppTextStyles.bodyMedium.copyWith(
+                                        color: det.secondaryText,
+                                        height: 1.45,
+                                      ),
+                                    ),
+                                    const SizedBox(height: AppSpacing.lg),
+                                    AppButton.secondary(
+                                      'Continuar nesta tela',
+                                      onPressed: () =>
+                                          Navigator.of(dialogContext).pop(false),
+                                    ),
+                                    const SizedBox(height: AppSpacing.sm),
+                                    AppButton.primary(
+                                      'Voltar para login',
+                                      onPressed: () =>
+                                          Navigator.of(dialogContext).pop(true),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: AppSpacing.sm),
-                                Text(
-                                  'Se voce voltar agora, ira para o login e depois precisara fazer essa selecao novamente.',
-                                  textAlign: TextAlign.center,
-                                  style: AppTextStyles.bodyMedium.copyWith(
-                                    color: det.secondaryText,
-                                    height: 1.45,
-                                  ),
-                                ),
-                                const SizedBox(height: AppSpacing.lg),
-                                AppButton.secondary(
-                                  'Continuar nesta tela',
-                                  onPressed: () =>
-                                      Navigator.of(dialogContext).pop(false),
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                AppButton.primary(
-                                  'Voltar para login',
-                                  onPressed: () =>
-                                      Navigator.of(dialogContext).pop(true),
-                                ),
-                              ],
-                            ),
-                          );
+                              );
                             },
                           ),
                         ),
@@ -161,99 +208,76 @@ class _ChooseModeScreenState extends ConsumerState<ChooseModeScreen> {
   Widget build(BuildContext context) {
     final et = EanTrackTheme.of(context);
 
-    return Scaffold(
-      backgroundColor: et.scaffoldOuter,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.xl,
+    return AuthScaffold(
+      showVersionBadge: false,
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Defina seu estilo operacional',
+            style: AppTextStyles.headlineSmall.copyWith(
+              color: et.primaryText,
             ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: Container(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                decoration: BoxDecoration(
-                  color: et.cardSurface,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Defina seu estilo operacional',
-                      style: AppTextStyles.headlineSmall.copyWith(
-                        color: et.primaryText,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      'Essa configuracao ajuda o EANTrack a personalizar sua experiencia operacional.',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: et.secondaryText,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    _ModeCard(
-                      icon: Icons.person,
-                      title: 'Individual',
-                      description:
-                          'Execute pesquisas, auditorias e controle de validades de forma independente',
-                      selected: _selected == _Mode.individual,
-                      onTap: () => setState(() => _selected = _Mode.individual),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    _ModeCard(
-                      icon: Icons.business,
-                      title: 'Agencia',
-                      description:
-                          'Gerencie equipes, lojas e operacoes completas',
-                      selected: _selected == _Mode.agency,
-                      onTap: () => setState(() => _selected = _Mode.agency),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    Row(
-                      children: [
-                        SizedBox(
-                          width: 120,
-                          child: AppButton(
-                            label: 'Voltar',
-                            variant: AppButtonVariant.outlined,
-                            leadingIcon: Icon(
-                              Icons.arrow_back_ios,
-                              size: 14,
-                              color: et.primaryText,
-                            ),
-                            onPressed: _saving ? null : _confirmBackToLogin,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: AppButton(
-                            label: 'Continuar',
-                            trailingIcon: _saving
-                                ? null
-                                : const Icon(
-                                    Icons.arrow_forward_ios,
-                                    size: 14,
-                                    color: AppColors.secondaryBackground,
-                                  ),
-                            isLoading: _saving,
-                            onPressed:
-                                (_selected == null || _saving) ? null : _continue,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Essa configuracao ajuda o EANTrack a personalizar sua experiencia operacional.',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: et.secondaryText,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          _ModeCard(
+            icon: Icons.person,
+            title: 'Individual',
+            description:
+                'Execute pesquisas, auditorias e controle de validades de forma independente',
+            selected: _selected == _Mode.individual,
+            onTap: () => setState(() => _selected = _Mode.individual),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _ModeCard(
+            icon: Icons.business,
+            title: 'Agencia',
+            description: 'Gerencie equipes, lojas e operacoes completas',
+            selected: _selected == _Mode.agency,
+            onTap: () => setState(() => _selected = _Mode.agency),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          Row(
+            children: [
+              SizedBox(
+                width: 120,
+                child: AppButton(
+                  label: 'Voltar',
+                  variant: AppButtonVariant.outlined,
+                  leadingIcon: const Icon(
+                    Icons.arrow_back_ios,
+                    size: 14,
+                  ),
+                  onPressed: _saving ? null : _confirmBackToLogin,
                 ),
               ),
-            ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: AppButton(
+                  label: 'Continuar',
+                  trailingIcon: _saving
+                      ? null
+                      : const Icon(
+                          Icons.arrow_forward_ios,
+                          size: 14,
+                        ),
+                  isLoading: _saving,
+                  onPressed: (_selected == null || _saving) ? null : _continue,
+                ),
+              ),
+            ],
           ),
-        ),
+        ],
       ),
     );
   }

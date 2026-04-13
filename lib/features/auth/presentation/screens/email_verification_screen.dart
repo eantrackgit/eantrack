@@ -220,7 +220,7 @@ class _EmailVerificationScreenState
 
   Widget _buildWaiting(ResendCooldownState cooldown, bool canResend) {
     final et = EanTrackTheme.of(context);
-    final secondaryActionColor = et.ctaBackground.withValues(alpha: 0.8);
+    final secondaryActionColor = et.accentLink;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -260,7 +260,7 @@ class _EmailVerificationScreenState
                 TextSpan(
                   text: _censor(_email),
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: et.ctaBackground,
+                    color: et.primaryText,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -271,7 +271,7 @@ class _EmailVerificationScreenState
                 TextSpan(
                   text: 'EANTrack',
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: et.ctaBackground,
+                    color: et.primaryText,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -468,6 +468,14 @@ class _PasswordModalState extends ConsumerState<_PasswordModal> {
     return Container(
       decoration: BoxDecoration(
         color: et.cardSurface,
+        border: Border(top: BorderSide(color: et.surfaceBorder)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.24),
+            blurRadius: 24,
+            offset: const Offset(0, -6),
+          ),
+        ],
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: EdgeInsets.fromLTRB(
@@ -497,7 +505,8 @@ class _PasswordModalState extends ConsumerState<_PasswordModal> {
               height: 56,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: et.surface,
+                color: et.inputFill,
+                border: Border.all(color: et.surfaceBorder),
               ),
               child: Icon(
                 Icons.lock_outline_rounded,
@@ -537,16 +546,24 @@ class _PasswordModalState extends ConsumerState<_PasswordModal> {
                 vertical: AppSpacing.md,
               ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: AppRadius.smAll,
                 borderSide: BorderSide(color: et.inputBorder),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: AppRadius.smAll,
                 borderSide: BorderSide(color: et.inputBorder),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: AppRadius.smAll,
                 borderSide: BorderSide(color: et.inputBorderFocused, width: 1.5),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: AppRadius.smAll,
+                borderSide: const BorderSide(color: AppColors.error),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: AppRadius.smAll,
+                borderSide: const BorderSide(color: AppColors.error, width: 1.5),
               ),
               errorText: _error,
               suffixIcon: IconButton(
@@ -587,7 +604,7 @@ class _PasswordModalState extends ConsumerState<_PasswordModal> {
               child: Text(
                 'Esqueceu sua senha?',
                 style: AppTextStyles.labelMedium.copyWith(
-                  color: et.ctaBackground,
+                  color: et.accentLink,
                 ),
               ),
             ),

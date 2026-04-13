@@ -214,41 +214,44 @@ AppShadows.elevated  → 0 8px 32px rgba(0,0,0,0.20)   // modais, dialogs
 
 ### 6.2 AppTextField
 
-| Propriedade | Valor |
-|-------------|-------|
-| Fill | `bgInput` (branco) |
-| Border default | 1px `borderDefault`, `AppRadius.sm` |
-| Label | floating (`FloatingLabelBehavior.always`), `labelInput` |
+| Propriedade | Token real |
+|-------------|-----------|
+| Fill (habilitado) | `et.inputFill` |
+| Fill (desabilitado) | `et.inputFillDisabled` |
+| Border idle | `et.inputBorder`, `AppRadius.smAll` (8px) |
+| Border focado | `et.inputBorderFocused`, 1.5px |
+| Border erro | `AppColors.error` |
+| Label cor | `et.secondaryText` (idle/disabled) · `et.inputBorderFocused` (focused) |
+| Texto | `et.primaryText` |
 | Height | ~52px |
 | Padding | H 16px, V 14px |
 
-| Estado | Border | Label color | Extra |
-|--------|--------|-------------|-------|
-| Default | 1px `borderDefault` | `textSecondary` | placeholder visível |
-| Hover | 1px `#BDBDBD` | `textSecondary` | — |
-| Focused | 2px `borderFocus` | `link` | label sobe 150ms |
-| Filled | 1px `borderDefault` | `textSecondary` | valor visível |
-| Error | 2px `borderError` | `textError` | msg abaixo bodySmall |
-| Disabled | 1px `borderDefault` 50% | `textDisabled` | fill `bgHover` |
-| Readonly | 1px `borderDefault` | `textSecondary` | ícone lock direita |
+| Estado | Border | Fill |
+|--------|--------|------|
+| Default | `et.inputBorder` 1px | `et.inputFill` |
+| Focused | `et.inputBorderFocused` 1.5px | `et.inputFill` |
+| Error | `AppColors.error` 1.5px | `et.inputFill` |
+| Disabled | `et.inputBorder` 1px | `et.inputFillDisabled` |
+
+**Convenção obrigatória:** `label` sempre preenchido com o nome do campo — nunca `AppTextField(label: '')`. O floating label é a única referência visual do campo em estado preenchido.
 
 **Suffix icons:**
-- Senha: `Icons.visibility_off` / `Icons.visibility` — cor `textSecondary`
-- Readonly: `Icons.lock_outline` — cor `textSecondary`
+- Senha: `Icons.visibility_off` / `Icons.visibility` — cor `et.secondaryText`
 - CNPJ válido: `Icons.check` verde, `Icons.close` para limpar
 
 ---
 
 ### 6.3 Password Strength Checklist
 
-| Estado | Ícone | Cor |
-|--------|-------|-----|
-| Não digitando | `radio_button_unchecked` 16px | `textSecondary` |
-| Atendido | `check_circle` 16px | `textSuccess` |
-| Não atendido (digitando) | `cancel` 16px | `textError` |
+| Estado | Ícone | Cor real (código) |
+|--------|-------|-------------------|
+| Não digitando | `radio_button_unchecked` 16px | `EanTrackTheme.of(context).secondaryText` — adapta light/dark |
+| Atendido | `check_circle` 16px | `AppColors.success` |
+| Não atendido (digitando) | `cancel` 16px | `AppColors.error` |
 
 - Animação: `AnimatedSwitcher` 150ms no ícone + `AnimatedDefaultTextStyle` na cor
 - Layout: Column de Rows (ícone + texto), gap `xs` entre items
+- **Theming:** o estado idle usa token semântico — correto em dark mode. Estados success/error usam `AppColors` fixo (semântico de estado, não de tema — correto).
 
 ---
 

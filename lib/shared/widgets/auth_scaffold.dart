@@ -26,6 +26,7 @@ class AuthScaffold extends StatelessWidget {
     this.logoHeight = 60,
     this.padding,
     this.action,
+    this.showVersionBadge = true,
   });
 
   final Widget child;
@@ -39,86 +40,104 @@ class AuthScaffold extends StatelessWidget {
   /// Widget opcional posicionado no canto superior direito do scaffold.
   /// Ideal para controles globais como alternância de tema.
   final Widget? action;
+  final bool showVersionBadge;
 
   @override
   Widget build(BuildContext context) {
     final et = EanTrackTheme.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: et.scaffoldOuter,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 480),
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.only(
-                    top: AppSpacing.xl,
-                    // Reserva espaço para o badge fixo não cobrir o card.
-                    bottom: AppSpacing.xl + _kVersionFooterHeight,
-                  ),
-                  child: AppCard(
-                    color: et.cardSurface,
-                    padding: padding,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (showLogo) ...[
-                          Center(
-                            child: SvgPicture.asset(
-                              'assets/images/eantrack.svg',
-                              width: logoWidth,
-                              height: logoHeight,
-                              fit: BoxFit.contain,
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: isDark
+                ? const [Color(0xFF0F1829), Color(0xFF080D16)]
+                : [
+                    Color.lerp(et.scaffoldOuter, Colors.white, 0.06)!,
+                    Color.lerp(et.scaffoldOuter, Colors.black, 0.06)!,
+                  ],
+          ),
+        ),
+        child: SafeArea(
+          child: Stack(
+            children: [
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.only(
+                      top: AppSpacing.xl,
+                      // Reserva espaço para o badge fixo não cobrir o card.
+                      bottom: AppSpacing.xl + _kVersionFooterHeight,
+                    ),
+                    child: AppCard(
+                      color: et.cardSurface,
+                      borderColor: et.surfaceBorder,
+                      padding: padding,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (showLogo) ...[
+                            Center(
+                              child: SvgPicture.asset(
+                                'assets/images/eantrack.svg',
+                                width: logoWidth,
+                                height: logoHeight,
+                                fit: BoxFit.contain,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                        ],
-                        if (title != null) ...[
-                          Text(
-                            title!,
-                            style: AppTextStyles.headlineSmall.copyWith(
-                              color: et.primaryText,
-                            ),
-                            textAlign:
-                                showLogo ? TextAlign.center : TextAlign.start,
-                          ),
-                          if (subtitle != null) ...[
-                            const SizedBox(height: AppSpacing.xs),
+                            const SizedBox(height: AppSpacing.sm),
+                          ],
+                          if (title != null) ...[
                             Text(
-                              subtitle!,
-                              style: AppTextStyles.bodySmall.copyWith(
-                                color: et.secondaryText,
+                              title!,
+                              style: AppTextStyles.headlineSmall.copyWith(
+                                color: et.primaryText,
                               ),
                               textAlign:
                                   showLogo ? TextAlign.center : TextAlign.start,
                             ),
+                            if (subtitle != null) ...[
+                              const SizedBox(height: AppSpacing.xs),
+                              Text(
+                                subtitle!,
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: et.secondaryText,
+                                ),
+                                textAlign:
+                                    showLogo ? TextAlign.center : TextAlign.start,
+                              ),
+                            ],
+                            const SizedBox(height: AppSpacing.lg),
                           ],
-                          const SizedBox(height: AppSpacing.lg),
+                          child,
                         ],
-                        child,
-                      ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            // Versão discreta fixada no rodapé, fora do card e do scroll.
-            const Positioned(
-              bottom: 8,
-              left: 0,
-              right: 0,
-              child: AppVersionBadge(),
-            ),
-            // Slot opcional para controles no canto superior direito.
-            if (action != null)
-              Positioned(
-                top: AppSpacing.sm,
-                right: AppSpacing.sm,
-                child: action!,
-              ),
-          ],
+              // Versão discreta fixada no rodapé, fora do card e do scroll.
+              if (showVersionBadge)
+                const Positioned(
+                  bottom: 8,
+                  left: 0,
+                  right: 0,
+                  child: AppVersionBadge(),
+                ),
+              // Slot opcional para controles no canto superior direito.
+              if (action != null)
+                Positioned(
+                  top: AppSpacing.sm,
+                  right: AppSpacing.sm,
+                  child: action!,
+                ),
+            ],
+          ),
         ),
       ),
     );

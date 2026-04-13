@@ -1,5 +1,42 @@
 # EANTrack - Build Log
 
+## 2026-04-13 - Sessão 10: Fechamento Dark Mode — Correções e Documentação
+
+### Contexto
+Auditoria do dark mode (sessão anterior) identificou nota 7.5/10. Esta sessão fechou as divergências encontradas e atualizou a documentação para refletir o estado real.
+
+### Corrigido — Código
+
+- [x] `lib/shared/widgets/password_rule_row.dart` — estado idle migrado de `AppColors.accent2` hardcoded para `EanTrackTheme.of(context).secondaryText`. Dark mode compliant.
+- [x] `lib/shared/widgets/app_card.dart` — `color` default agora context-aware: `et.cardSurface` no dark, `AppColors.primaryBackground` no light. Elimina armadilha de card com fundo claro no dark mode.
+- [x] `lib/features/auth/presentation/screens/register_screen.dart` — campos de email/senha/confirmação alinhados ao padrão `AppTextField(label: '...')`. Removida composição paralela `Text() + AppTextField(label: '')`.
+- [x] `lib/features/auth/presentation/screens/email_verification_screen.dart` — `_PasswordModal`: bordas corrigidas de `BorderRadius.circular(12)` para `AppRadius.smAll`; adicionados `errorBorder` e `focusedErrorBorder` com `AppColors.error`.
+- [x] `lib/features/onboarding/presentation/screens/onboarding_profile_screen.dart` — adicionado comentário de exceção intencional explicando uso de `TextFormField` raw. Código não alterado.
+
+### Corrigido — Documentação
+
+- [x] `docs/design/DESIGN_SYSTEM.md` — seções 6.2 (AppTextField) e 6.3 (PasswordRuleRow) atualizadas com tokens reais de EanTrackTheme
+- [x] `docs/architecture/ARCHITECTURE.md` — tabela EanTrackTheme: 4 tokens adicionados (`socialBg/Fg/Border`, `accentLink`), `outlinedFg` dark corrigido (`#8896B3`), tabela de status dark mode expandida com exceções documentadas
+- [x] `docs/planning/CURRENT_STATE.md` — data, notas de componentes, exceções intencionais, backlog residual, nota de qualidade atualizada
+- [x] `docs/engineering/COMPONENT_LIBRARY.md` — AppCard (default dark), PasswordRuleRow (theming), AppTextField (convenção de label)
+- [x] `docs/logs/DECISIONS_LOG.md` — DEC-018 atualizado com status; DEC-020 adicionado (AppTextField label convention)
+
+### Exceções registradas (não bugs — intencionais)
+
+| Local | Exceção |
+|-------|---------|
+| `onboarding_profile_screen` | `TextFormField` raw por border dinâmico + `maxLines`/`buildCounter` |
+| `_PasswordModal` | `TextField` raw com `errorText` direto; bordas alinhadas ao padrão |
+
+### Backlog residual (não tratado nesta sessão)
+
+- `AppButton.action` com foreground hardcoded (inativo no fluxo atual)
+- `AppTheme.dark().elevatedButtonTheme.backgroundColor` inconsistente (inativo na prática)
+- `register_screen` sem `_ThemeToggleButton`
+- Dark mode em hub, regiões, flow_page
+
+---
+
 ## 2026-04-08 - Sessao 8: Recovery UX cirurgico
 
 ### Alterado

@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/error/app_exception.dart';
@@ -220,60 +219,33 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'E-mail',
-                  style: AppTextStyles.labelMedium.copyWith(
-                    color: et.primaryText,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                AppTextField(
-                  label: '',
-                  hint: 'Digite seu e-mail',
-                  controller: _emailCtrl,
-                  focusNode: _emailFocus,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  autofillHints: const [AutofillHints.email],
-                  validator: _emailFieldValidator,
-                  onChanged: _onEmailChanged,
-                  onFieldSubmitted: (_) =>
-                      FocusScope.of(context).requestFocus(_passwordFocus),
-                ),
-              ],
+            AppTextField(
+              label: 'E-mail',
+              hint: 'Digite seu e-mail',
+              controller: _emailCtrl,
+              focusNode: _emailFocus,
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
+              autofillHints: const [AutofillHints.email],
+              validator: _emailFieldValidator,
+              onChanged: _onEmailChanged,
+              onFieldSubmitted: (_) =>
+                  FocusScope.of(context).requestFocus(_passwordFocus),
             ),
             _EmailStatusHint(_emailStatus),
             const SizedBox(height: AppSpacing.md),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Senha',
-                  style: AppTextStyles.labelMedium.copyWith(
-                    color: et.primaryText,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                AppTextField(
-                  label: '',
-                  hint: 'Digite sua senha',
-                  controller: _passwordCtrl,
-                  focusNode: _passwordFocus,
-                  isPassword: true,
-                  textInputAction: TextInputAction.next,
-                  autofillHints: const [AutofillHints.newPassword],
-                  validator: passwordValidator,
-                  onChanged: (value) =>
-                      onPasswordChanged(value, _confirmCtrl),
-                  onFieldSubmitted: (_) =>
-                      FocusScope.of(context).requestFocus(_confirmFocus),
-                ),
-              ],
+            AppTextField(
+              label: 'Senha',
+              hint: 'Digite sua senha',
+              controller: _passwordCtrl,
+              focusNode: _passwordFocus,
+              isPassword: true,
+              textInputAction: TextInputAction.next,
+              autofillHints: const [AutofillHints.newPassword],
+              validator: passwordValidator,
+              onChanged: (value) => onPasswordChanged(value, _confirmCtrl),
+              onFieldSubmitted: (_) =>
+                  FocusScope.of(context).requestFocus(_confirmFocus),
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
@@ -318,31 +290,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
               ],
             ),
             const SizedBox(height: AppSpacing.md),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Confirmar senha',
-                  style: AppTextStyles.labelMedium.copyWith(
-                    color: et.primaryText,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                AppTextField(
-                  label: '',
-                  hint: 'Repita a senha',
-                  controller: _confirmCtrl,
-                  focusNode: _confirmFocus,
-                  isPassword: true,
-                  textInputAction: TextInputAction.done,
-                  validator: (value) =>
-                      confirmValidator(value, _passwordCtrl),
-                  onChanged: (value) =>
-                      onConfirmChanged(value, _passwordCtrl),
-                  onFieldSubmitted: (_) => _submit(),
-                ),
-              ],
+            AppTextField(
+              label: 'Confirmar senha',
+              hint: 'Repita a senha',
+              controller: _confirmCtrl,
+              focusNode: _confirmFocus,
+              isPassword: true,
+              textInputAction: TextInputAction.done,
+              validator: (value) => confirmValidator(value, _passwordCtrl),
+              onChanged: (value) => onConfirmChanged(value, _passwordCtrl),
+              onFieldSubmitted: (_) => _submit(),
             ),
             const SizedBox(height: AppSpacing.lg),
             _TermsRow(
@@ -357,10 +314,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
             ),
             const SizedBox(height: AppSpacing.lg),
             const SizedBox(height: AppSpacing.sm),
-            _GoogleButton(
+            AppButton(
+              label: 'Entrar com Google',
+              variant: AppButtonVariant.social,
               isLoading: _googleAction.isLoading,
-              disabled: isBusy,
-              onPressed: _signInWithGoogle,
+              onPressed: isBusy ? null : _signInWithGoogle,
+              leadingIcon: SvgPicture.asset(
+                'assets/images/google_logo.svg',
+                width: 20,
+                height: 20,
+              ),
             ),
             const SizedBox(height: AppSpacing.sm),
             Row(
@@ -457,8 +420,8 @@ class _TermsRow extends StatelessWidget {
             Checkbox(
               value: accepted,
               onChanged: onChanged,
-              activeColor: AppColors.primary,
-              checkColor: AppColors.secondaryBackground,
+              activeColor: et.ctaBackground,
+              checkColor: et.ctaForeground,
               side: BorderSide(
                 color: hasError ? AppColors.error : et.inputBorder,
               ),
@@ -479,9 +442,9 @@ class _TermsRow extends StatelessWidget {
                           child: Text(
                             'Termos de Uso',
                             style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.actionBlue,
+                              color: et.accentLink,
                               decoration: TextDecoration.underline,
-                              decorationColor: AppColors.actionBlue,
+                              decorationColor: et.accentLink,
                             ),
                           ),
                         ),
@@ -493,9 +456,9 @@ class _TermsRow extends StatelessWidget {
                           child: Text(
                             'Politica de Privacidade.',
                             style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.actionBlue,
+                              color: et.accentLink,
                               decoration: TextDecoration.underline,
-                              decorationColor: AppColors.actionBlue,
+                              decorationColor: et.accentLink,
                             ),
                           ),
                         ),
@@ -516,64 +479,6 @@ class _TermsRow extends StatelessWidget {
             ),
           ),
       ],
-    );
-  }
-}
-
-class _GoogleButton extends StatelessWidget {
-  const _GoogleButton({
-    required this.onPressed,
-    required this.isLoading,
-    required this.disabled,
-  });
-
-  final VoidCallback onPressed;
-  final bool isLoading;
-  final bool disabled;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: ElevatedButton(
-        onPressed: disabled ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          disabledBackgroundColor: AppColors.primary,
-          foregroundColor: AppColors.secondaryBackground,
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: AppRadius.smAll),
-        ),
-        child: isLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  color: AppColors.secondaryBackground,
-                ),
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const FaIcon(
-                    FontAwesomeIcons.squareGooglePlus,
-                    size: 22,
-                    color: AppColors.secondaryBackground,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    'Entrar com Google',
-                    style: AppTextStyles.labelLarge.copyWith(
-                      color: AppColors.secondaryBackground,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-      ),
     );
   }
 }

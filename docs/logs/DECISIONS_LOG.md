@@ -177,9 +177,20 @@
 
 **Data:** 2026-04-09
 **Contexto:** Dark mode requerido. Opções: (A) mapear cores com `MediaQuery.platformBrightness`, (B) criar próprio sistema de tokens, (C) usar Flutter `ThemeExtension`.
-**Decisão:** `EanTrackTheme` como `ThemeExtension<EanTrackTheme>` com tokens semânticos (14 tokens). Dois presets: `EanTrackTheme.light` e `EanTrackTheme.dark`. Acesso via `EanTrackTheme.of(context)`. Toggle via `StateProvider<ThemeMode>` (`themeModeProvider`).
+**Decisão:** `EanTrackTheme` como `ThemeExtension<EanTrackTheme>` com 18 tokens semânticos. Dois presets: `EanTrackTheme.light` e `EanTrackTheme.dark`. Acesso via `EanTrackTheme.of(context)`. Toggle via `StateProvider<ThemeMode>` (`themeModeProvider`).
 **Motivo:** ThemeExtension é o padrão oficial Flutter, integra com `MaterialApp.darkTheme`, suporta `lerp()` para transições suaves, e não exige `BuildContext` no lugar errado. Tokens semânticos isolam widgets das cores primitivas — mudança de paleta não requer alterar widgets.
-**Impacto:** `AppButton`, `AppTextField`, `AuthScaffold`, `AppFeedbackDialog`, e todas as telas de auth/onboarding migradas. Telas internas (hub, regiões) ainda usam `AppColors.*` direto — pendente de migração.
+**Impacto:** `AppButton`, `AppTextField`, `AppCard`, `PasswordRuleRow`, `AuthScaffold`, `AppFeedbackDialog`, e todas as telas de auth/onboarding migradas. Telas internas (hub, regiões) ainda usam `AppColors.*` direto — pendente de migração.
+**Status (2026-04-13):** auth/onboarding totalmente padronizados. Auditoria e correções concluídas. Ver exceções em ARCHITECTURE.md.
+
+---
+
+## DEC-020 — AppTextField com label sempre preenchido
+
+**Data:** 2026-04-13
+**Contexto:** `register_screen` usava composição paralela (`Text()` label manual + `AppTextField(label: '')`), enquanto demais telas de auth usavam `AppTextField(label: 'E-mail')`. Inconsistência de padrão e manutenção.
+**Decisão:** `label` em `AppTextField` é sempre preenchido com o nome do campo. Nunca usar `label: ''`. O floating label (`FloatingLabelBehavior.always`) é a única referência visual do campo em estado preenchido.
+**Motivo:** Elimina duplicação (Text + AppTextField), centraliza a exibição do label no componente, e garante comportamento consistente com o `inputDecorationTheme` do Flutter.
+**Impacto:** `register_screen` corrigido. Padrão documentado em DESIGN_SYSTEM.md e COMPONENT_LIBRARY.md. Qualquer nova tela deve seguir este padrão.
 
 ---
 

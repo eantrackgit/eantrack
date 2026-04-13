@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/error/app_exception.dart';
@@ -282,10 +281,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               variant: AppButtonVariant.social,
               isLoading: _googleAction.isLoading,
               onPressed: isBusy ? null : _signInWithGoogle,
-              leadingIcon: const FaIcon(
-                FontAwesomeIcons.squareGooglePlus,
-                size: 20,
-                color: AppColors.secondaryBackground,
+              leadingIcon: SvgPicture.asset(
+                'assets/images/google_logo.svg',
+                width: 20,
+                height: 20,
               ),
             ),
             const SizedBox(height: AppSpacing.xs),
@@ -308,12 +307,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         text: 'Esqueceu sua senha? ',
                         style: TextStyle(color: et.secondaryText),
                       ),
-                      const TextSpan(
+                      TextSpan(
                         text: 'Clique aqui',
                         style: TextStyle(
-                          color: AppColors.actionBlue,
+                          color: et.accentLink,
                           decoration: TextDecoration.underline,
-                          decorationColor: AppColors.actionBlue,
+                          decorationColor: et.accentLink,
                         ),
                       ),
                     ],

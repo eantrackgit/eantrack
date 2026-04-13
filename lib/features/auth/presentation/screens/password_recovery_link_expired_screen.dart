@@ -22,17 +22,10 @@ class PasswordRecoveryLinkExpiredScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppSpacing.lg),
             decoration: BoxDecoration(
+              color: et.surface,
               borderRadius: BorderRadius.circular(AppSpacing.md),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.error.withValues(alpha: 0.12),
-                  et.ctaBackground.withValues(alpha: 0.08),
-                ],
-              ),
               border: Border.all(
-                color: AppColors.error.withValues(alpha: 0.18),
+                color: AppColors.error.withValues(alpha: 0.22),
               ),
             ),
             child: Column(
@@ -47,10 +40,10 @@ class PasswordRecoveryLinkExpiredScreen extends StatelessWidget {
                       color: AppColors.error.withValues(alpha: 0.2),
                     ),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.link_off_rounded,
                     size: 32,
-                    color: et.ctaForeground,
+                    color: AppColors.error,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -76,10 +69,9 @@ class PasswordRecoveryLinkExpiredScreen extends StatelessWidget {
           AppButton(
             label: 'Voltar ao login',
             onPressed: () => context.go(AppRoutes.login),
-            leadingIcon: Icon(
+            leadingIcon: const Icon(
               Icons.arrow_back_ios_new,
               size: 14,
-              color: et.ctaForeground,
             ),
           ),
         ],

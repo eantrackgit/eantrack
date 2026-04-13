@@ -2,7 +2,7 @@
 
 > **Leia este arquivo primeiro ao retomar o projeto.**
 > Atualizar a cada sessão que avança o código.
-> Última atualização: 2026-04-11 (auditoria global)
+> Última atualização: 2026-04-13 (fechamento dark mode — correções e documentação)
 
 ---
 
@@ -42,9 +42,9 @@
 - `lib/shared/widgets/app_error_box.dart` ✅ — erro inline com shake animation
 - `lib/shared/widgets/app_feedback_dialog.dart` ✅ — modal sucesso/erro, dark mode via `EanTrackTheme.of(dialogContext)`
 - `lib/shared/widgets/auth_scaffold.dart` ✅ — layout padrão auth/onboarding com dark mode. Parâmetro `action` opcional para widget no canto superior direito.
-- `lib/shared/widgets/password_rule_row.dart` ✅ — checklist de senha animado
+- `lib/shared/widgets/password_rule_row.dart` ✅ — checklist de senha animado, dark mode via `EanTrackTheme.secondaryText` no estado idle
 - `lib/shared/widgets/app_version_badge.dart` ✅
-- `lib/shared/widgets/app_card.dart` ✅ — `onTap?`, `selected?`, `borderColor?`, ripple
+- `lib/shared/widgets/app_card.dart` ✅ — `onTap?`, `selected?`, `borderColor?`, ripple. Default de `color` é context-aware: `et.cardSurface` no dark, `AppColors.primaryBackground` no light
 - `lib/shared/widgets/app_empty_state.dart` ✅
 - `lib/shared/widgets/app_bottom_nav.dart` ✅
 - `lib/shared/widgets/app_sidebar.dart` ✅
@@ -66,8 +66,8 @@
 - `lib/features/auth/data/password_recovery_cooldown_storage.dart` ✅ (stub + web via conditional import)
 - `lib/features/auth/presentation/providers/auth_provider.dart` ✅ — `AuthNotifier`, `EmailCooldownNotifier`, `passwordRecoveryCooldownProvider`, cooldown state
 - `lib/features/auth/presentation/widgets/resend_cooldown_button.dart` ✅
-- `lib/features/auth/presentation/screens/login_screen.dart` ✅ — dark mode, toggle de tema (`_ThemeToggleButton`)
-- `lib/features/auth/presentation/screens/register_screen.dart` ✅ — dark mode, `_TermsRow` com links azuis
+- `lib/features/auth/presentation/screens/login_screen.dart` ✅ — dark mode, toggle de tema (`_ThemeToggleButton`). Referência visual para dark mode.
+- `lib/features/auth/presentation/screens/register_screen.dart` ✅ — dark mode, `_TermsRow` com links azuis. Campos no padrão `AppTextField(label: '...')` alinhado às demais telas de auth.
 - `lib/features/auth/presentation/screens/email_verification_screen.dart` ✅
 - `lib/features/auth/presentation/screens/recover_password_screen.dart` ✅ — dark mode completo
 - `lib/features/auth/presentation/screens/update_password_screen.dart` ✅
@@ -78,7 +78,7 @@
 - `lib/features/onboarding/data/onboarding_repository.dart` ✅ — `saveMode()`, `identificadorExiste()` (RPC + fallback), `saveProfile()`
 - `lib/features/onboarding/presentation/providers/onboarding_provider.dart` ✅
 - `lib/features/onboarding/presentation/screens/choose_mode_screen.dart` ✅ — dark mode
-- `lib/features/onboarding/presentation/screens/onboarding_profile_screen.dart` ✅ — dark mode, identifier com sugestões determinísticas (Instagram/Microsoft style), validação em tempo real
+- `lib/features/onboarding/presentation/screens/onboarding_profile_screen.dart` ✅ — dark mode, identifier com sugestões determinísticas (Instagram/Microsoft style), validação em tempo real. **Exceção intencional:** usa `TextFormField` raw por border dinâmico de status + `maxLines`/`buildCounter` customizado — documentado no código e em ARCHITECTURE.md.
 - `lib/features/onboarding/presentation/screens/cnpj_screen.dart` ✅ — UI criada
 - `lib/features/onboarding/presentation/screens/company_data_screen.dart` ✅ — UI criada
 - `lib/features/onboarding/presentation/screens/legal_representative_screen.dart` ✅ — UI criada
@@ -153,20 +153,33 @@
 
 ## Qualidade do Projeto
 
-**Nota auditada: 8.6 / 10** *(2026-04-11 — auditoria independente)*
-**Faixa após correções prioritárias: 9.0–9.2**
+**Nota auditada: 8.6 / 10** *(2026-04-11 — auditoria global)*
+**Pós-correções dark mode (2026-04-13): ~8.9**
 
 | Área | Nota | Observação |
 |------|------|-----------|
 | Arquitetura | 9.2 | Feature-first sólido, repository e router limpos |
 | Auth foundation | 9.5 | Completo, edge cases cobertos, cooldown, history |
 | Segurança | 9.4 | RPC-first, SHA-256, dart-define, erros sanitizados |
-| UI Design System | 8.5 | EanTrackTheme excelente em auth/onboarding; ausente nas telas internas |
+| UI Design System | 8.8 | Auth/onboarding totalmente padronizados; exceções documentadas; telas internas ainda pendentes |
 | Estado / Riverpod | 9.0 | Sealed states, AsyncAction/Value, providers organizados |
 | Navegação | 9.2 | RouterRedirectGuard, FlowPage, AppRoutes constants |
 | Manutenibilidade | 8.0 | FormStateMixin/AsyncAction bons; screens muito longas |
 | Testabilidade | 7.2 | Auth coberto; hub/onboarding screens descobertas; sem integration tests |
-| Documentação | 8.5 | Pós-auditoria (antes: 6.5) |
+| Documentação | 8.8 | Pós-fechamento dark mode; ARCHITECTURE e DESIGN_SYSTEM atualizados |
+
+---
+
+## Backlog Técnico Residual (dark mode)
+
+Itens não bloqueadores — registrados para tratamento futuro:
+
+| Item | Impacto | Observação |
+|------|---------|------------|
+| `AppButton.action` com foreground hardcoded (`AppColors.secondaryBackground`) | Baixo | Não usado em auth/onboarding — inativo no fluxo atual |
+| `AppTheme.dark().elevatedButtonTheme.backgroundColor = AppColors.secondary` | Baixo | Inativo: `AppButton.primary` sobrescreve com `Ink decoration` |
+| `register_screen` sem `_ThemeToggleButton` | Baixo | UX minor — usuário só alterna tema via login screen |
+| `_PasswordModal` usa `TextField` raw | Baixo | Exceção documentada; bordas alinhadas ao padrão |
 
 ---
 
@@ -176,6 +189,6 @@
 |-------|-------|-----------|
 | Arquivos FlutterFlow legados causam erros de análise | Médio | Deletar na Fase Hardening; ignorar até lá |
 | Dark mode quebrado em telas internas (hub, regiões) | Médio | Migrar para EanTrackTheme nas próximas sessões |
-| Screens longas (911, 579 linhas) dificultas manutenção | Médio | Decompor em widgets privados quando tocar no arquivo |
+| Screens longas (911, 579 linhas) dificultam manutenção | Médio | Decompor em widgets privados quando tocar no arquivo |
 | RPCs podem ter assinatura diferente do esperado | Baixo | Verificar no Supabase Dashboard antes de integrar |
 | Lottie asset `flow_loading.json` pode não existir | Baixo | Verificar em `assets/animations/` antes de rodar |

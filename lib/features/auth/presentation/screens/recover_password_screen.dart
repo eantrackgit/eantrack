@@ -129,13 +129,14 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
     final cooldown = ref.watch(passwordRecoveryCooldownProvider);
     final isEmailLocked = cooldown.isLocked;
     final canResend = !_isLoading && !cooldown.isLocked;
+    final helperAccent = et.accentLink;
 
     return AuthScaffold(
       padding: EdgeInsets.zero,
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          color: et.cardSurface,
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Form(
@@ -205,14 +206,14 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
                             width: 36,
                             height: 36,
                             decoration: BoxDecoration(
-                              color: AppColors.actionBlue.withValues(alpha: 0.12),
+                              color: helperAccent.withValues(alpha: 0.14),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
                               isEmailLocked
                                   ? Icons.lock_clock_outlined
                                   : Icons.mark_email_read_outlined,
-                              color: AppColors.actionBlue,
+                              color: helperAccent,
                               size: 18,
                             ),
                           ),

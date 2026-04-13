@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../theme/app_theme.dart';
 
 /// Card base do EANTrack.
 ///
@@ -51,16 +52,41 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final et = EanTrackTheme.of(context);
+
     final Color effectiveBorderColor = borderColor ??
         (selected ? AppColors.success : Colors.transparent);
     final double effectiveBorderWidth = selected ? 2.0 : 1.0;
-    final Color effectiveColor = color ?? AppColors.primaryBackground;
+    final Color effectiveColor = color ?? (isDark ? et.cardSurface : AppColors.primaryBackground);
     final EdgeInsetsGeometry effectivePadding =
         padding ?? const EdgeInsets.all(AppSpacing.lg);
+    final List<BoxShadow> shadow = isDark
+        ? [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.40),
+              blurRadius: 28,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: const Color(0xFF4D72F5).withValues(alpha: 0.06),
+              blurRadius: 40,
+              spreadRadius: -4,
+              offset: const Offset(0, 4),
+            ),
+          ]
+        : [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.07),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ];
 
     final deco = BoxDecoration(
       color: effectiveColor,
       borderRadius: AppRadius.lgAll,
+      boxShadow: shadow,
       border: Border.all(
         color: effectiveBorderColor,
         width: effectiveBorderWidth,
