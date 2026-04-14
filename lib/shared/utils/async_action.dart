@@ -52,4 +52,17 @@ extension AsyncActionX<T> on AsyncAction<T> {
 
   T? get value =>
       this is ActionSuccess<T> ? (this as ActionSuccess<T>).value : null;
+
+  R when<R>({
+    required R Function() onIdle,
+    required R Function() onLoading,
+    required R Function(T value) onSuccess,
+    required R Function(String message) onFailure,
+  }) =>
+      switch (this) {
+        ActionIdle<T>() => onIdle(),
+        ActionLoading<T>() => onLoading(),
+        ActionSuccess<T>(:final value) => onSuccess(value),
+        ActionFailure<T>(:final message) => onFailure(message),
+      };
 }

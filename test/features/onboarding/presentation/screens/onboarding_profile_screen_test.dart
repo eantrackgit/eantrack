@@ -1,11 +1,10 @@
-import 'package:eantrack/core/router/app_routes.dart';
 import 'package:eantrack/core/error/app_exception.dart';
+import 'package:eantrack/core/router/app_routes.dart';
 import 'package:eantrack/features/onboarding/data/onboarding_repository.dart';
 import 'package:eantrack/features/onboarding/presentation/providers/onboarding_provider.dart';
 import 'package:eantrack/features/onboarding/presentation/screens/onboarding_profile_screen.dart';
 import 'package:eantrack/shared/providers/theme_provider.dart';
 import 'package:eantrack/shared/theme/app_theme.dart';
-import 'package:eantrack/shared/widgets/app_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,12 +32,21 @@ Finder get _descriptionField => find.byWidgetPredicate(
 Finder get _identifierField =>
     _textFieldByHint('Escolha seu identificador');
 
+const _advanceLabel = 'Avan\u00E7ar';
+const _shortSuggestionsTitle = 'Sugest\u00F5es para voc\u00EA';
+const _availableText = 'Identificador dispon\u00EDvel!';
+const _takenText =
+    'Esse identificador n\u00E3o est\u00E1 dispon\u00EDvel.';
+const _takenSuggestionsTitle =
+    'Outras op\u00E7\u00F5es dispon\u00EDveis';
+
 void main() {
   late MockOnboardingRepository repository;
 
   setUp(() {
     repository = MockOnboardingRepository();
-    when(() => repository.identificadorExiste(any())).thenAnswer((_) async => false);
+    when(() => repository.identificadorExiste(any()))
+        .thenAnswer((_) async => false);
     when(
       () => repository.reservarIdentificadorComCadastro(any(), any()),
     ).thenAnswer((_) async => true);
@@ -122,10 +130,7 @@ void main() {
     await tester.pump();
 
     final button = tester.widget<ElevatedButton>(
-      find.descendant(
-        of: find.widgetWithText(AppButton, 'Avançar'),
-        matching: find.byType(ElevatedButton),
-      ),
+      find.widgetWithText(ElevatedButton, _advanceLabel),
     );
 
     expect(button.onPressed, isNull);
@@ -156,11 +161,8 @@ void main() {
     await tester.pump();
 
     verifyNever(() => repository.identificadorExiste(any()));
-    expect(
-      find.text('Identificador não disponível.'),
-      findsOneWidget,
-    );
-    expect(find.text('Sugestões para você'), findsOneWidget);
+    expect(find.text('M\u00EDnimo de 10 caracteres.'), findsOneWidget);
+    expect(find.text(_shortSuggestionsTitle), findsOneWidget);
     expect(find.text('curto123oficial'), findsOneWidget);
     expect(find.byIcon(Icons.check_circle), findsNothing);
   });
@@ -175,7 +177,7 @@ void main() {
     await tester.pump();
 
     verifyNever(() => repository.identificadorExiste(any()));
-    expect(find.text('Sugestões para você'), findsOneWidget);
+    expect(find.text(_shortSuggestionsTitle), findsOneWidget);
     expect(find.text('joaosilva'), findsOneWidget);
     expect(find.text('curto123oficial'), findsNothing);
   });
@@ -185,13 +187,14 @@ void main() {
 
     await enterAvailableIdentifier(tester);
 
-    expect(find.text('Identificador disponível!'), findsOneWidget);
+    expect(find.text(_availableText), findsOneWidget);
     expect(find.byIcon(Icons.check_circle), findsOneWidget);
     verify(() => repository.identificadorExiste('clientebase1')).called(1);
   });
 
   testWidgets('identificador ocupado exibe sugestoes', (tester) async {
-    when(() => repository.identificadorExiste(any())).thenAnswer((invocation) async {
+    when(() => repository.identificadorExiste(any()))
+        .thenAnswer((invocation) async {
       final value = invocation.positionalArguments.first as String;
       if (value == 'clientebase1') return true;
       return false;
@@ -203,17 +206,18 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pump();
 
-    expect(find.text('Esse identificador não está disponível.'), findsOneWidget);
-    expect(find.text('Outras opções disponíveis'), findsOneWidget);
+    expect(find.text(_takenText), findsOneWidget);
+    expect(find.text(_takenSuggestionsTitle), findsOneWidget);
     expect(find.text('joaosilva'), findsOneWidget);
     expect(find.byIcon(Icons.check_circle), findsNothing);
-    expect(find.text('Identificador disponível!'), findsNothing);
+    expect(find.text(_availableText), findsNothing);
   });
 
   testWidgets(
       'identificador existente normalizado nao reaproveita estado disponivel',
       (tester) async {
-    when(() => repository.identificadorExiste(any())).thenAnswer((invocation) async {
+    when(() => repository.identificadorExiste(any()))
+        .thenAnswer((invocation) async {
       final value = invocation.positionalArguments.first as String;
       if (value == 'adminteste') return true;
       return false;
@@ -226,7 +230,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pump();
 
-    expect(find.text('Identificador disponível!'), findsOneWidget);
+    expect(find.text(_availableText), findsOneWidget);
     expect(find.byIcon(Icons.check_circle), findsOneWidget);
 
     await tester.enterText(_identifierField, '@AdminTeste ');
@@ -234,13 +238,14 @@ void main() {
     await tester.pump();
 
     verify(() => repository.identificadorExiste('adminteste')).called(1);
-    expect(find.text('Esse identificador não está disponível.'), findsOneWidget);
-    expect(find.text('Identificador disponível!'), findsNothing);
+    expect(find.text(_takenText), findsOneWidget);
+    expect(find.text(_availableText), findsNothing);
     expect(find.byIcon(Icons.check_circle), findsNothing);
   });
 
   testWidgets('clique em sugestao preenche campo', (tester) async {
-    when(() => repository.identificadorExiste(any())).thenAnswer((invocation) async {
+    when(() => repository.identificadorExiste(any()))
+        .thenAnswer((invocation) async {
       final value = invocation.positionalArguments.first as String;
       if (value == 'clientebase1') return true;
       return false;
@@ -257,7 +262,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('joaosilva'), findsWidgets);
-    expect(find.text('Identificador disponível!'), findsOneWidget);
+    expect(find.text(_availableText), findsOneWidget);
   });
 
   testWidgets('botao avancar chama fluxo final corretamente', (tester) async {
@@ -265,7 +270,7 @@ void main() {
     await tester.enterText(_descriptionField, 'Especialista em operacoes');
     await enterAvailableIdentifier(tester);
 
-    await tester.tap(find.widgetWithText(AppButton, 'Avançar'));
+    await tester.tap(find.widgetWithText(ElevatedButton, _advanceLabel));
     await tester.pump();
     await tester.pump();
 
@@ -284,7 +289,8 @@ void main() {
   testWidgets('nao navega em caso de falha de identificador ocupado',
       (tester) async {
     var originalChecks = 0;
-    when(() => repository.identificadorExiste(any())).thenAnswer((invocation) async {
+    when(() => repository.identificadorExiste(any()))
+        .thenAnswer((invocation) async {
       final value = invocation.positionalArguments.first as String;
       if (value == 'clientebase1') {
         originalChecks++;
@@ -299,18 +305,19 @@ void main() {
     await pumpScreen(tester);
     await enterAvailableIdentifier(tester);
 
-    await tester.tap(find.widgetWithText(AppButton, 'Avançar'));
+    await tester.tap(find.widgetWithText(ElevatedButton, _advanceLabel));
     await tester.pump();
     await tester.pump();
 
     expect(find.text('CNPJ destination'), findsNothing);
-    expect(find.text('Outras opções disponíveis'), findsOneWidget);
-    expect(find.text('Esse identificador não está disponível.'), findsOneWidget);
+    expect(find.text(_takenSuggestionsTitle), findsOneWidget);
+    expect(find.text(_takenText), findsOneWidget);
   });
 
   testWidgets('conflito 23505 no submit volta identificador para ocupado',
       (tester) async {
-    when(() => repository.identificadorExiste(any())).thenAnswer((invocation) async {
+    when(() => repository.identificadorExiste(any()))
+        .thenAnswer((invocation) async {
       final value = invocation.positionalArguments.first as String;
       return value == 'adminteste';
     });
@@ -328,8 +335,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pump();
 
-    expect(find.text('Esse identificador não está disponível.'), findsOneWidget);
-    expect(find.text('Identificador disponível!'), findsNothing);
+    expect(find.text(_takenText), findsOneWidget);
+    expect(find.text(_availableText), findsNothing);
     expect(find.byIcon(Icons.check_circle), findsNothing);
   });
 }

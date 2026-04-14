@@ -10,7 +10,7 @@
 | Layer | Technology | Version |
 |-------|-----------|---------|
 | UI | Flutter | ≥3.2 |
-| State | flutter_riverpod (StateNotifier) | ^2.6 |
+| State | flutter_riverpod (Notifier / StateNotifier) | ^2.6 |
 | Navigation | go_router | ^14.x |
 | Backend | supabase_flutter | ^2.9 |
 | Auth Extras | google_sign_in, sign_in_with_apple | current |
@@ -162,20 +162,104 @@ final authRepositoryProvider = Provider<AuthRepository>(...);
 // Auth stream do Supabase
 final authUserStreamProvider = StreamProvider<User?>(...);
 
-// Auth actions + state
+// Auth actions + state (legado — manter para Auth)
 final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthState>(...);
+
+// Novos módulos — padrão Riverpod 2 Notifier
+final regionNotifierProvider = NotifierProvider<RegionNotifier, RegionState>(
+  RegionNotifier.new,
+);
 ```
+
+### Padrão Riverpod 2 — Notifier
+
+Para novos módulos, usar `Notifier` em vez de `StateNotifier`:
+
+```dart
+class RegionNotifier extends Notifier<RegionState> {
+  RegionRepository get _repository => ref.read(regionRepositoryProvider);
+  String get _agencyId => ref.read(agencyIdProvider);
+
+  @override
+  RegionState build() {
+    ref.watch(agencyIdProvider); // auto-invalida na troca de conta
+    Future.microtask(load);      // carrega dados ao montar
+    return RegionInitial();
+  }
+}
+```
+
+Vantagens sobre `StateNotifier`:
+- `ref` disponível diretamente (sem `ProviderRef` no constructor)
+- `build()` como ponto central de setup e auto-dispose declarativo
+- `ref.watch()` no `build()` recria o notifier quando dependência muda
+
+### Padrão de Guard — agencyId
+
+Todo acesso a dados scoped por agência passa por `agencyIdProvider`:
+
+```dart
+final agencyIdProvider = Provider<String>((ref) {
+  final authState = ref.watch(authNotifierProvider);
+  if (authState is! AuthAuthenticated) {
+    throw StateError('Usuario nao autenticado.');
+  }
+  final agencyId = authState.flowState?.agencyId;
+  if (agencyId == null) {
+    throw StateError('Agency ID nao encontrado para o usuario autenticado.');
+  }
+  return agencyId;
+});
+```
+
+**Regra:** nunca passar `agencyId` como parâmetro explícito para notifiers — sempre derivar de `agencyIdProvider`. Garante que:
+1. Usuário não autenticado nunca acessa dados
+2. Troca de conta invalida automaticamente o estado do notifier
+3. null nunca passa silencioso para o repository
+
+### Padrão de Controller — IdentifierController
+
+Para lógica complexa de campo (validação assíncrona + debounce + sugestões), extrair um controller puro (sem Riverpod):
+
+```dart
+class IdentifierController {
+  IdentifierController({
+    required this.checkExists,  // injetado pela screen
+    required this.onStateChanged,
+  });
+
+  Timer? _debounce;
+  int _requestId = 0;   // cancela consultas stale
+
+  void onChanged(String raw) {
+    _debounce?.cancel();
+    _requestId++;
+    // debounce 350ms → _validate(normalized, requestId: _requestId)
+  }
+
+  Future<void> _validate(String id, {required int requestId, ...}) async {
+    final exists = await checkExists(id);
+    if (requestId != _requestId) return; // stale — ignora resultado
+    // atualiza estado
+  }
+}
+```
+
+**Regras:**
+- Controller não conhece Riverpod, nem Flutter (exceto `TextEditingController`)
+- `_requestId` é incrementado a cada nova chamada — respostas fora de ordem são descartadas
+- `dispose()` seta `_disposed = true` e cancela o timer
 
 ### Fluxo de Estado
 
 ```
 Ação do usuário (tap no botão)
-  → Widget chama ref.read(authNotifierProvider.notifier).signIn(...)
-  → AuthNotifier seta state = AuthLoading()
-  → AuthNotifier chama AuthRepository.signIn(...)
+  → Widget chama ref.read(regionNotifierProvider.notifier).createRegion(...)
+  → RegionNotifier lê agencyId via ref.read(agencyIdProvider)
+  → RegionNotifier chama RegionRepository.createRegion(...)
   → Repository chama Supabase
-  → AuthNotifier seta state = AuthAuthenticated() ou AuthError()
-  → Widget lê ref.watch(authNotifierProvider) → rebuild
+  → RegionNotifier seta state = RegionLoaded(regions) ou mantém estado atual
+  → Widget lê ref.watch(regionNotifierProvider) → rebuild
 ```
 
 ### Anti-patterns Proibidos
@@ -184,6 +268,8 @@ Ação do usuário (tap no botão)
 - Lógica de negócio em `build()` de widget
 - Chamada Supabase direta no widget
 - `setState()` para algo que afeta múltiplos widgets
+- Passar `agencyId` como parâmetro explícito — sempre derivar de `agencyIdProvider`
+- Ignorar resultado de `_requestId` em chamadas assíncronas com debounce
 
 ---
 
@@ -379,8 +465,18 @@ features/{name}/
 │   ├── {name}_state.dart             # Sealed state class
 │   └── {name}_model.dart             # Domain data models
 └── presentation/
+    ├── controllers/                   # (opcional) controllers puros sem Riverpod
+    │   └── {name}_controller.dart    # lógica complexa de campo (debounce, async, sugestões)
     ├── providers/
-    │   └── {name}_provider.dart      # StateNotifier + Providers
+    │   └── {name}_provider.dart      # Notifier + Providers (Riverpod 2)
     └── screens/
         └── {name}_screen.dart        # Pure UI, calls notifier, reads state
 ```
+
+### Quando usar controller vs. notifier
+
+| Caso | Usar |
+|------|------|
+| Estado global de feature (lista, form de criação) | `Notifier` + `NotifierProvider` |
+| Lógica complexa de campo único (validação async, debounce, sugestões) | Controller puro (sem Riverpod) |
+| Estado simples de UI (toggle, loading local) | `setState` na própria screen |

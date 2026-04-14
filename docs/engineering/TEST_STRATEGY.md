@@ -1,6 +1,7 @@
 # EANTrack — Test Strategy
 
 > Documento prático. Foca no que funciona neste projeto.
+> Última atualização: 2026-04-14 — adicionado padrão de controller tests, debounce e concorrência.
 
 ---
 
@@ -12,8 +13,16 @@
       [    Unit Tests     ]     ← Business logic, repositories, validators
 ```
 
+**Cobertura atingida (2026-04-14):**
+- Auth repository + providers: ✅ coberto
+- Onboarding IdentifierController: ✅ coberto (~30 casos, incl. concorrência)
+- Onboarding profile screen: ✅ coberto (widget)
+- Regions repository: ✅ coberto
+- Shared (FormStateMixin, PasswordValidator): ✅ coberto
+- Hub / region_list_screen / choose_mode_screen: ❌ sem testes de UI (débito documentado)
+
 **Meta de cobertura mínima:**
-- Unit: 80% nas funções de domínio e repositórios
+- Unit: 80% nas funções de domínio, repositórios e controllers
 - Widget: 100% das telas (smoke test mínimo)
 - Integration: fluxos críticos (auth, PDV, lançamento)
 
@@ -52,7 +61,85 @@ group('AuthRepository.signIn', () {
 
 ---
 
-## 2. Widget Tests
+## 2. Controller Tests (Unit)
+
+Para controllers puros (sem Riverpod), como `IdentifierController`:
+
+### Setup mínimo:
+```dart
+IdentifierController _make({
+  required Future<bool> Function(String) checkExists,
+  VoidCallback? onStateChanged,
+}) {
+  return IdentifierController(
+    checkExists: checkExists,
+    onStateChanged: onStateChanged ?? () {},
+  );
+}
+```
+
+### Testando debounce (obrigatório):
+```dart
+// Helper para avançar além do debounce de 350ms
+Future<void> _pumpDebounce(WidgetTester tester) async {
+  await tester.pump(const Duration(milliseconds: 400));
+  await tester.pump();
+}
+
+// Com chamada async depois do debounce
+Future<void> _pumpDebounceAndAsync(WidgetTester tester) async {
+  await tester.pump(const Duration(milliseconds: 400));
+  await tester.pump();
+  await tester.pump();
+}
+```
+
+**Regra:** sempre verificar que `checkExists` NÃO foi chamado antes do debounce expirar.
+
+### Testando concorrência (obrigatório para controllers com _requestId):
+```dart
+testWidgets('novo onChanged durante async invalida resultado anterior', (tester) async {
+  final firstCheck = Completer<bool>();
+  final secondCheck = Completer<bool>();
+
+  final ctrl = _make(checkExists: (id) {
+    if (id == 'primeiro123') return firstCheck.future;
+    if (id == 'segundo123a') return secondCheck.future;
+    return Future.value(false);
+  });
+
+  // Dispara primeira consulta
+  ctrl.onChanged('primeiro123');
+  await _pumpDebounceAndAsync(tester);
+  expect(ctrl.status, IdentifierStatus.checking);
+
+  // Dispara segunda ANTES da primeira completar
+  ctrl.onChanged('segundo123a');
+  await _pumpDebounceAndAsync(tester);
+
+  // Primeira completa — deve ser ignorada
+  firstCheck.complete(false);
+  await tester.pump();
+  expect(ctrl.status, IdentifierStatus.checking); // ainda aguardando segunda
+
+  // Segunda completa — é a válida
+  secondCheck.complete(false);
+  await tester.pump();
+  await tester.pump();
+  expect(ctrl.status, IdentifierStatus.available);
+});
+```
+
+### Regras para controller tests:
+- Cobrir todos os estados do enum (idle, typing, tooShort, checking, available, taken, error)
+- Testar `dispose()`: verificar que callback NÃO é chamado após dispose
+- Testar normalização (`normalize()`) com acentos, `@`, caracteres inválidos
+- Testar `applySuggestion` e `applyTakenStateFromConflict` separadamente
+- Usar `addTearDown(ctrl.dispose)` em todo teste
+
+---
+
+## 3. Widget Tests
 
 **NÃO depender de texto frágil ou layout rígido.**
 
@@ -96,7 +183,7 @@ await tester.pumpWidget(
 
 ---
 
-## 3. Mocks — Regra Crítica
+## 4. Mocks — Regra Crítica
 
 ### CORRETO:
 ```dart
@@ -114,7 +201,7 @@ when() dentro de outro stub             // causa loop infinito
 
 ---
 
-## 4. Anti-Patterns Proibidos
+## 5. Anti-Patterns Proibidos
 
 | Anti-pattern | Por quê |
 |---|---|
@@ -127,7 +214,7 @@ when() dentro de outro stub             // causa loop infinito
 
 ---
 
-## 5. Layout — Resiliência Obrigatória
+## 6. Layout — Resiliência Obrigatória
 
 Testes **não devem quebrar por overflow visual**.
 
@@ -138,7 +225,7 @@ Componentes devem ser resilientes:
 
 ---
 
-## 6. Checklist de Validação por Tela (Auth)
+## 7. Checklist de Validação por Tela (Auth)
 
 ### LoginScreen
 - [ ] Renderiza sem erro
@@ -166,7 +253,7 @@ Componentes devem ser resilientes:
 
 ---
 
-## 7. Cenários de Borda (obrigatórios em todos os módulos)
+## 8. Cenários de Borda (obrigatórios em todos os módulos)
 
 - [ ] Campos em branco
 - [ ] Texto muito longo (overflow de UI)
@@ -176,7 +263,7 @@ Componentes devem ser resilientes:
 
 ---
 
-## 8. Ferramentas
+## 9. Ferramentas
 
 | Ferramenta | Uso |
 |---|---|
@@ -186,7 +273,7 @@ Componentes devem ser resilientes:
 
 ---
 
-## 9. CI/CD
+## 10. CI/CD
 
 - `flutter analyze` → zero erros em todo PR
 - `flutter test` → verde em todo PR

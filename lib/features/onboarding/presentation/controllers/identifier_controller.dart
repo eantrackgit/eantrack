@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/error/app_exception.dart';
 
-/// Status do identificador durante o preenchimento e validação assíncrona.
 enum IdentifierStatus {
   idle,
   typing,
@@ -15,30 +14,15 @@ enum IdentifierStatus {
   error,
 }
 
-/// Gerencia toda a lógica de identificador: normalização, debounce, verificação
-/// assíncrona de disponibilidade e geração de sugestões.
-///
-/// Não é um widget — é uma classe Dart pura que notifica a tela via [onStateChanged].
-/// Instanciar em [initState] e descartar em [dispose].
 class IdentifierController {
   IdentifierController({
     required this.checkExists,
     required this.onStateChanged,
   });
 
-  /// Callback para verificar se um identificador já existe no backend.
   final Future<bool> Function(String identifier) checkExists;
-
-  /// Chamado sempre que o estado interno muda — normalmente `() => setState(() {})`.
   final VoidCallback onStateChanged;
-
-  /// Controller do campo de texto do identificador.
-  /// Deve ser passado como `controller:` ao `TextFormField` da tela.
   final TextEditingController textController = TextEditingController();
-
-  // -------------------------------------------------------------------------
-  // Estado interno
-  // -------------------------------------------------------------------------
 
   IdentifierStatus _status = IdentifierStatus.idle;
   String? _message;
@@ -52,30 +36,33 @@ class IdentifierController {
 
   static const int _minLength = 10;
 
-  // -------------------------------------------------------------------------
-  // Getters públicos (somente leitura)
-  // -------------------------------------------------------------------------
-
   IdentifierStatus get status => _status;
   String? get message => _message;
   List<String> get suggestions => _suggestions;
   String? get confirmedAvailable => _confirmedAvailable;
 
-  // -------------------------------------------------------------------------
-  // Normalização — método estático público para uso externo (ex: _canSubmit)
-  // -------------------------------------------------------------------------
-
-  static String normalize(String value) {
-    final normalized = value.trim().toLowerCase().replaceAll('@', '');
-    return normalized.replaceAll(RegExp(r'[^a-z0-9._-]'), '');
+  static String _stripAccents(String text) {
+    const withAccent =
+        '\u00E1\u00E0\u00E3\u00E2\u00E4\u00E9\u00E8\u00EA\u00EB\u00ED\u00EC\u00EE\u00EF'
+        '\u00F3\u00F2\u00F5\u00F4\u00F6\u00FA\u00F9\u00FB\u00FC\u00E7\u00F1\u00C1\u00C0'
+        '\u00C3\u00C2\u00C4\u00C9\u00C8\u00CA\u00CB\u00CD\u00CC\u00CE\u00CF\u00D3\u00D2'
+        '\u00D5\u00D4\u00D6\u00DA\u00D9\u00DB\u00DC\u00C7\u00D1';
+    const withoutAccent =
+        'aaaaaeeeeiiiiooooouuuucnAAAAAEEEEIIIIOOOOOUUUUCN';
+    var result = text;
+    for (var i = 0; i < withAccent.length; i++) {
+      result = result.replaceAll(withAccent[i], withoutAccent[i]);
+    }
+    return result;
   }
 
-  // -------------------------------------------------------------------------
-  // Ações públicas chamadas pela tela
-  // -------------------------------------------------------------------------
+  static String normalize(String input) {
+    return _stripAccents(input.trim())
+        .toLowerCase()
+        .replaceAll('@', '')
+        .replaceAll(RegExp(r'[^a-z0-9._-]'), '');
+  }
 
-  /// Atualiza o nome do perfil usado para gerar sugestões de identificador.
-  /// Chamar do `onChanged` do campo nome.
   void onNameChanged(String name) {
     _name = name;
 
@@ -92,8 +79,6 @@ class IdentifierController {
     }
   }
 
-  /// Reagir ao texto digitado no campo identificador.
-  /// Chamar do `onChanged` do `TextFormField`.
   void onChanged(String rawValue) {
     final normalized = normalize(rawValue);
     if (rawValue != normalized) {
@@ -149,7 +134,6 @@ class IdentifierController {
     );
   }
 
-  /// Aplicar uma sugestão clicada pelo usuário.
   Future<void> applySuggestion(String suggestion) async {
     final normalized = normalize(suggestion);
     textController.value = TextEditingValue(
@@ -166,8 +150,6 @@ class IdentifierController {
     await _validate(normalized, requestId: requestId, refreshSuggestions: false);
   }
 
-  /// Resolver um conflito de identificador detectado durante o submit.
-  /// A tela é responsável por resetar o flag `_submitting` após o await.
   Future<void> applyTakenStateFromConflict(String normalizedIdentifier) async {
     final requestId = ++_requestId;
     final generatedSuggestions =
@@ -176,25 +158,17 @@ class IdentifierController {
     if (normalize(textController.text) != normalizedIdentifier) return;
 
     _status = IdentifierStatus.taken;
-    _message = 'Esse identificador não está disponível.';
+    _message = 'Esse identificador n\u00E3o est\u00E1 dispon\u00EDvel.';
     _suggestions = generatedSuggestions;
     _confirmedAvailable = null;
     onStateChanged();
   }
-
-  // -------------------------------------------------------------------------
-  // Ciclo de vida
-  // -------------------------------------------------------------------------
 
   void dispose() {
     _disposed = true;
     _debounce?.cancel();
     textController.dispose();
   }
-
-  // -------------------------------------------------------------------------
-  // Lógica interna
-  // -------------------------------------------------------------------------
 
   void _scheduleValidation({bool forceRefreshSuggestions = false}) {
     final normalized = normalize(textController.text);
@@ -237,7 +211,7 @@ class IdentifierController {
         if (_disposed || requestId != _requestId) return;
 
         _status = IdentifierStatus.taken;
-        _message = 'Esse identificador não está disponível.';
+        _message = 'Esse identificador n\u00E3o est\u00E1 dispon\u00EDvel.';
         _suggestions = newSuggestions;
         _confirmedAvailable = null;
         onStateChanged();
@@ -245,7 +219,7 @@ class IdentifierController {
       }
 
       _status = IdentifierStatus.available;
-      _message = 'Identificador disponível!';
+      _message = 'Identificador dispon\u00EDvel!';
       _suggestions = const [];
       _confirmedAvailable = normalized;
       onStateChanged();
@@ -259,7 +233,8 @@ class IdentifierController {
     } catch (_) {
       if (_disposed || requestId != _requestId) return;
       _status = IdentifierStatus.error;
-      _message = 'Não foi possível verificar o identificador agora.';
+      _message =
+          'N\u00E3o foi poss\u00EDvel verificar o identificador agora.';
       _suggestions = const [];
       _confirmedAvailable = null;
       onStateChanged();
@@ -271,15 +246,11 @@ class IdentifierController {
     if (normalize(textController.text) != normalized) return;
 
     _status = IdentifierStatus.tooShort;
-    _message = 'Identificador não disponível.';
+    _message = 'M\u00EDnimo de 10 caracteres.';
     _suggestions = _buildUncheckedSuggestions(normalized);
     _confirmedAvailable = null;
     onStateChanged();
   }
-
-  // -------------------------------------------------------------------------
-  // Geração de sugestões
-  // -------------------------------------------------------------------------
 
   List<String> _buildUncheckedSuggestions(String identifier) {
     final seen = <String>{normalize(identifier)};
@@ -307,25 +278,30 @@ class IdentifierController {
     final results = <String>[];
     final seen = <String>{normalizedIdentifier};
 
-    Future<void> tryAdd(String candidate) async {
+    Future<bool> tryAdd(String candidate) async {
+      if (results.length >= 5) return true;
+
       final n = normalize(candidate);
-      if (n.isEmpty) return;
-      if (!seen.add(n)) return;
-      if (_disposed || requestId != _requestId) return;
+      if (n.isEmpty) return false;
+      if (!seen.add(n)) return false;
+      if (_disposed || requestId != _requestId) return true;
 
       final exists = await checkExists(n);
-      if (_disposed || requestId != _requestId) return;
-      if (!exists) results.add(n);
+      if (_disposed || requestId != _requestId) return true;
+      if (!exists) {
+        results.add(n);
+      }
+
+      return results.length >= 5;
     }
 
     for (final candidate in candidates) {
-      if (results.length >= 5) break;
-      await tryAdd(candidate);
+      if (await tryAdd(candidate)) break;
     }
 
     var suffix = 1;
     while (results.length < 5 && suffix <= 10) {
-      await tryAdd(_composeIdentifier(base, suffix: '$suffix'));
+      if (await tryAdd(_composeIdentifier(base, suffix: '$suffix'))) break;
       suffix++;
     }
 
@@ -376,10 +352,6 @@ class IdentifierController {
     ];
   }
 
-  // -------------------------------------------------------------------------
-  // Helpers de normalização de nome
-  // -------------------------------------------------------------------------
-
   String _normalizedNameToken(String value) {
     final parts = _normalizedNameParts(value);
     if (parts.isEmpty) return 'perfil';
@@ -388,16 +360,8 @@ class IdentifierController {
   }
 
   List<String> _normalizedNameParts(String value) {
-    final normalized = value
-        .trim()
+    final normalized = _stripAccents(value.trim())
         .toLowerCase()
-        .replaceAll(RegExp(r'[àáâãäå]'), 'a')
-        .replaceAll(RegExp(r'[èéêë]'), 'e')
-        .replaceAll(RegExp(r'[ìíîï]'), 'i')
-        .replaceAll(RegExp(r'[òóôõö]'), 'o')
-        .replaceAll(RegExp(r'[ùúûü]'), 'u')
-        .replaceAll(RegExp(r'[ç]'), 'c')
-        .replaceAll(RegExp(r'[ñ]'), 'n')
         .replaceAll(RegExp(r'[^a-z0-9\s]'), '');
 
     return normalized

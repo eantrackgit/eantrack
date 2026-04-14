@@ -161,6 +161,74 @@ AuthError(e.toString())                   // ❌
 
 ---
 
+## 12. Guard de agencyId (crítico)
+
+```dart
+// ✅ Sempre derivar agencyId de agencyIdProvider — nunca passar como parâmetro
+final regionNotifier = ref.read(regionNotifierProvider.notifier);
+
+// ❌ Nunca aceitar agencyId null silenciosamente
+Future<void> load({String? agencyId}) async { // proibido
+  if (agencyId == null) return;              // null silencioso — proibido
+}
+
+// ✅ agencyIdProvider lança StateError se não autenticado ou sem agencyId
+// Isso garante que:
+//   1. Usuário não autenticado nunca acessa dados
+//   2. Troca de conta invalida automaticamente o notifier (via ref.watch no build)
+//   3. null nunca atravessa silencioso para o repository
+```
+
+**Regra:** todo notifier que acessa dados scoped por agência deve usar `ref.read(agencyIdProvider)` para acessar o agencyId, nunca receber como parâmetro externo.
+
+---
+
+## 13. Normalização Centralizada de Identificadores
+
+```dart
+// ✅ Sempre normalizar via IdentifierController.normalize() — método static
+final normalized = IdentifierController.normalize(rawInput);
+
+// ❌ Nunca duplicar lógica de normalização em outros lugares
+final normalized = rawInput.trim().toLowerCase(); // duplicação — proibido
+
+// ✅ Normalização inclui: strip acentos, lowercase, remove @, remove chars inválidos
+// Resultado: apenas [a-z0-9._-]
+```
+
+---
+
+## 14. Debounce + Async — Regras Críticas
+
+```dart
+// ✅ Cancelar debounce anterior antes de criar novo
+_debounce?.cancel();
+_requestId++;
+_debounce = Timer(const Duration(milliseconds: 350), () => _validate(...));
+
+// ✅ Sempre verificar _requestId no callback async — descartar resultado stale
+Future<void> _validate(String id, {required int requestId}) async {
+  final result = await checkExists(id);
+  if (requestId != _requestId) return; // stale — ignora
+  // atualiza estado
+}
+
+// ❌ Nunca atualizar estado sem verificar se a chamada ainda é válida
+final result = await checkExists(id);
+state = result ? StatusTaken() : StatusAvailable(); // perigoso — pode ser stale
+
+// ✅ Sempre verificar _disposed antes de atualizar estado
+if (_disposed || requestId != _requestId) return;
+
+// ✅ Todo controller com debounce DEVE ter testes de:
+//   - resultado antes do debounce (checkExists não chamado)
+//   - resultado após debounce (checkExists chamado com valor correto)
+//   - concorrência: segunda chamada invalida primeira (usando Completer)
+//   - dispose: onStateChanged não chamado após dispose
+```
+
+---
+
 ## 8. Estado Inconsistente
 
 ```dart
@@ -251,3 +319,7 @@ import '../domain/auth_state.dart';
 6. Riverpod → watch no build, read em callbacks, listen para side effects
 7. Estado → sealed, tratamento exaustivo, sem nullable flags
 8. Segurança → validar input, não expor erro raw, não persistir senha
+9. agencyId → sempre de agencyIdProvider, nunca null silencioso, nunca parâmetro externo
+10. Normalização → centralizada em IdentifierController.normalize(), sem duplicação
+11. Debounce → sempre cancelar anterior + verificar _requestId para descartar stale + testar concorrência
+12. Notifier (Riverpod 2) → para novos módulos, usar Notifier + NotifierProvider
