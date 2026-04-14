@@ -22,7 +22,6 @@ class _RegionListScreenState extends ConsumerState<RegionListScreen> {
     final regionState = ref.watch(regionNotifierProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.primaryBackground,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,6 +79,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
@@ -91,20 +91,20 @@ class _Header extends StatelessWidget {
         children: [
           IconButton(
             icon: const Icon(Icons.arrow_back),
-            color: AppColors.primaryText,
+            color: et.primaryText,
             onPressed: () => Navigator.of(context).maybePop(),
           ),
           Expanded(
             child: Text(
               'Regiões',
               style: AppTextStyles.headlineSmall.copyWith(
-                color: AppColors.primaryText,
+                color: et.primaryText,
               ),
             ),
           ),
           IconButton(
             icon: const Icon(Icons.add),
-            color: AppColors.secondary,
+            color: et.ctaBackground,
             tooltip: 'Nova região',
             onPressed: onAdd,
           ),
@@ -161,6 +161,7 @@ class _TabChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -170,16 +171,16 @@ class _TabChip extends StatelessWidget {
           vertical: AppSpacing.xs + 2,
         ),
         decoration: BoxDecoration(
-          color: selected ? AppColors.secondary : Colors.transparent,
+          color: selected ? et.ctaBackground : Colors.transparent,
           borderRadius: AppRadius.mdAll,
           border: Border.all(
-            color: selected ? AppColors.secondary : AppColors.tertiary,
+            color: selected ? et.ctaBackground : et.surfaceBorder,
           ),
         ),
         child: Text(
           label,
           style: AppTextStyles.labelSmall.copyWith(
-            color: selected ? AppColors.info : AppColors.secondaryText,
+            color: selected ? et.ctaForeground : et.secondaryText,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
           ),
         ),
@@ -198,6 +199,7 @@ class _SearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
@@ -205,30 +207,30 @@ class _SearchBar extends StatelessWidget {
       ),
       child: TextField(
         onChanged: onChanged,
-        style: AppTextStyles.bodyMedium,
+        style: AppTextStyles.bodyMedium.copyWith(color: et.primaryText),
         decoration: InputDecoration(
           hintText: 'Buscar região...',
           hintStyle: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.secondaryText,
+            color: et.secondaryText,
           ),
-          prefixIcon: const Icon(Icons.search, color: AppColors.secondaryText),
+          prefixIcon: Icon(Icons.search, color: et.secondaryText),
           filled: true,
-          fillColor: AppColors.secondaryBackground,
+          fillColor: et.inputFill,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
             vertical: AppSpacing.sm,
           ),
           border: OutlineInputBorder(
             borderRadius: AppRadius.smAll,
-            borderSide: const BorderSide(color: AppColors.tertiary),
+            borderSide: BorderSide(color: et.inputBorder),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: AppRadius.smAll,
-            borderSide: const BorderSide(color: AppColors.tertiary),
+            borderSide: BorderSide(color: et.inputBorder),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: AppRadius.smAll,
-            borderSide: const BorderSide(color: AppColors.secondary, width: 1.5),
+            borderSide: BorderSide(color: et.inputBorderFocused, width: 1.5),
           ),
         ),
       ),
@@ -331,8 +333,9 @@ class _RegionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     return Material(
-      color: AppColors.secondaryBackground,
+      color: et.cardSurface,
       borderRadius: AppRadius.mdAll,
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -342,13 +345,13 @@ class _RegionCard extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: AppColors.secondary.withValues(alpha: 0.1),
+                color: et.ctaBackground.withValues(alpha: 0.1),
                 borderRadius: AppRadius.smAll,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.map_outlined,
                 size: 20,
-                color: AppColors.secondary,
+                color: et.ctaBackground,
               ),
             ),
             const SizedBox(width: AppSpacing.md),
@@ -359,13 +362,13 @@ class _RegionCard extends StatelessWidget {
                   Text(
                     region.name,
                     style: AppTextStyles.titleSmall.copyWith(
-                      color: AppColors.primaryText,
+                      color: et.primaryText,
                     ),
                   ),
                   Text(
                     '${region.cityCount} ${region.cityCount == 1 ? 'cidade' : 'cidades'}',
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.secondaryText,
+                      color: et.secondaryText,
                     ),
                   ),
                 ],
@@ -390,7 +393,8 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? AppColors.success : AppColors.secondaryText;
+    final et = EanTrackTheme.of(context);
+    final color = isActive ? AppColors.success : et.secondaryText;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
@@ -415,11 +419,12 @@ class _ToggleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     return IconButton(
       onPressed: onTap,
       icon: Icon(
         isActive ? Icons.toggle_on : Icons.toggle_off,
-        color: isActive ? AppColors.success : AppColors.secondaryText,
+        color: isActive ? AppColors.success : et.secondaryText,
         size: 28,
       ),
       tooltip: isActive ? 'Desativar' : 'Ativar',
@@ -497,6 +502,7 @@ class _CreateRegionDialogState extends ConsumerState<_CreateRegionDialog>
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
       child: Padding(
@@ -508,14 +514,14 @@ class _CreateRegionDialogState extends ConsumerState<_CreateRegionDialog>
             Text(
               'Nova Região',
               style: AppTextStyles.headlineSmall.copyWith(
-                color: AppColors.primaryText,
+                color: et.primaryText,
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
               'Defina um nome único para identificar esta região.',
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.secondaryText,
+                color: et.secondaryText,
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -527,7 +533,7 @@ class _CreateRegionDialogState extends ConsumerState<_CreateRegionDialog>
               controller: _controller,
               autofocus: true,
               textCapitalization: TextCapitalization.words,
-              style: AppTextStyles.bodyMedium,
+              style: AppTextStyles.bodyMedium.copyWith(color: et.primaryText),
               decoration: InputDecoration(
                 labelText: 'Nome da região',
                 errorText: _submitted ? _validate(_controller.text) : null,
@@ -535,7 +541,7 @@ class _CreateRegionDialogState extends ConsumerState<_CreateRegionDialog>
                 focusedBorder: OutlineInputBorder(
                   borderRadius: AppRadius.smAll,
                   borderSide:
-                      const BorderSide(color: AppColors.secondary, width: 1.5),
+                      BorderSide(color: et.inputBorderFocused, width: 1.5),
                 ),
               ),
               onChanged: (_) {

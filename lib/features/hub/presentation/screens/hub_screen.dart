@@ -6,6 +6,7 @@ import '../../../../shared/layout/breakpoints.dart';
 import '../../../../shared/theme/app_colors.dart';
 import '../../../../shared/theme/app_spacing.dart';
 import '../../../../shared/theme/app_text_styles.dart';
+import '../../../../shared/theme/app_theme.dart';
 import '../../../../shared/widgets/app_bottom_nav.dart';
 import '../../../../shared/widgets/app_sidebar.dart';
 import '../../../../shared/widgets/app_version_badge.dart';
@@ -69,7 +70,6 @@ class _HubScreenState extends State<HubScreen> {
 
     if (isDesktop) {
       return Scaffold(
-        backgroundColor: AppColors.primaryBackground,
         body: Row(
           children: [
             AppSidebar(
@@ -85,7 +85,6 @@ class _HubScreenState extends State<HubScreen> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.primaryBackground,
       body: _Content(modules: _modules),
       bottomNavigationBar: AppBottomNav(
         currentIndex: _selectedIndex,
@@ -147,6 +146,7 @@ class _Content extends StatelessWidget {
 class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
@@ -163,13 +163,13 @@ class _Header extends StatelessWidget {
                 Text(
                   'Bom dia!',
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.secondaryText,
+                    color: et.secondaryText,
                   ),
                 ),
                 Text(
                   'EANTrack',
                   style: AppTextStyles.headlineSmall.copyWith(
-                    color: AppColors.primaryText,
+                    color: et.primaryText,
                   ),
                 ),
               ],
@@ -177,11 +177,11 @@ class _Header extends StatelessWidget {
           ),
           CircleAvatar(
             radius: 20,
-            backgroundColor: AppColors.secondary,
+            backgroundColor: et.ctaBackground,
             child: Text(
               'U',
               style: AppTextStyles.titleSmall.copyWith(
-                color: AppColors.info,
+                color: et.ctaForeground,
               ),
             ),
           ),
@@ -197,8 +197,9 @@ class _ModuleCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     return Material(
-      color: AppColors.secondaryBackground,
+      color: et.cardSurface,
       borderRadius: AppRadius.mdAll,
       child: InkWell(
         borderRadius: AppRadius.mdAll,
@@ -213,13 +214,13 @@ class _ModuleCardWidget extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.secondary.withValues(alpha: 0.1),
+                  color: et.ctaBackground.withValues(alpha: 0.1),
                   borderRadius: AppRadius.smAll,
                 ),
                 child: Icon(
                   card.icon,
                   size: 20,
-                  color: AppColors.secondary,
+                  color: et.ctaBackground,
                 ),
               ),
               Column(
@@ -228,14 +229,14 @@ class _ModuleCardWidget extends StatelessWidget {
                   Text(
                     card.label,
                     style: AppTextStyles.titleSmall.copyWith(
-                      color: AppColors.primaryText,
+                      color: et.primaryText,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     card.description,
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.secondaryText,
+                      color: et.secondaryText,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

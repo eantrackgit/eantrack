@@ -6,6 +6,7 @@ import 'package:lottie/lottie.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../features/auth/domain/auth_flow_state.dart';
 import '../../../../features/auth/presentation/providers/auth_provider.dart';
+import '../../../../shared/shared.dart';
 
 /// Tela transitória central de decisão do fluxo de auth.
 /// Lê [AuthFlowState] e encaminha automaticamente o usuário.
@@ -50,8 +51,9 @@ class _FlowPageState extends ConsumerState<FlowPage> {
       WidgetsBinding.instance.addPostFrameCallback((_) => _decide(next));
     });
 
+    final et = EanTrackTheme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E27),
+      backgroundColor: et.scaffoldOuter,
       body: Center(
         child: Lottie.asset(
           'assets/animations/flow_loading.json',
