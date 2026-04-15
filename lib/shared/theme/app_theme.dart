@@ -115,7 +115,7 @@ class EanTrackTheme extends ThemeExtension<EanTrackTheme> {
     ctaBackground: AppColors.secondary,
     ctaForeground: AppColors.secondaryBackground,
     outlinedFg: AppColors.secondary,
-    socialBg: AppColors.primary,
+    socialBg: AppColors.brandRed,
     socialFg: AppColors.secondaryBackground,
     socialBorder: Colors.transparent,
     accentLink: AppColors.actionBlue,

@@ -326,6 +326,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               variant: AppButtonVariant.outlined,
               onPressed: isBusy ? null : () => context.push(AppRoutes.register),
             ),
+            const SizedBox(height: AppSpacing.xs),
+            Center(
+              child: TextButton(
+                onPressed:
+                    isBusy ? null : () => context.push(AppRoutes.photoProfile),
+                style: TextButton.styleFrom(
+                  foregroundColor: et.secondaryText,
+                  textStyle: AppTextStyles.bodySmall.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                child: const Text('Testar foto de perfil'),
+              ),
+            ),
           ],
         ),
       ),

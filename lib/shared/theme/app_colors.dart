@@ -9,6 +9,10 @@ abstract final class AppColors {
   static const tertiary = Color(0xFFD1D5DB);
   static const alternate = Color(0xFFE0E3E7);
 
+  /// Crimson extraído diretamente da logo SVG (paths EAN — #a4202b).
+  /// Usar em contextos de identidade visual: botão Google, badges de marca.
+  static const brandRed = Color(0xFFA4202B);
+
   // Text
   static const primaryText = Color(0xFF14181B);
   static const secondaryText = Color(0xFF57636C);

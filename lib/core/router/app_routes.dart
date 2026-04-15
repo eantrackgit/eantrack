@@ -19,6 +19,7 @@ abstract final class AppRoutes {
   // --- Onboarding (post-registration) ---
   static const onboarding = '/onboarding';
   static const onboardingIndividual = '/onboarding/individual';
+  static const photoProfile = '/onboarding/photo-profile';
   static const onboardingCnpj = '/onboarding/cnpj';
   static const onboardingAgency = '/onboarding/agency';
   static const onboardingLegalRep = '/onboarding/legal-rep';

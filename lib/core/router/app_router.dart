@@ -15,6 +15,7 @@ import '../../features/onboarding/presentation/screens/choose_mode_screen.dart';
 import '../../features/onboarding/presentation/screens/cnpj_screen.dart';
 import '../../features/onboarding/presentation/screens/company_data_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_profile_screen.dart';
+import '../../features/onboarding/presentation/screens/photo_profile_screen.dart';
 import '../../features/onboarding/presentation/screens/legal_representative_screen.dart';
 import '../../features/regions/presentation/screens/region_list_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
@@ -149,6 +150,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             mode: state.uri.queryParameters['mode'] ?? 'individual',
           ),
         ),
+      ),
+      GoRoute(
+        path: AppRoutes.photoProfile,
+        pageBuilder: (_, state) => _fadePage(state, const PagPhotoProfile()),
       ),
       GoRoute(
         path: AppRoutes.onboardingCnpj,
