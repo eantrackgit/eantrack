@@ -35,17 +35,12 @@ class AuthRepository {
         throw const AuthAppException('Credenciais invalidas.');
       }
     } on AuthException catch (e) {
-      if (_isEmailNotConfirmedError(e.message)) {
-        throw const EmailNotConfirmedException();
-      }
-      throw AuthAppException(_mapAuthError(e.message));
+      throw _mapAuthException(e);
     } catch (e) {
       if (e is AppException) rethrow;
-      throw AuthAppException(
-        _mapUnexpectedAuthError(
-          e,
-          fallbackMessage: 'Erro ao realizar login. Tente novamente.',
-        ),
+      throw _mapUnexpectedException(
+        e,
+        fallbackMessage: 'Erro ao realizar login. Tente novamente.',
       );
     }
   }
@@ -76,14 +71,12 @@ class AuthRepository {
         'p_user_id': response.user!.id,
       });
     } on AuthException catch (e) {
-      throw AuthAppException(_mapAuthError(e.message));
+      throw _mapAuthException(e);
     } catch (e) {
       if (e is AppException) rethrow;
-      throw AuthAppException(
-        _mapUnexpectedAuthError(
-          e,
-          fallbackMessage: 'Erro ao criar conta. Tente novamente.',
-        ),
+      throw _mapUnexpectedException(
+        e,
+        fallbackMessage: 'Erro ao criar conta. Tente novamente.',
       );
     }
   }
@@ -106,19 +99,12 @@ class AuthRepository {
         redirectTo: AppConfig.passwordResetRedirectUrl,
       );
     } on AuthException catch (e) {
-      if (_isRateLimitError(e.message)) {
-        throw const AuthAppException(
-          'Já enviamos um link recentemente.\n\nPara sua segurança, aguarde alguns minutos antes de solicitar outro.',
-        );
-      }
-      throw AuthAppException(_mapAuthError(e.message));
+      throw _mapAuthException(e);
     } catch (e) {
       if (e is AppException) rethrow;
-      throw AuthAppException(
-        _mapUnexpectedAuthError(
-          e,
-          fallbackMessage: 'Erro ao enviar o link de recuperação. Tente novamente.',
-        ),
+      throw _mapUnexpectedException(
+        e,
+        fallbackMessage: 'Erro ao enviar o link de recuperacao. Tente novamente.',
       );
     }
   }
@@ -135,14 +121,12 @@ class AuthRepository {
     try {
       await _client.auth.resend(type: OtpType.signup, email: email.trim());
     } on AuthException catch (e) {
-      throw AuthAppException(_mapAuthError(e.message));
+      throw _mapAuthException(e);
     } catch (e) {
       if (e is AppException) rethrow;
-      throw AuthAppException(
-        _mapUnexpectedAuthError(
-          e,
-          fallbackMessage: 'Erro ao reenviar o e-mail de verificacao. Tente novamente.',
-        ),
+      throw _mapUnexpectedException(
+        e,
+        fallbackMessage: 'Erro ao reenviar o e-mail de verificacao. Tente novamente.',
       );
     }
   }
@@ -155,7 +139,7 @@ class AuthRepository {
       if (_isSamePasswordError(e)) {
         throw const SamePasswordException();
       }
-      throw AuthAppException(_mapAuthError(e.message));
+      throw _mapAuthException(e);
     } catch (e) {
       if (e is AppException) rethrow;
       throw const ServerException('Erro ao atualizar senha. Tente novamente.');
@@ -195,14 +179,12 @@ class AuthRepository {
         redirectTo: kIsWeb ? null : 'io.supabase.flutter://login-callback',
       );
     } on AuthException catch (e) {
-      throw AuthAppException(_mapAuthError(e.message));
+      throw _mapAuthException(e);
     } catch (e) {
       if (e is AppException) rethrow;
-      throw AuthAppException(
-        _mapUnexpectedAuthError(
-          e,
-          fallbackMessage: 'Nao foi possivel entrar com Google. Tente novamente.',
-        ),
+      throw _mapUnexpectedException(
+        e,
+        fallbackMessage: 'Nao foi possivel entrar com Google. Tente novamente.',
       );
     }
   }
@@ -257,101 +239,110 @@ class AuthRepository {
         hasSamePasswordMessage;
   }
 
-  bool _isRateLimitError(String message) {
-    final normalized = message.toLowerCase();
-    return normalized.contains('rate limit') || normalized.contains('too many');
+  AppException _mapAuthException(AuthException error) {
+    final backendMessage = _extractBackendMessage(
+      error,
+      fallbackMessage: 'Erro de autenticacao.',
+    );
+
+    if (_isEmailNotConfirmedError(backendMessage)) {
+      return const EmailNotConfirmedException();
+    }
+
+    return _toAppException(
+      backendMessage,
+      statusCode: error.statusCode,
+    );
   }
 
-  String _mapAuthError(String message) {
-    final normalized = message.toLowerCase();
-
-    if (_looksLikeSupabaseConfigError(normalized)) {
-      return 'Falha na configuração do Supabase. Revise SUPABASE_URL e SUPABASE_ANON_KEY.';
-    }
-    if (_looksLikeNetworkOrFetchError(normalized)) {
-      return 'Falha de conexão com o Supabase. Verifique internet, domínio liberado e URL do projeto.';
-    }
-    if (normalized.contains('invalid login credentials') ||
-        normalized.contains('invalid_credentials')) {
-      return 'E-mail ou senha incorretos.';
-    }
-    if (normalized.contains('email not confirmed')) {
-      return 'E-mail não confirmado. Verifique sua caixa de entrada.';
-    }
-    if (normalized.contains('user already registered') ||
-        normalized.contains('already registered')) {
-      return 'Este e-mail já está em uso.';
-    }
-    if (_isRateLimitError(normalized)) {
-      return 'Muitas tentativas. Aguarde antes de tentar novamente.';
-    }
-    if (normalized.contains('network') || normalized.contains('timeout')) {
-      return 'Falha de conexão. Verifique sua internet.';
-    }
-
-    final sanitizedMessage = _sanitizeAuthMessage(message);
-    if (sanitizedMessage != null) {
-      return 'Erro de autenticação: $sanitizedMessage';
-    }
-    return 'Erro de autenticação. Tente novamente.';
-  }
-
-  String _mapUnexpectedAuthError(
+  AppException _mapUnexpectedException(
     Object error, {
     required String fallbackMessage,
   }) {
-    final rawMessage = error.toString();
-    final normalized = rawMessage.toLowerCase();
+    final backendMessage = _extractBackendMessage(
+      error,
+      fallbackMessage: fallbackMessage,
+    );
+    return _toAppException(backendMessage);
+  }
+
+  AppException _toAppException(
+    String backendMessage, {
+    String? statusCode,
+  }) {
+    final normalized = backendMessage.toLowerCase();
 
     if (_looksLikeSupabaseConfigError(normalized)) {
-      return 'Falha na configuração do Supabase. Revise SUPABASE_URL e SUPABASE_ANON_KEY.';
-    }
-    if (_looksLikeNetworkOrFetchError(normalized)) {
-      return 'Falha de conexão com o Supabase. Verifique internet, domínio liberado e URL do projeto.';
+      return ServerException(backendMessage);
     }
 
-    final sanitizedMessage = _sanitizeAuthMessage(rawMessage);
-    if (sanitizedMessage != null) {
-      return 'Erro de autenticação: $sanitizedMessage';
+    if (_looksLikeAuthError(normalized, statusCode: statusCode)) {
+      return AuthAppException(backendMessage);
     }
 
-    return fallbackMessage;
+    if (_looksLikeSessionError(normalized)) {
+      return AuthAppException(backendMessage);
+    }
+
+    return AuthAppException(backendMessage);
   }
 
   bool _looksLikeSupabaseConfigError(String normalizedMessage) {
-    return normalizedMessage.contains('invalid api key') ||
-        normalizedMessage.contains('apikey') ||
+    return normalizedMessage.contains('missing supabase url') ||
+        normalizedMessage.contains('missing supabase anon key') ||
+        normalizedMessage.contains('invalid api key');
+  }
+
+  bool _looksLikeAuthError(
+    String normalizedMessage, {
+    String? statusCode,
+  }) {
+    return statusCode == '401' ||
+        normalizedMessage.contains('invalid login credentials') ||
+        normalizedMessage.contains('invalid_credentials') ||
+        normalizedMessage.contains('email not confirmed') ||
+        normalizedMessage.contains('user not found');
+  }
+
+  bool _looksLikeSessionError(String normalizedMessage) {
+    return normalizedMessage.contains('invalid jwt') ||
         normalizedMessage.contains('jwt malformed') ||
-        normalizedMessage.contains('invalid jwt') ||
-        normalizedMessage.contains('project not found') ||
-        normalizedMessage.contains('not a valid url') ||
-        normalizedMessage.contains('invalid uri');
+        normalizedMessage.contains('jwt expired');
   }
 
-  bool _looksLikeNetworkOrFetchError(String normalizedMessage) {
-    return normalizedMessage.contains('network') ||
-        normalizedMessage.contains('timeout') ||
-        normalizedMessage.contains('failed to fetch') ||
-        normalizedMessage.contains('network request failed') ||
-        normalizedMessage.contains('failed host lookup') ||
-        normalizedMessage.contains('clientexception') ||
-        normalizedMessage.contains('xmlhttprequest');
-  }
-
-  String? _sanitizeAuthMessage(String message) {
-    final trimmed = message.trim();
-    if (trimmed.isEmpty) {
-      return null;
+  String _extractBackendMessage(
+    Object error, {
+    required String fallbackMessage,
+  }) {
+    if (error is AuthException) {
+      final message = error.message.trim();
+      return message.isEmpty ? fallbackMessage : message;
     }
 
-    final withoutPrefix = trimmed.replaceFirst(
-      RegExp(r'^[A-Za-z]+Exception:\s*'),
-      '',
-    );
-    if (withoutPrefix.isEmpty) {
-      return null;
+    if (error is PostgrestException) {
+      final message = error.message.trim();
+      if (message.isNotEmpty) {
+        return message;
+      }
+
+      final details = error.details?.toString().trim() ?? '';
+      if (details.isNotEmpty) {
+        return details;
+      }
+
+      final hint = error.hint?.trim() ?? '';
+      if (hint.isNotEmpty) {
+        return hint;
+      }
+
+      return fallbackMessage;
     }
 
-    return withoutPrefix;
+    final rawMessage = error.toString().trim();
+    if (rawMessage.isEmpty) {
+      return fallbackMessage;
+    }
+
+    return rawMessage.replaceFirst(RegExp(r'^[A-Za-z]+Exception:\s*'), '');
   }
 }

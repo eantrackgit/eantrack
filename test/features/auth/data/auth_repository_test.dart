@@ -82,7 +82,7 @@ void main() {
         () => repository.signIn(email: email, password: password),
         throwsA(
           isA<AuthAppException>().having(
-              (e) => e.message, 'message', 'E-mail ou senha incorretos.'),
+              (e) => e.message, 'message', 'Invalid login credentials'),
         ),
       );
     });
@@ -99,7 +99,7 @@ void main() {
           isA<AuthAppException>().having(
             (e) => e.message,
             'message',
-            'Erro de autenticação: Exception: unexpected',
+            'Exception: unexpected',
           ),
         ),
       );

@@ -84,7 +84,10 @@ class PhotoCropDialog extends StatefulWidget {
       context: context,
       barrierDismissible: false,
       barrierColor: Colors.black.withValues(alpha: 0.84),
-      builder: (_) => PhotoCropDialog(photo: photo),
+      builder: (_) => PhotoCropDialog(
+        key: ValueKey(Object.hash(photo.file.path, photo.bytes, photo.contentType)),
+        photo: photo,
+      ),
     );
   }
 
@@ -93,60 +96,130 @@ class PhotoCropDialog extends StatefulWidget {
 }
 
 class _PhotoCropDialogState extends State<PhotoCropDialog> {
+  static const int _previewDecodeTargetWidth = 1440;
   static const double _viewportPadding = 20;
   static const double _handleHitSize = 34;
   static const double _handleVisualSize = 24;
   static const double _minCropSize = 110;
 
   ui.Image? _decodedImage;
+  Size? _decodedImageSize;
+  Uint8List? _sourceBytes;
   Rect? _cropRect;
   Rect? _lastImageRect;
   Size? _lastViewport;
   _CropDragMode _dragMode = _CropDragMode.none;
   bool _isProcessing = false;
+  bool _hasUserAdjustedCrop = false;
   int _rotationTurns = 0;
   _PhotoFilter _selectedFilter = _PhotoFilter.original;
+  int _decodeRequestId = 0;
 
   @override
   void initState() {
     super.initState();
-    _decodeImage();
-  }
-
-  Future<void> _decodeImage() async {
-    ui.Image image;
-    try {
-      final codec = await ui.instantiateImageCodec(widget.photo.bytes);
-      final frame = await codec.getNextFrame();
-      image = frame.image;
-    } catch (_) {
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder);
-      const side = 512.0;
-      canvas.drawRect(
-        const Rect.fromLTWH(0, 0, side, side),
-        Paint()..color = const Color(0xFFBFC5CD),
-      );
-      final picture = recorder.endRecording();
-      image = await picture.toImage(side.toInt(), side.toInt());
-    }
-
-    if (!mounted) return;
-    setState(() {
-      _decodedImage = image;
+    _resetEditorState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _decodePreviewImage();
     });
   }
 
-  Size _displayImageSize(ui.Image image) {
+  @override
+  void didUpdateWidget(covariant PhotoCropDialog oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.photo.file.path == widget.photo.file.path &&
+        oldWidget.photo.bytes == widget.photo.bytes &&
+        oldWidget.photo.contentType == widget.photo.contentType) {
+      return;
+    }
+
+    _resetEditorState();
+    _decodePreviewImage();
+  }
+
+  void _resetEditorState() {
+    _decodedImage = null;
+    _decodedImageSize = null;
+    _sourceBytes = null;
+    _cropRect = null;
+    _lastImageRect = null;
+    _lastViewport = null;
+    _dragMode = _CropDragMode.none;
+    _isProcessing = false;
+    _hasUserAdjustedCrop = false;
+    _rotationTurns = 0;
+    _selectedFilter = _PhotoFilter.original;
+  }
+
+  Future<void> _decodePreviewImage() async {
+    final requestId = ++_decodeRequestId;
+    ui.Image image;
+    Size imageSize;
+    Uint8List? sourceBytes;
+    try {
+      sourceBytes = await widget.photo.readBytes();
+      final originalImage = await decodeImageFromList(sourceBytes);
+      imageSize = Size(
+        originalImage.width.toDouble(),
+        originalImage.height.toDouble(),
+      );
+
+      if (originalImage.width > _previewDecodeTargetWidth) {
+        image = await _decodeImageBytes(
+          sourceBytes,
+          targetWidth: _previewDecodeTargetWidth,
+        );
+      } else {
+        image = originalImage;
+      }
+    } catch (_) {
+      image = await _buildFallbackImage();
+      imageSize = Size(image.width.toDouble(), image.height.toDouble());
+    }
+
+    if (!mounted || requestId != _decodeRequestId) return;
+    setState(() {
+      _decodedImage = image;
+      _decodedImageSize = imageSize;
+      _sourceBytes = sourceBytes;
+    });
+  }
+
+  Future<ui.Image> _decodeImageBytes(
+    Uint8List bytes, {
+    int? targetWidth,
+  }) async {
+    final codec = await ui.instantiateImageCodec(
+      bytes,
+      targetWidth: targetWidth,
+    );
+    final frame = await codec.getNextFrame();
+    return frame.image;
+  }
+
+  Future<ui.Image> _buildFallbackImage() async {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    const side = 512.0;
+    canvas.drawRect(
+      const Rect.fromLTWH(0, 0, side, side),
+      Paint()..color = const Color(0xFFBFC5CD),
+    );
+    final picture = recorder.endRecording();
+    return picture.toImage(side.toInt(), side.toInt());
+  }
+
+  Size _displayImageSize(Size imageSize) {
     final isQuarterTurn = _rotationTurns.isOdd;
     return Size(
-      isQuarterTurn ? image.height.toDouble() : image.width.toDouble(),
-      isQuarterTurn ? image.width.toDouble() : image.height.toDouble(),
+      isQuarterTurn ? imageSize.height : imageSize.width,
+      isQuarterTurn ? imageSize.width : imageSize.height,
     );
   }
 
-  Rect _computeImageRect(Size viewport, ui.Image image) {
-    final displaySize = _displayImageSize(image);
+  Rect _computeImageRect(Size viewport, Size imageSize) {
+    final displaySize = _displayImageSize(imageSize);
     final availableWidth =
         math.max(0.0, viewport.width - (_viewportPadding * 2)).toDouble();
     final availableHeight =
@@ -351,14 +424,17 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
   }
 
   Future<void> _confirmCrop(Rect imageRect) async {
-    final image = _decodedImage;
     final cropRect = _cropRect ?? _initialCropRect(imageRect);
-    if (image == null || _isProcessing) return;
+    if (_decodedImage == null || _isProcessing) return;
 
     setState(() => _isProcessing = true);
 
     try {
-      final displaySize = _displayImageSize(image);
+      final sourceBytes = _sourceBytes ?? await widget.photo.readBytes();
+      final image = await _decodeImageBytes(sourceBytes);
+      final displaySize = _displayImageSize(
+        Size(image.width.toDouble(), image.height.toDouble()),
+      );
       final renderedWidth = math.max(1, displaySize.width.round());
       final renderedHeight = math.max(1, displaySize.height.round());
 
@@ -437,6 +513,7 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
   @override
   Widget build(BuildContext context) {
     final image = _decodedImage;
+    final imageSize = _decodedImageSize;
 
     return Material(
       color: const Color(0xFF050505),
@@ -445,19 +522,29 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
           children: [
             Expanded(
               child: image == null
+                  || imageSize == null
                   ? const Center(
                       child: CircularProgressIndicator(color: Colors.white),
                     )
                   : LayoutBuilder(
                       builder: (context, constraints) {
+                        final previousImageRect = _lastImageRect;
                         final viewport = Size(
                           constraints.maxWidth,
                           constraints.maxHeight,
                         );
                         _lastViewport = viewport;
-                        final imageRect = _computeImageRect(viewport, image);
+                        final imageRect = _computeImageRect(viewport, imageSize);
+                        final shouldResetCropRect =
+                            _cropRect == null ||
+                            (!_hasUserAdjustedCrop &&
+                                previousImageRect != null &&
+                                previousImageRect != imageRect);
+                        if (shouldResetCropRect) {
+                          _cropRect = _initialCropRect(imageRect);
+                        }
                         _lastImageRect = imageRect;
-                        final cropRect = _cropRect ??= _initialCropRect(imageRect);
+                        final cropRect = _cropRect!;
 
                         return GestureDetector(
                           behavior: HitTestBehavior.opaque,
@@ -473,6 +560,7 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
                             final activeCropRect = _cropRect ?? cropRect;
 
                             setState(() {
+                              _hasUserAdjustedCrop = true;
                               if (_dragMode == _CropDragMode.move) {
                                 _cropRect = _moveCropRect(
                                   activeCropRect,
@@ -540,7 +628,7 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(0, 8, 0, 4),
                 child: _FilterSelector(
-                  imageBytes: widget.photo.bytes,
+                  photoBytes: _sourceBytes,
                   selectedFilter: _selectedFilter,
                   onSelected: _isProcessing
                       ? null
@@ -588,10 +676,11 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
                                     _cropRect = null;
                                     _lastImageRect = null;
                                     _dragMode = _CropDragMode.none;
+                                    _hasUserAdjustedCrop = false;
                                   });
                                 },
                           icon: const Icon(
-                            Icons.rotate_90_degrees_ccw_rounded,
+                            Icons.rotate_90_degrees_ccw,
                             color: Colors.white,
                           ),
                         ),
@@ -603,11 +692,11 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
                             : () {
                                 final imageRect =
                                     _lastImageRect ??
-                                    (_lastViewport == null
+                                    (_lastViewport == null || imageSize == null
                                         ? null
                                         : _computeImageRect(
                                             _lastViewport!,
-                                            image,
+                                            imageSize,
                                           ));
                                 if (imageRect == null) return;
                                 _confirmCrop(imageRect);
@@ -838,17 +927,19 @@ class _CropChromePainter extends CustomPainter {
 
 class _FilterSelector extends StatelessWidget {
   const _FilterSelector({
-    required this.imageBytes,
+    required this.photoBytes,
     required this.selectedFilter,
     required this.onSelected,
   });
 
-  final Uint8List imageBytes;
+  final Uint8List? photoBytes;
   final _PhotoFilter selectedFilter;
   final ValueChanged<_PhotoFilter>? onSelected;
 
   @override
   Widget build(BuildContext context) {
+    final bytes = photoBytes;
+
     return SizedBox(
       height: 102,
       child: SingleChildScrollView(
@@ -883,21 +974,26 @@ class _FilterSelector extends StatelessWidget {
                         child: SizedBox(
                           width: 64,
                           height: 64,
-                          child: ColoredBox(
-                            color: const Color(0xFF111111),
-                            child: filter.colorFilter == null
-                                ? Image.memory(
-                                    imageBytes,
-                                    fit: BoxFit.cover,
-                                  )
-                                : ColorFiltered(
-                                    colorFilter: filter.colorFilter!,
-                                    child: Image.memory(
-                                      imageBytes,
+                          child: bytes == null
+                              ? const ColoredBox(color: Color(0xFF111111))
+                              : filter.colorFilter == null
+                                  ? Image.memory(
+                                      bytes,
                                       fit: BoxFit.cover,
+                                      cacheWidth: 128,
+                                      cacheHeight: 128,
+                                      gaplessPlayback: false,
+                                    )
+                                  : ColorFiltered(
+                                      colorFilter: filter.colorFilter!,
+                                      child: Image.memory(
+                                        bytes,
+                                        fit: BoxFit.cover,
+                                        cacheWidth: 128,
+                                        cacheHeight: 128,
+                                        gaplessPlayback: false,
+                                      ),
                                     ),
-                                  ),
-                          ),
                         ),
                       ),
                       const SizedBox(height: 6),

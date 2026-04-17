@@ -67,7 +67,7 @@ class _CompCameraOrGalleryState extends State<CompCameraOrGallery> {
           mainAxisSize: MainAxisSize.min,
           children: [
             _SheetActionTile(
-              icon: Icons.photo_camera_outlined,
+              icon: Icons.photo_camera,
               label: 'Câmera',
               onTap: widget.onCamera,
             ),

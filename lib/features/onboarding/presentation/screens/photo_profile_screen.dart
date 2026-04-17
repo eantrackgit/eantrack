@@ -325,7 +325,7 @@ class _PhotoOverlayCamera extends StatelessWidget {
           children: [
             const Center(
               child: Icon(
-                Icons.photo_camera_outlined,
+                Icons.photo_camera,
                 size: 28,
                 color: Color(0xFFD6DAE3),
               ),
@@ -361,7 +361,7 @@ class _PhotoOverlayCheck extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Center(
       child: Icon(
-                      Icons.edit_rounded,
+                      Icons.edit,
         size: 28,
         color: Colors.white,
       ),
@@ -456,7 +456,7 @@ class _PhotoPreviewDialog extends StatelessWidget {
                           ),
                         ),
                         child: const Icon(
-                          Icons.edit_rounded,
+                          Icons.edit,
                           color: Colors.white,
                           size: 24,
                         ),

@@ -100,13 +100,14 @@ class PhotoProfileNotifier extends StateNotifier<PhotoProfileState> {
     if (state.isUploading) return;
 
     final previousImageUrl = state.imageUrl;
+    final photoBytes = await photo.readBytes();
     state = state.copyWith(isUploading: true);
 
     try {
       if (!mounted) return;
       state = state.copyWith(
         localImage: photo.file,
-        localImageBytes: photo.bytes,
+        localImageBytes: photoBytes,
       );
 
       final uploadedUrl = await _service.uploadProfilePhoto(photo);

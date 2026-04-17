@@ -6,13 +6,18 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class PickedProfilePhoto {
   const PickedProfilePhoto({
     required this.file,
-    required this.bytes,
     required this.contentType,
+    this.bytes,
   });
 
   final XFile file;
-  final Uint8List bytes;
   final String contentType;
+  final Uint8List? bytes;
+
+  Future<Uint8List> readBytes() async {
+    if (bytes != null) return bytes!;
+    return await file.readAsBytes();
+  }
 }
 
 abstract class ProfilePhotoService {
@@ -56,18 +61,11 @@ class SupabaseProfilePhotoService implements ProfilePhotoService {
 
   @override
   Future<PickedProfilePhoto?> pickImage(ImageSource source) async {
-    final file = await _picker.pickImage(
-      source: source,
-      imageQuality: 90,
-      maxWidth: 1800,
-      maxHeight: 1800,
-    );
+    final file = await _picker.pickImage(source: source);
     if (file == null) return null;
 
-    final bytes = await file.readAsBytes();
     return PickedProfilePhoto(
       file: file,
-      bytes: bytes,
       contentType: file.mimeType ?? _inferContentType(file.name),
     );
   }
@@ -76,6 +74,7 @@ class SupabaseProfilePhotoService implements ProfilePhotoService {
   Future<String?> uploadProfilePhoto(PickedProfilePhoto photo) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return null;
+    final bytes = await photo.readBytes();
 
     final path = _storagePathForUser(userId, photo.contentType);
 
@@ -84,7 +83,7 @@ class SupabaseProfilePhotoService implements ProfilePhotoService {
       await _removeKnownProfileFiles(userId);
       await _client.storage.from(_bucketName).uploadBinary(
             path,
-            photo.bytes,
+            bytes,
             fileOptions: FileOptions(
               upsert: true,
               contentType: photo.contentType,

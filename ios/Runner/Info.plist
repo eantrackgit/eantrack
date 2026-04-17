@@ -91,5 +91,7 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
 
+	<key>NSCameraUsageDescription</key>
+	<string>Precisamos de acesso &agrave; c&acirc;mera para tirar sua foto de perfil.</string>
 </dict>
 </plist>
