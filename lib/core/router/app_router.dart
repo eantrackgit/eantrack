@@ -11,8 +11,11 @@ import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/screens/update_password_screen.dart';
 import '../../features/flow/presentation/screens/flow_page.dart';
 import '../../features/hub/presentation/screens/hub_screen.dart';
+import '../../features/onboarding/agency/pages/agency_cnpj_page.dart';
+import '../../features/onboarding/agency/pages/agency_confirm_page.dart';
+import '../../features/onboarding/agency/pages/agency_representative_page.dart';
+import '../../features/onboarding/agency/models/cnpj_model.dart';
 import '../../features/onboarding/presentation/screens/choose_mode_screen.dart';
-import '../../features/onboarding/presentation/screens/cnpj_screen.dart';
 import '../../features/onboarding/presentation/screens/company_data_screen.dart';
 import '../../features/onboarding/presentation/screens/legal_representative_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_profile_screen.dart';
@@ -144,7 +147,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.onboardingCnpj,
-        pageBuilder: (_, state) => _fadePage(state, const CnpjScreen()),
+        pageBuilder: (_, state) => _fadePage(state, const AgencyCnpjPage()),
       ),
       GoRoute(
         path: AppRoutes.onboardingAgency,
@@ -155,6 +158,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.onboardingLegalRep,
         pageBuilder: (_, state) =>
             _fadePage(state, const LegalRepresentativeScreen()),
+      ),
+      GoRoute(
+        path: '/onboarding/agency/confirm',
+        pageBuilder: (_, state) {
+          final cnpjModel = state.extra;
+          if (cnpjModel is! CnpjModel) {
+            return _fadePage(state, const AgencyCnpjPage());
+          }
+
+          return _fadePage(
+            state,
+            AgencyConfirmPage(cnpjModel: cnpjModel),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/onboarding/agency/representative',
+        pageBuilder: (_, state) => _fadePage(
+          state,
+          AgencyRepresentativePage(key: ValueKey(state.extra)),
+        ),
       ),
       GoRoute(
         path: AppRoutes.regions,
