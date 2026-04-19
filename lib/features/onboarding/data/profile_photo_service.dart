@@ -1,7 +1,10 @@
 import 'dart:typed_data';
 
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../../core/error/app_exception.dart';
 
 class PickedProfilePhoto {
   const PickedProfilePhoto({
@@ -23,7 +26,7 @@ class PickedProfilePhoto {
 abstract class ProfilePhotoService {
   Future<String?> loadImageUrl();
   Future<PickedProfilePhoto?> pickImage(ImageSource source);
-  Future<String?> uploadProfilePhoto(PickedProfilePhoto photo);
+  Future<String> uploadProfilePhoto(PickedProfilePhoto photo);
   Future<void> removeProfilePhoto();
 }
 
@@ -34,9 +37,15 @@ class SupabaseProfilePhotoService implements ProfilePhotoService {
   })  : _client = client,
         _picker = picker ?? ImagePicker();
 
-  static const _bucketName = 'profile-photos';
+  static const _bucketName = 'urlperfiluser';
   static const _profileTable = 'tab_cadastroauxiliar';
   static const _photoColumn = 'photourl';
+  static const _thumbColumn = 'thumburl';
+  static const _storedImageContentType = 'image/webp';
+  static const _originalPath = 'original.webp';
+  static const _thumbPath = 'thumb.webp';
+  static const _originalSize = 500;
+  static const _thumbSize = 120;
 
   final SupabaseClient _client;
   final ImagePicker _picker;
@@ -49,11 +58,12 @@ class SupabaseProfilePhotoService implements ProfilePhotoService {
     try {
       final response = await _client
           .from(_profileTable)
-          .select(_photoColumn)
+          .select('$_photoColumn,$_thumbColumn')
           .eq('user_id', userId)
           .maybeSingle();
 
-      return response?[_photoColumn] as String?;
+      return response?[_photoColumn] as String? ??
+          response?[_thumbColumn] as String?;
     } catch (_) {
       return null;
     }
@@ -71,101 +81,107 @@ class SupabaseProfilePhotoService implements ProfilePhotoService {
   }
 
   @override
-  Future<String?> uploadProfilePhoto(PickedProfilePhoto photo) async {
-    final userId = _client.auth.currentUser?.id;
-    if (userId == null) return null;
-    final bytes = await photo.readBytes();
-
-    final path = _storagePathForUser(userId, photo.contentType);
+  Future<String> uploadProfilePhoto(PickedProfilePhoto photo) async {
+    final userId = _requireUserId();
+    final rawBytes = await photo.readBytes();
+    final originalBytes = await _encodeWebP(rawBytes, _originalSize);
+    final thumbBytes = await _encodeWebP(rawBytes, _thumbSize);
+    final storage = _client.storage.from(_bucketName);
 
     try {
-      await _ensureBucketExists();
-      await _removeKnownProfileFiles(userId);
-      await _client.storage.from(_bucketName).uploadBinary(
-            path,
-            bytes,
-            fileOptions: FileOptions(
-              upsert: true,
-              contentType: photo.contentType,
-            ),
-          );
-
-      final publicUrl = _client.storage.from(_bucketName).getPublicUrl(path);
-      await _persistImageUrl(userId, publicUrl);
-      return publicUrl;
-    } catch (_) {
-      return null;
+      await storage.uploadBinary(
+        _storagePathForUser(userId, _originalPath),
+        originalBytes,
+        fileOptions: const FileOptions(
+          upsert: true,
+          contentType: _storedImageContentType,
+        ),
+      );
+      await storage.uploadBinary(
+        _storagePathForUser(userId, _thumbPath),
+        thumbBytes,
+        fileOptions: const FileOptions(
+          upsert: true,
+          contentType: _storedImageContentType,
+        ),
+      );
+    } on StorageException catch (e) {
+      throw ServerException(
+        'Nao foi possivel salvar a foto de perfil. ${e.message}',
+      );
     }
+
+    final photoUrl =
+        _client.storage.from(_bucketName).getPublicUrl(_storagePathForUser(userId, _originalPath));
+    final thumbUrl =
+        _client.storage.from(_bucketName).getPublicUrl(_storagePathForUser(userId, _thumbPath));
+
+    try {
+      await _persistImageUrls(
+        userId,
+        photoUrl: photoUrl,
+        thumbUrl: thumbUrl,
+      );
+    } on PostgrestException catch (e) {
+      throw ServerException(
+        'Nao foi possivel salvar a foto de perfil. (${e.code})',
+      );
+    }
+
+    return photoUrl;
   }
 
   @override
   Future<void> removeProfilePhoto() async {
-    final userId = _client.auth.currentUser?.id;
-    if (userId == null) return;
-
+    final userId = _requireUserId();
     try {
       await _removeKnownProfileFiles(userId);
-    } catch (_) {}
-
-    try {
-      await _persistImageUrl(userId, null);
-    } catch (_) {}
-  }
-
-  Future<void> _ensureBucketExists() async {
-    try {
-      final bucket = await _client.storage.getBucket(_bucketName);
-      if (bucket.public) return;
-
-      await _client.storage.updateBucket(
-        _bucketName,
-        const BucketOptions(
-          public: true,
-          fileSizeLimit: '5MB',
-          allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
-        ),
+    } on StorageException catch (e) {
+      throw ServerException(
+        'Nao foi possivel remover a foto de perfil. ${e.message}',
       );
-    } on StorageException {
-      try {
-        await _client.storage.createBucket(
-          _bucketName,
-          const BucketOptions(
-            public: true,
-            fileSizeLimit: '5MB',
-            allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
-          ),
-        );
-      } on StorageException catch (error) {
-        final message = error.message.toLowerCase();
-        if (!message.contains('already exists')) {
-          rethrow;
-        }
-      }
+    }
+
+    try {
+      await _persistImageUrls(userId, photoUrl: null, thumbUrl: null);
+    } on PostgrestException catch (e) {
+      throw ServerException(
+        'Nao foi possivel remover a foto de perfil. (${e.code})',
+      );
     }
   }
 
-  Future<void> _persistImageUrl(String userId, String? imageUrl) async {
-    final existingProfile = await _client
+  Future<void> _persistImageUrls(
+    String userId, {
+    required String? photoUrl,
+    required String? thumbUrl,
+  }) async {
+    final updatedProfile = await _client
         .from(_profileTable)
-        .select('user_id')
+        .update({
+          _photoColumn: photoUrl,
+          _thumbColumn: thumbUrl,
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        })
         .eq('user_id', userId)
+        .select('user_id')
         .maybeSingle();
 
-    if (existingProfile == null) {
-      await _client.from(_profileTable).insert({
-        'user_id': userId,
-        _photoColumn: imageUrl,
-      });
-      return;
+    if (updatedProfile == null) {
+      throw const ServerException(
+        'Cadastro complementar nao encontrado para salvar a foto.',
+      );
     }
-
-    await _client
-        .from(_profileTable)
-        .update({_photoColumn: imageUrl}).eq('user_id', userId);
   }
 
   Future<void> _removeKnownProfileFiles(String userId) async {
     await _client.storage.from(_bucketName).remove([
+      _storagePathForUser(userId, _originalPath),
+      _storagePathForUser(userId, _thumbPath),
+      '$userId/original.jpg',
+      '$userId/original.png',
+      '$userId/thumb.jpg',
+      '$userId/thumb.png',
       '$userId/avatar.jpg',
       '$userId/avatar.jpeg',
       '$userId/avatar.png',
@@ -173,14 +189,25 @@ class SupabaseProfilePhotoService implements ProfilePhotoService {
     ]);
   }
 
-  String _storagePathForUser(String userId, String contentType) {
-    if (contentType == 'image/png') {
-      return '$userId/avatar.png';
+  String _storagePathForUser(String userId, String fileName) {
+    return '$userId/$fileName';
+  }
+
+  Future<Uint8List> _encodeWebP(Uint8List sourceBytes, int size) async {
+    final result = await FlutterImageCompress.compressWithList(
+      sourceBytes,
+      minWidth: size,
+      minHeight: size,
+      quality: size >= _originalSize ? 88 : 80,
+      format: CompressFormat.webp,
+      keepExif: false,
+    );
+    if (result.isEmpty) {
+      throw const ServerException(
+        'Nao foi possivel processar a imagem de perfil.',
+      );
     }
-    if (contentType == 'image/webp') {
-      return '$userId/avatar.webp';
-    }
-    return '$userId/avatar.jpg';
+    return result;
   }
 
   String _inferContentType(String fileName) {
@@ -188,5 +215,13 @@ class SupabaseProfilePhotoService implements ProfilePhotoService {
     if (lower.endsWith('.png')) return 'image/png';
     if (lower.endsWith('.webp')) return 'image/webp';
     return 'image/jpeg';
+  }
+
+  String _requireUserId() {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) {
+      throw const ServerException('Usuario nao autenticado.');
+    }
+    return userId;
   }
 }

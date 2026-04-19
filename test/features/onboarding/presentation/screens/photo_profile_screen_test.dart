@@ -18,7 +18,7 @@ class _FakeProfilePhotoService implements ProfilePhotoService {
 
   final String? initialUrl = null;
   final PickedProfilePhoto? pickedPhoto;
-  final String? uploadedUrl = 'https://example.com/avatar.jpg';
+  final String uploadedUrl = 'https://example.com/original.jpg';
 
   int uploadCalls = 0;
   int removeCalls = 0;
@@ -35,7 +35,7 @@ class _FakeProfilePhotoService implements ProfilePhotoService {
   }
 
   @override
-  Future<String?> uploadProfilePhoto(PickedProfilePhoto photo) async {
+  Future<String> uploadProfilePhoto(PickedProfilePhoto photo) async {
     uploadCalls++;
     return uploadedUrl;
   }
@@ -87,7 +87,7 @@ void main() {
     await _pumpUi(tester);
   }
 
-  Future<void> _savePhoto(
+  Future<void> _stagePhoto(
     ProviderContainer container,
     WidgetTester tester,
   ) async {
@@ -145,16 +145,34 @@ void main() {
     await tester.pumpWidget(_buildScreen(container));
     await tester.pump();
 
-    await _savePhoto(container, tester);
+    await _stagePhoto(container, tester);
 
-    expect(service.uploadCalls, 1);
+    expect(service.uploadCalls, 0);
     expect(find.text('Toque para editar'), findsOneWidget);
 
     await _openPhotoActionsFromButton(tester);
     expect(find.text('Remover foto'), findsOneWidget);
   });
 
-  testWidgets('remover foto limpa estado local e remoto', (tester) async {
+  testWidgets('salvar envia upload apenas na confirmacao', (tester) async {
+    final service = _FakeProfilePhotoService();
+    final container = _createContainer(service);
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildScreen(container));
+    await tester.pump();
+
+    await _stagePhoto(container, tester);
+    expect(service.uploadCalls, 0);
+
+    await container.read(photoProfileNotifierProvider.notifier).persistPhoto();
+    await _pumpUi(tester);
+
+    expect(service.uploadCalls, 1);
+  });
+
+  testWidgets('remover foto em rascunho limpa estado local sem tocar remoto',
+      (tester) async {
     final service = _FakeProfilePhotoService(
       pickedPhoto: _validPickedPhoto(),
     );
@@ -164,7 +182,7 @@ void main() {
     await tester.pumpWidget(_buildScreen(container));
     await tester.pump();
 
-    await _savePhoto(container, tester);
+    await _stagePhoto(container, tester);
     expect(find.text('Toque para editar'), findsOneWidget);
 
     await _openPhotoActionsFromButton(tester);
@@ -172,7 +190,7 @@ void main() {
     await tester.tap(find.text('Remover foto'), warnIfMissed: false);
     await _pumpUi(tester);
 
-    expect(service.removeCalls, 1);
+    expect(service.removeCalls, 0);
     expect(find.byIcon(Icons.check), findsNothing);
     expect(find.text('Toque para adicionar uma imagem'), findsOneWidget);
 

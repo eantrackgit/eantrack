@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/connectivity/presentation/no_connection_modal.dart';
 import '../../../../core/error/app_exception.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../shared/shared.dart';
@@ -54,6 +55,9 @@ class _RecoverPasswordScreenState extends ConsumerState<RecoverPasswordScreen>
     if (cooldown.isLocked) return;
 
     if (!validateAndSubmit()) return;
+    final isOnline =
+        await ensureOnlineOrShowNoConnectionModal(context: context, ref: ref);
+    if (!isOnline || !mounted) return;
 
     final email = _emailCtrl.text.trim();
     setState(() => _action = const ActionLoading());

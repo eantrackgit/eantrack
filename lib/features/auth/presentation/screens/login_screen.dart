@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/connectivity/presentation/no_connection_modal.dart';
+import '../../../../core/connectivity/presentation/connection_status_icon.dart';
 import '../../../../core/error/app_exception.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../shared/shared.dart';
@@ -81,6 +83,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }
 
   Future<void> _signInWithGoogle() async {
+    final isOnline =
+        await ensureOnlineOrShowNoConnectionModal(context: context, ref: ref);
+    if (!isOnline || !mounted) return;
+
     setState(() => _googleAction = const ActionLoading());
     try {
       await ref.read(authNotifierProvider.notifier).signInWithGoogle();
@@ -97,6 +103,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
   Future<void> _submit() async {
     if (!validateAndSubmit()) return;
+    final isOnline =
+        await ensureOnlineOrShowNoConnectionModal(context: context, ref: ref);
+    if (!isOnline || !mounted) return;
+
     setState(() => _action = const ActionLoading());
     try {
       await ref.read(authNotifierProvider.notifier).signIn(
@@ -172,7 +182,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         recoveryEmail == currentEmail;
 
     return AuthScaffold(
-      action: const _ThemeToggleButton(),
+      action: const _TopBarActions(),
       child: Form(
         key: formKey,
         child: Column(
@@ -343,6 +353,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           ],
         ),
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Barra superior direita: ícone de conectividade + toggle de tema
+// ---------------------------------------------------------------------------
+
+class _TopBarActions extends StatelessWidget {
+  const _TopBarActions();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: const [
+        ConnectionStatusIcon(),
+        SizedBox(width: 8),
+        _ThemeToggleButton(),
+      ],
     );
   }
 }

@@ -3,14 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/error/app_exception.dart';
 import '../../../../core/router/app_routes.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../shared/shared.dart';
 import '../providers/photo_profile_provider.dart';
 import '../widgets/comp_camera_or_gallery.dart';
 import '../widgets/photo_crop_dialog.dart';
 
 class PagPhotoProfile extends ConsumerWidget {
-  const PagPhotoProfile({super.key});
+  const PagPhotoProfile({
+    super.key,
+    this.mode = 'individual',
+  });
+
+  final String mode;
+
+  bool get _isAgency => mode == 'agency';
 
   Future<void> _pickCropAndUpload(
     BuildContext context,
@@ -54,9 +63,31 @@ class PagPhotoProfile extends ConsumerWidget {
           },
           onClose: () => Navigator.of(sheetContext).pop(),
           onRemovePhoto: () async {
-            await ref.read(photoProfileNotifierProvider.notifier).removePhoto();
-            if (sheetContext.mounted) {
-              Navigator.of(sheetContext).pop();
+            try {
+              await ref.read(photoProfileNotifierProvider.notifier).removePhoto();
+              if (sheetContext.mounted) {
+                Navigator.of(sheetContext).pop();
+              }
+            } on AppException catch (e) {
+              if (sheetContext.mounted) {
+                Navigator.of(sheetContext).pop();
+              }
+              if (!context.mounted) return;
+              await AppFeedback.showError(
+                context,
+                title: 'Erro ao remover foto',
+                message: e.message,
+              );
+            } catch (_) {
+              if (sheetContext.mounted) {
+                Navigator.of(sheetContext).pop();
+              }
+              if (!context.mounted) return;
+              await AppFeedback.showError(
+                context,
+                title: 'Erro ao remover foto',
+                message: 'Nao foi possivel remover a foto agora.',
+              );
             }
           },
         );
@@ -88,12 +119,47 @@ class PagPhotoProfile extends ConsumerWidget {
     );
   }
 
-  void _closeScreen(BuildContext context) {
-    if (context.canPop()) {
-      context.pop();
+  Future<void> _finishFlow(BuildContext context, WidgetRef ref) async {
+    if (_isAgency) {
+      context.go(AppRoutes.onboardingCnpj);
       return;
     }
-    context.go(AppRoutes.login);
+
+    final user = ref.read(authRepositoryProvider).currentUser;
+    if (user == null) {
+      context.go(AppRoutes.flow);
+      return;
+    }
+
+    await ref.read(authNotifierProvider.notifier).onExternalAuthChange(user);
+    if (!context.mounted) return;
+    context.go(AppRoutes.hub);
+  }
+
+  Future<void> _handleSkip(BuildContext context, WidgetRef ref) async {
+    await _finishFlow(context, ref);
+  }
+
+  Future<void> _handleSave(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(photoProfileNotifierProvider.notifier).persistPhoto();
+      if (!context.mounted) return;
+      await _finishFlow(context, ref);
+    } on AppException catch (e) {
+      if (!context.mounted) return;
+      await AppFeedback.showError(
+        context,
+        title: 'Erro ao salvar foto',
+        message: e.message,
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      await AppFeedback.showError(
+        context,
+        title: 'Erro ao salvar foto',
+        message: 'Nao foi possivel concluir esta etapa agora.',
+      );
+    }
   }
 
   @override
@@ -231,15 +297,15 @@ class PagPhotoProfile extends ConsumerWidget {
                 child: AppButton.secondary(
                   'Pular',
                   onPressed:
-                      state.isUploading ? null : () => _closeScreen(context),
+                      state.isUploading ? null : () => _handleSkip(context, ref),
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: AppButton.primary(
-                'Salvar  ✓',
+                  'Salvar',
                   onPressed:
-                      state.isUploading ? null : () => _closeScreen(context),
+                      state.isUploading ? null : () => _handleSave(context, ref),
                 ),
               ),
             ],

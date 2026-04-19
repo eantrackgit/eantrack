@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:eantrack/core/connectivity/connectivity_provider.dart';
+import 'package:eantrack/core/connectivity/connectivity_service.dart';
 import 'package:eantrack/features/auth/data/auth_repository.dart';
 import 'package:eantrack/features/auth/domain/auth_state.dart';
 import 'package:eantrack/features/auth/presentation/providers/auth_provider.dart';
@@ -12,6 +14,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockAuthRepository extends Mock implements AuthRepository {}
+
+class _AlwaysOnlineConnectivityService implements ConnectivityService {
+  const _AlwaysOnlineConnectivityService();
+
+  @override
+  Future<bool> hasInternet() async => true;
+
+  @override
+  Stream<void> get onConnectivityChanged => const Stream<void>.empty();
+}
 
 class TestAuthNotifier extends AuthNotifier {
   TestAuthNotifier(this._repo, AuthState initial) : super(_repo) {
@@ -114,6 +126,9 @@ Widget buildTestable({
 }) {
   return ProviderScope(
     overrides: [
+      connectivityServiceProvider.overrideWithValue(
+        const _AlwaysOnlineConnectivityService(),
+      ),
       authRepositoryProvider.overrideWithValue(repository),
       authNotifierProvider.overrideWith((ref) => notifier),
       ...overrides,

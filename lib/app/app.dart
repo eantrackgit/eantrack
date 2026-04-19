@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/connectivity/connectivity_provider.dart';
 import '../core/router/app_router.dart';
 import '../shared/shared.dart';
 
@@ -19,6 +20,23 @@ class EanTrackApp extends ConsumerWidget {
       themeMode: themeMode,
       debugShowCheckedModeBanner: false,
       routerConfig: router,
+      builder: (context, child) {
+        return _ConnectivityBootstrap(
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
+  }
+}
+
+class _ConnectivityBootstrap extends ConsumerWidget {
+  const _ConnectivityBootstrap({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.read(connectivityProvider);
+    return child;
   }
 }

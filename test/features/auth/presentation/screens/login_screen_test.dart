@@ -27,7 +27,8 @@ class _FakeProfilePhotoService implements ProfilePhotoService {
   Future<void> removeProfilePhoto() async {}
 
   @override
-  Future<String?> uploadProfilePhoto(PickedProfilePhoto photo) async => null;
+  Future<String> uploadProfilePhoto(PickedProfilePhoto photo) async =>
+      'https://example.com/original.jpg';
 }
 
 void main() {

@@ -21,25 +21,25 @@ final photoProfileNotifierProvider = StateNotifierProvider.autoDispose<
 
 class PhotoProfileState {
   const PhotoProfileState({
-    this.localImage,
-    this.localImageBytes,
+    this.draftPhoto,
+    this.draftImageBytes,
     this.imageUrl,
     this.isUploading = false,
   });
 
   static const _sentinel = Object();
 
-  final XFile? localImage;
-  final Uint8List? localImageBytes;
+  final PickedProfilePhoto? draftPhoto;
+  final Uint8List? draftImageBytes;
   final String? imageUrl;
   final bool isUploading;
 
   bool get hasPhoto =>
-      localImageBytes != null || (imageUrl?.trim().isNotEmpty ?? false);
+      draftImageBytes != null || (imageUrl?.trim().isNotEmpty ?? false);
 
   ImageProvider<Object>? get imageProvider {
-    if (localImageBytes != null) {
-      return MemoryImage(localImageBytes!);
+    if (draftImageBytes != null) {
+      return MemoryImage(draftImageBytes!);
     }
 
     final url = imageUrl?.trim();
@@ -51,17 +51,18 @@ class PhotoProfileState {
   }
 
   PhotoProfileState copyWith({
-    Object? localImage = _sentinel,
-    Object? localImageBytes = _sentinel,
+    Object? draftPhoto = _sentinel,
+    Object? draftImageBytes = _sentinel,
     Object? imageUrl = _sentinel,
     bool? isUploading,
   }) {
     return PhotoProfileState(
-      localImage:
-          identical(localImage, _sentinel) ? this.localImage : localImage as XFile?,
-      localImageBytes: identical(localImageBytes, _sentinel)
-          ? this.localImageBytes
-          : localImageBytes as Uint8List?,
+      draftPhoto: identical(draftPhoto, _sentinel)
+          ? this.draftPhoto
+          : draftPhoto as PickedProfilePhoto?,
+      draftImageBytes: identical(draftImageBytes, _sentinel)
+          ? this.draftImageBytes
+          : draftImageBytes as Uint8List?,
       imageUrl: identical(imageUrl, _sentinel) ? this.imageUrl : imageUrl as String?,
       isUploading: isUploading ?? this.isUploading,
     );
@@ -99,47 +100,71 @@ class PhotoProfileNotifier extends StateNotifier<PhotoProfileState> {
   Future<void> saveCroppedPhoto(PickedProfilePhoto photo) async {
     if (state.isUploading) return;
 
-    final previousImageUrl = state.imageUrl;
     final photoBytes = await photo.readBytes();
+    if (!mounted) return;
+
+    state = state.copyWith(
+      draftPhoto: PickedProfilePhoto(
+        file: photo.file,
+        bytes: photoBytes,
+        contentType: photo.contentType,
+      ),
+      draftImageBytes: photoBytes,
+    );
+  }
+
+  Future<void> persistPhoto() async {
+    if (state.isUploading) return;
+
+    final draftPhoto = state.draftPhoto;
+    if (draftPhoto == null) return;
+
     state = state.copyWith(isUploading: true);
 
     try {
+      final uploadedUrl = await _service.uploadProfilePhoto(draftPhoto);
       if (!mounted) return;
       state = state.copyWith(
-        localImage: photo.file,
-        localImageBytes: photoBytes,
-      );
-
-      final uploadedUrl = await _service.uploadProfilePhoto(photo);
-      if (!mounted) return;
-
-      state = state.copyWith(
-        imageUrl: uploadedUrl ?? previousImageUrl,
+        imageUrl: uploadedUrl,
         isUploading: false,
       );
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted) rethrow;
       state = state.copyWith(isUploading: false);
+      rethrow;
     }
   }
 
   Future<void> removePhoto() async {
     if (state.isUploading) return;
 
+    final previousDraftPhoto = state.draftPhoto;
+    final previousDraftBytes = state.draftImageBytes;
+    final previousImageUrl = state.imageUrl;
+    final hasPersistedPhoto = previousImageUrl?.trim().isNotEmpty ?? false;
+
     state = state.copyWith(
-      localImage: null,
-      localImageBytes: null,
+      draftPhoto: null,
+      draftImageBytes: null,
       imageUrl: null,
-      isUploading: true,
+      isUploading: hasPersistedPhoto,
     );
+
+    if (!hasPersistedPhoto) return;
 
     try {
       await _service.removeProfilePhoto();
-    } catch (_) {
-      // UX silenciosa por requisito.
-    } finally {
       if (!mounted) return;
       state = state.copyWith(isUploading: false);
+    } catch (_) {
+      if (!mounted) rethrow;
+      state = state.copyWith(
+        draftPhoto: previousDraftPhoto,
+        draftImageBytes: previousDraftBytes,
+        imageUrl: previousImageUrl,
+        isUploading: false,
+      );
+      rethrow;
     }
   }
 }

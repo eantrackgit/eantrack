@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/error/app_exception.dart';
 import '../../../../core/router/app_routes.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../shared/shared.dart';
 import '../../data/onboarding_repository.dart';
 import '../controllers/identifier_controller.dart';
@@ -35,8 +34,6 @@ class _OnboardingProfileScreenState
   late final IdentifierController _identifierController;
   bool _submitting = false;
 
-  bool get _isAgency => widget.mode == 'agency';
-
   bool get _canSubmit =>
       !_submitting &&
       _nameCtrl.text.trim().isNotEmpty &&
@@ -48,6 +45,11 @@ class _OnboardingProfileScreenState
 
   OnboardingRepository get _repository =>
       ref.read(onboardingRepositoryProvider);
+
+  String get _photoProfileLocation => Uri(
+        path: AppRoutes.photoProfile,
+        queryParameters: {'mode': widget.mode},
+      ).toString();
 
   @override
   void initState() {
@@ -109,20 +111,9 @@ class _OnboardingProfileScreenState
       await _repository.updateDescricao(descricao);
       if (!mounted) return;
 
-      if (_isAgency) {
-        setState(() => _submitting = false);
-        context.go(AppRoutes.onboardingCnpj);
-        return;
-      }
-
-      final user = ref.read(authRepositoryProvider).currentUser;
-      if (user != null) {
-        await ref.read(authNotifierProvider.notifier).onExternalAuthChange(user);
-      }
-
       if (!mounted) return;
       setState(() => _submitting = false);
-      context.go(AppRoutes.hub);
+      context.go(_photoProfileLocation);
     } on AppException catch (e) {
       if (!mounted) return;
       if (e.message.contains('(23505)')) {

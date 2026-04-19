@@ -73,6 +73,14 @@ void main() {
           builder: (_, __) => const Scaffold(body: Text('CNPJ destination')),
         ),
         GoRoute(
+          path: AppRoutes.photoProfile,
+          builder: (_, state) => Scaffold(
+            body: Text(
+              'Photo destination ${state.uri.queryParameters['mode']}',
+            ),
+          ),
+        ),
+        GoRoute(
           path: AppRoutes.hub,
           builder: (_, __) => const Scaffold(body: Text('Hub destination')),
         ),
@@ -265,7 +273,7 @@ void main() {
     expect(find.text(_availableText), findsOneWidget);
   });
 
-  testWidgets('botao avancar chama fluxo final corretamente', (tester) async {
+  testWidgets('botao avancar envia para a etapa de foto', (tester) async {
     await pumpScreen(tester);
     await tester.enterText(_descriptionField, 'Especialista em operacoes');
     await enterAvailableIdentifier(tester);
@@ -283,7 +291,19 @@ void main() {
     verify(
       () => repository.updateDescricao('Especialista em operacoes'),
     ).called(1);
-    expect(find.text('CNPJ destination'), findsOneWidget);
+    expect(find.text('Photo destination agency'), findsOneWidget);
+  });
+
+  testWidgets('modo individual tambem navega para a etapa de foto',
+      (tester) async {
+    await pumpScreen(tester, mode: 'individual');
+    await enterAvailableIdentifier(tester);
+
+    await tester.tap(find.widgetWithText(ElevatedButton, _advanceLabel));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Photo destination individual'), findsOneWidget);
   });
 
   testWidgets('nao navega em caso de falha de identificador ocupado',

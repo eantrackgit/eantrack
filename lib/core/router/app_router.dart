@@ -14,18 +14,14 @@ import '../../features/hub/presentation/screens/hub_screen.dart';
 import '../../features/onboarding/presentation/screens/choose_mode_screen.dart';
 import '../../features/onboarding/presentation/screens/cnpj_screen.dart';
 import '../../features/onboarding/presentation/screens/company_data_screen.dart';
+import '../../features/onboarding/presentation/screens/legal_representative_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_profile_screen.dart';
 import '../../features/onboarding/presentation/screens/photo_profile_screen.dart';
-import '../../features/onboarding/presentation/screens/legal_representative_screen.dart';
 import '../../features/regions/presentation/screens/region_list_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 import 'app_routes.dart';
 import 'recovery_link_parser.dart';
 import 'router_redirect_guard.dart';
-
-// ---------------------------------------------------------------------------
-// Page transition helper — fade
-// ---------------------------------------------------------------------------
 
 CustomTransitionPage<void> _fadePage(GoRouterState state, Widget child) {
   return CustomTransitionPage<void>(
@@ -42,10 +38,6 @@ CustomTransitionPage<void> _fadePage(GoRouterState state, Widget child) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Router provider
-// ---------------------------------------------------------------------------
-
 final appRouterProvider = Provider<GoRouter>((ref) {
   final guard = RouterRedirectGuard(ref);
   ref.read(authRecoveryContextProvider);
@@ -59,9 +51,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     overridePlatformDefaultLocation: recoveryErrorLocation != null,
     onException: (_, state, router) {
       // Recovery links with expired/invalid tokens land here when GoRouter
-      // fails to parse the URL fragment (e.g. #error=access_denied&error_code=otp_expired
-      // has no leading slash and matches no route). Check both the router URI
-      // and the raw browser URL to catch all fragment-encoding variants.
+      // fails to parse the URL fragment. Check both the router URI and the raw
+      // browser URL to catch all fragment-encoding variants.
       if (RecoveryLinkParser.hasExpiredParams(state.uri) ||
           RecoveryLinkParser.hasExpiredParams(Uri.base)) {
         router.go(AppRoutes.passwordRecoveryLinkExpired);
@@ -71,13 +62,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       router.go(AppRoutes.login);
     },
     routes: [
-      // --- Splash ---
       GoRoute(
         path: AppRoutes.splash,
         pageBuilder: (_, state) => _fadePage(state, const SplashScreen()),
       ),
-
-      // --- Auth (public) ---
       GoRoute(
         path: AppRoutes.login,
         pageBuilder: (_, state) {
@@ -124,23 +112,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           const PasswordRecoveryLinkExpiredScreen(),
         ),
       ),
-
-      // --- Hub (protected) ---
       GoRoute(
         path: AppRoutes.hub,
         pageBuilder: (_, state) => _fadePage(state, const HubScreen()),
       ),
-      // FlowPage: transitória, decide destino pós email-confirmado.
       GoRoute(
         path: AppRoutes.flow,
         pageBuilder: (_, state) => _fadePage(state, const FlowPage()),
       ),
-
-      // --- Onboarding ---
       GoRoute(
         path: AppRoutes.onboarding,
-        pageBuilder: (_, state) =>
-            _fadePage(state, const ChooseModeScreen()),
+        pageBuilder: (_, state) => _fadePage(state, const ChooseModeScreen()),
       ),
       GoRoute(
         path: AppRoutes.onboardingIndividual,
@@ -153,7 +135,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.photoProfile,
-        pageBuilder: (_, state) => _fadePage(state, const PagPhotoProfile()),
+        pageBuilder: (_, state) => _fadePage(
+          state,
+          PagPhotoProfile(
+            mode: state.uri.queryParameters['mode'] ?? 'individual',
+          ),
+        ),
       ),
       GoRoute(
         path: AppRoutes.onboardingCnpj,
@@ -169,15 +156,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (_, state) =>
             _fadePage(state, const LegalRepresentativeScreen()),
       ),
-
-      // --- Hub modules ---
       GoRoute(
         path: AppRoutes.regions,
-        pageBuilder: (_, state) =>
-            _fadePage(state, const RegionListScreen()),
+        pageBuilder: (_, state) => _fadePage(state, const RegionListScreen()),
       ),
-
-      // --- Legal (placeholder) ---
       GoRoute(
         path: AppRoutes.termsOfUse,
         pageBuilder: (_, state) =>
@@ -187,32 +169,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.privacyPolicy,
         pageBuilder: (_, state) => _fadePage(
           state,
-          const _PlaceholderScreen(title: 'Política de Privacidade'),
+          const _PlaceholderScreen(title: 'Politica de Privacidade'),
         ),
-      ),
-
-      GoRoute(
-        path: AppRoutes.noConnection,
-        pageBuilder: (_, state) =>
-            _fadePage(state, const _PlaceholderScreen(title: 'Sem Conexão')),
       ),
     ],
   );
 });
 
-// ---------------------------------------------------------------------------
-// Placeholder screen (legal / no-connection routes)
-// ---------------------------------------------------------------------------
-
 class _PlaceholderScreen extends StatelessWidget {
   const _PlaceholderScreen({required this.title});
+
   final String title;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(title)),
-      body: Center(child: Text('$title - em construção')),
+      body: Center(child: Text('$title - em construcao')),
     );
   }
 }

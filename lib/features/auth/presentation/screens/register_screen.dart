@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/connectivity/presentation/no_connection_modal.dart';
 import '../../../../core/error/app_exception.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../shared/shared.dart';
@@ -90,6 +91,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   }
 
   Future<void> _signInWithGoogle() async {
+    final isOnline =
+        await ensureOnlineOrShowNoConnectionModal(context: context, ref: ref);
+    if (!isOnline || !mounted) return;
+
     setState(() => _googleAction = const ActionLoading());
     try {
       await ref.read(authNotifierProvider.notifier).signInWithGoogle();
@@ -114,6 +119,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     if (_termsError) return;
     if (_emailStatus == _EmailStatus.taken) return;
     if (_emailStatus == _EmailStatus.checking) return;
+    final isOnline =
+        await ensureOnlineOrShowNoConnectionModal(context: context, ref: ref);
+    if (!isOnline || !mounted) return;
 
     setState(() => _action = const ActionLoading());
 
