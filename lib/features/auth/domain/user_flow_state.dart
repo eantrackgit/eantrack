@@ -37,7 +37,7 @@ class UserFlowState {
   /// True when the user has completed the full onboarding flow.
   bool get isOnboardingComplete {
     if (userMode == null) return false;
-    if (userMode == 'agencia') {
+    if (userMode == 'agency') {
       return agencyId != null && agencyStatus == 'aprovada';
     }
     return hasProfile;

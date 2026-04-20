@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../../shared/utils/string_utils.dart';
 import '../models/cnpj_model.dart';
 
 /// Serviço responsável por consultar dados de CNPJ na BrasilAPI
@@ -21,7 +22,7 @@ class CnpjService {
   /// Lança exceções específicas para CNPJ não encontrado, inativo
   /// ou falhas de comunicação/interpretação da resposta.
   Future<CnpjModel> fetchCnpj(String cnpj) async {
-    final normalizedCnpj = _onlyDigits(cnpj);
+    final normalizedCnpj = onlyDigits(cnpj);
     final client = http.Client();
 
     try {
@@ -44,7 +45,7 @@ class CnpjService {
       final decoded = jsonDecode(body);
       if (decoded is! Map<String, dynamic>) {
         throw const CnpjServiceException(
-          'Resposta inv\u00E1lida ao consultar o CNPJ.',
+          'Resposta inválida ao consultar o CNPJ.',
         );
       }
 
@@ -58,19 +59,15 @@ class CnpjService {
       return model;
     } on http.ClientException {
       throw const CnpjServiceException(
-        'N\u00E3o foi poss\u00EDvel consultar o CNPJ agora.',
+        'Não foi possível consultar o CNPJ agora.',
       );
     } on FormatException {
       throw const CnpjServiceException(
-        'N\u00E3o foi poss\u00EDvel interpretar a resposta da consulta.',
+        'Não foi possível interpretar a resposta da consulta.',
       );
     } finally {
       client.close();
     }
-  }
-
-  String _onlyDigits(String value) {
-    return value.replaceAll(RegExp(r'\D'), '');
   }
 
   /// Verifica no backend se já existe uma agência cadastrada com este CNPJ.
@@ -78,15 +75,18 @@ class CnpjService {
   /// A RPC pode retornar bool, número, string, lista ou mapa, então o resultado
   /// é normalizado para um booleano com [_isTruthy].
   Future<bool> cnpjExistsAgency(String cnpj) async {
-    final normalizedCnpj = _onlyDigits(cnpj);
-    print('[CnpjService] verificando duplicidade: $normalizedCnpj');
-    final result = await _supabaseClient.rpc(
-      'cnpj_exists_agency',
-      params: {'p_cnpj': normalizedCnpj},
-    );
-    print('[CnpjService] resultado RPC: $result');
-
-    return _isTruthy(result);
+    final normalizedCnpj = onlyDigits(cnpj);
+    try {
+      final result = await _supabaseClient.rpc(
+        'cnpj_exists_agency',
+        params: {'p_cnpj': normalizedCnpj},
+      );
+      return _isTruthy(result);
+    } on PostgrestException catch (e) {
+      throw CnpjServiceException(
+        'Erro ao verificar duplicidade do CNPJ. (${e.code})',
+      );
+    }
   }
 
   /// Normaliza diferentes formatos de retorno da RPC para um booleano.
@@ -137,11 +137,11 @@ class CnpjServiceException implements Exception {
 /// Indica que nenhum registro foi encontrado para o CNPJ consultado.
 class CnpjNotFoundException extends CnpjServiceException {
   const CnpjNotFoundException()
-      : super('N\u00E3o encontramos uma empresa com este CNPJ.');
+      : super('Não encontramos uma empresa com este CNPJ.');
 }
 
 /// Indica que o CNPJ existe, porém não está com situação cadastral ativa.
 class CnpjInactiveException extends CnpjServiceException {
   const CnpjInactiveException()
-      : super('Este CNPJ est\u00E1 inativo na Receita Federal.');
+      : super('Este CNPJ está inativo na Receita Federal.');
 }

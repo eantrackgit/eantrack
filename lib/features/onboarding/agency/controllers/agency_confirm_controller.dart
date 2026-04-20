@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../../shared/utils/string_utils.dart';
+import '../models/agency_confirm_payload.dart';
 import '../models/cnpj_model.dart';
+import '../services/agency_confirm_service.dart';
 import '../services/cep_service.dart';
 
 /// Estados do envio final da agência para o Supabase.
@@ -16,13 +18,14 @@ enum AgencyConfirmSubmitState {
 /// Controller da tela de confirmação de dados da agência.
 ///
 /// Gerencia pré-preenchimento dos campos, busca de CEP, validações do formulário
-/// e o insert final da agência na tabela `public.agencies`.
+/// e o insert final da agência via [AgencyConfirmService].
 class AgencyConfirmController extends ChangeNotifier {
   AgencyConfirmController({
     required this.cnpjModel,
     CepService? cepService,
+    AgencyConfirmService? confirmService,
   })  : _cepService = cepService ?? CepService(),
-        _supabase = Supabase.instance.client {
+        _confirmService = confirmService ?? AgencyConfirmService() {
     fantasyNameController.text = cnpjModel.displayName;
     phoneController.addListener(_onFormChanged);
     emailController.addListener(_onFormChanged);
@@ -37,7 +40,7 @@ class AgencyConfirmController extends ChangeNotifier {
 
   final CnpjModel cnpjModel;
   final CepService _cepService;
-  final SupabaseClient _supabase;
+  final AgencyConfirmService _confirmService;
 
   final TextEditingController fantasyNameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
@@ -53,21 +56,23 @@ class AgencyConfirmController extends ChangeNotifier {
   bool _isSearchingCep = false;
   String? _cepMessage;
   AgencyConfirmSubmitState _submitState = AgencyConfirmSubmitState.idle;
+  String? _savedAgencyId;
 
   bool get isSearchingCep => _isSearchingCep;
   String? get cepMessage => _cepMessage;
   AgencyConfirmSubmitState get submitState => _submitState;
   bool get isSubmitting => _submitState == AgencyConfirmSubmitState.loading;
+  String? get savedAgencyId => _savedAgencyId;
 
   bool get canAdvance =>
-      _isPhoneValid(phoneController.text) && _isEmailValid(emailController.text);
+      _isPhoneValid(phoneController.text) && isValidEmail(emailController.text);
 
   String? get submitErrorMessage {
     switch (_submitState) {
       case AgencyConfirmSubmitState.errorAlreadyRegistered:
-        return 'Esta agencia ja esta cadastrada em nossa plataforma.';
+        return 'Esta agência já está cadastrada em nossa plataforma.';
       case AgencyConfirmSubmitState.errorGeneric:
-        return 'Erro ao salvar agencia. Tente novamente.';
+        return 'Erro ao salvar agência. Tente novamente.';
       case AgencyConfirmSubmitState.idle:
       case AgencyConfirmSubmitState.loading:
       case AgencyConfirmSubmitState.success:
@@ -77,11 +82,11 @@ class AgencyConfirmController extends ChangeNotifier {
 
   String? get phoneError {
     if (!_submitted) return null;
-    if (_onlyDigits(phoneController.text).isEmpty) {
+    if (onlyDigits(phoneController.text).isEmpty) {
       return 'Informe o telefone de contato.';
     }
     if (!_isPhoneValid(phoneController.text)) {
-      return 'Informe um telefone valido.';
+      return 'Informe um telefone válido.';
     }
     return null;
   }
@@ -91,8 +96,8 @@ class AgencyConfirmController extends ChangeNotifier {
     if (emailController.text.trim().isEmpty) {
       return 'Informe o e-mail.';
     }
-    if (!_isEmailValid(emailController.text)) {
-      return 'Informe um e-mail valido.';
+    if (!isValidEmail(emailController.text)) {
+      return 'Informe um e-mail válido.';
     }
     return null;
   }
@@ -101,12 +106,12 @@ class AgencyConfirmController extends ChangeNotifier {
   ///
   /// Mantém o CEP digitado e limpa os demais campos quando a busca falha.
   Future<void> searchCep() async {
-    final rawCep = _onlyDigits(cepController.text);
+    final rawCep = onlyDigits(cepController.text);
     _cepMessage = null;
 
     if (rawCep.length != 8) {
       _clearAddressFields();
-      _cepMessage = 'CEP nao encontrado.';
+      _cepMessage = 'CEP não encontrado.';
       notifyListeners();
       return;
     }
@@ -125,7 +130,7 @@ class AgencyConfirmController extends ChangeNotifier {
       notifyListeners();
     } on CepNotFoundException {
       _clearAddressFields();
-      _cepMessage = 'CEP nao encontrado.';
+      _cepMessage = 'CEP não encontrado.';
       notifyListeners();
     } on CepServiceException {
       _clearAddressFields();
@@ -148,7 +153,7 @@ class AgencyConfirmController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Valida o formulário e tenta salvar a agência no Supabase.
+  /// Valida o formulário e tenta salvar a agência.
   ///
   /// Retorna `true` em sucesso e atualiza [submitState] para que a UI
   /// reaja a carregamento, sucesso e tipos de erro esperados.
@@ -160,41 +165,31 @@ class AgencyConfirmController extends ChangeNotifier {
       return false;
     }
 
-    final userId = _supabase.auth.currentUser?.id;
-    if (userId == null) {
-      _submitState = AgencyConfirmSubmitState.errorGeneric;
-      notifyListeners();
-      return false;
-    }
-
     _submitState = AgencyConfirmSubmitState.loading;
     notifyListeners();
 
     try {
-      await _supabase.from('agencies').insert({
-        'cnpj': _onlyDigits(cnpjModel.cnpj),
-        'razao_social': cnpjModel.razaoSocial.trim(),
-        'nome_fantasia': fantasyNameController.text.trim(),
-        'porte': cnpjModel.porte?.trim() ?? '',
-        'cnae_principal': cnpjModel.cnaePrincipal?.trim() ?? '',
-        'cep': _onlyDigits(cepController.text),
-        'logradouro': logradouroController.text.trim(),
-        'numero': numeroController.text.trim(),
-        'complemento': '',
-        'municipio': municipioController.text.trim(),
-        'uf': ufController.text.trim(),
-        'email_contato': emailController.text.trim(),
-        'telefone_contato': _onlyDigits(phoneController.text),
-        'user_uuid': userId,
-      });
+      _savedAgencyId = await _confirmService.saveAgency(
+        cnpjModel: cnpjModel,
+        nomeFantasia: fantasyNameController.text.trim(),
+        telefoneContato: phoneController.text.trim(),
+        email: emailController.text.trim(),
+        cep: cepController.text.trim(),
+        logradouro: logradouroController.text.trim(),
+        numero: numeroController.text.trim(),
+        municipio: municipioController.text.trim(),
+        uf: ufController.text.trim(),
+      );
 
       _submitState = AgencyConfirmSubmitState.success;
       notifyListeners();
       return true;
-    } on PostgrestException catch (e) {
-      _submitState = e.code == '23505'
-          ? AgencyConfirmSubmitState.errorAlreadyRegistered
-          : AgencyConfirmSubmitState.errorGeneric;
+    } on AgencyAlreadyRegisteredException {
+      _submitState = AgencyConfirmSubmitState.errorAlreadyRegistered;
+      notifyListeners();
+      return false;
+    } on AgencyConfirmServiceException {
+      _submitState = AgencyConfirmSubmitState.errorGeneric;
       notifyListeners();
       return false;
     } catch (_) {
@@ -206,13 +201,19 @@ class AgencyConfirmController extends ChangeNotifier {
 
   /// Monta o payload que segue para a próxima etapa do onboarding.
   AgencyConfirmPayload buildPayload() {
+    final agencyId = _savedAgencyId;
+    if (agencyId == null || agencyId.isEmpty) {
+      throw StateError('Agency ID não disponível para a próxima etapa.');
+    }
+
     return AgencyConfirmPayload(
+      agencyId: agencyId,
       cnpjModel: cnpjModel,
       formData: AgencyConfirmFormData(
         nomeFantasia: fantasyNameController.text.trim(),
         telefoneContato: phoneController.text.trim(),
         email: emailController.text.trim(),
-        cep: _onlyDigits(cepController.text),
+        cep: onlyDigits(cepController.text),
         logradouro: logradouroController.text.trim(),
         numero: numeroController.text.trim(),
         bairro: bairroController.text.trim(),
@@ -238,18 +239,7 @@ class AgencyConfirmController extends ChangeNotifier {
   }
 
   bool _isPhoneValid(String value) {
-    return _onlyDigits(value).length == 11;
-  }
-
-  bool _isEmailValid(String value) {
-    final email = value.trim();
-    if (email.isEmpty) return false;
-    return RegExp(r'^[\w\.\-]+@[\w\-]+\.[a-z]{2,}$', caseSensitive: false)
-        .hasMatch(email);
-  }
-
-  String _onlyDigits(String value) {
-    return value.replaceAll(RegExp(r'\D'), '');
+    return onlyDigits(value).length == 11;
   }
 
   @override
@@ -266,56 +256,5 @@ class AgencyConfirmController extends ChangeNotifier {
     municipioController.dispose();
     ufController.dispose();
     super.dispose();
-  }
-}
-
-/// Agrupa os dados fiscais e os dados editados no formulário após a confirmação.
-class AgencyConfirmPayload {
-  const AgencyConfirmPayload({
-    required this.cnpjModel,
-    required this.formData,
-  });
-
-  final CnpjModel cnpjModel;
-  final AgencyConfirmFormData formData;
-}
-
-/// Estrutura com os dados complementares preenchidos na tela de confirmação.
-class AgencyConfirmFormData {
-  const AgencyConfirmFormData({
-    required this.nomeFantasia,
-    required this.telefoneContato,
-    required this.email,
-    required this.cep,
-    required this.logradouro,
-    required this.numero,
-    required this.bairro,
-    required this.municipio,
-    required this.uf,
-  });
-
-  final String nomeFantasia;
-  final String telefoneContato;
-  final String email;
-  final String cep;
-  final String logradouro;
-  final String numero;
-  final String bairro;
-  final String municipio;
-  final String uf;
-
-  /// Serializa os dados complementares para envio entre etapas do fluxo.
-  Map<String, dynamic> toJson() {
-    return {
-      'nome_fantasia': nomeFantasia,
-      'telefone_contato': telefoneContato,
-      'email': email,
-      'cep': cep,
-      'logradouro': logradouro,
-      'numero': numero,
-      'bairro': bairro,
-      'municipio': municipio,
-      'uf': uf,
-    };
   }
 }

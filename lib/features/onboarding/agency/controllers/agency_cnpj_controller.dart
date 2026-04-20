@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../services/cnpj_service.dart';
+import '../../../../shared/utils/string_utils.dart';
 import '../models/cnpj_model.dart';
+import '../services/cnpj_service.dart';
 
 /// Estados possíveis da busca de CNPJ na etapa inicial do onboarding.
 enum CnpjState {
@@ -119,11 +120,6 @@ class AgencyCnpjController extends ChangeNotifier {
   void dispose() {
     textController.dispose();
     super.dispose();
-  }
-
-  /// Remove qualquer máscara e mantém apenas os dígitos do valor recebido.
-  static String onlyDigits(String value) {
-    return value.replaceAll(RegExp(r'\D'), '');
   }
 
   /// Valida estrutura, repetição de dígitos e verificadores do CNPJ.

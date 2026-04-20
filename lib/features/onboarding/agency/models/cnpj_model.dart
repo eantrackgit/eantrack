@@ -1,3 +1,5 @@
+import '../../../../shared/utils/string_utils.dart';
+
 /// Modelo de dados da empresa retornado pela BrasilAPI e reutilizado
 /// ao longo do onboarding de agências.
 ///
@@ -51,7 +53,7 @@ class CnpjModel {
   /// Cria o modelo a partir do payload bruto retornado pela BrasilAPI.
   factory CnpjModel.fromJson(Map<String, dynamic> json) {
     return CnpjModel(
-      cnpj: _onlyDigits(json['cnpj']?.toString() ?? ''),
+      cnpj: onlyDigits(json['cnpj']?.toString() ?? ''),
       razaoSocial: json['razao_social']?.toString().trim() ?? '',
       nomeFantasia: json['nome_fantasia']?.toString().trim() ?? '',
       situacaoCadastral:
@@ -63,7 +65,7 @@ class CnpjModel {
       porte: json['porte']?.toString().trim(),
       cnaePrincipal: json['cnae_fiscal_descricao']?.toString().trim(),
       numero: json['numero']?.toString().trim(),
-      cep: _onlyDigits(json['cep']?.toString() ?? ''),
+      cep: onlyDigits(json['cep']?.toString() ?? ''),
       logradouro: json['logradouro']?.toString().trim() ?? '',
       bairro: json['bairro']?.toString().trim() ?? '',
       municipio: json['municipio']?.toString().trim() ?? '',
@@ -91,7 +93,7 @@ class CnpjModel {
 
   /// Formata um CNPJ de 14 dígitos no padrão `00.000.000/0000-00`.
   static String formatCnpj(String value) {
-    final digits = _onlyDigits(value);
+    final digits = onlyDigits(value);
     if (digits.length != 14) return digits;
 
     return '${digits.substring(0, 2)}.${digits.substring(2, 5)}.'
@@ -101,12 +103,8 @@ class CnpjModel {
 
   /// Formata um CEP de 8 dígitos no padrão `00000-000`.
   static String formatCep(String value) {
-    final digits = _onlyDigits(value);
+    final digits = onlyDigits(value);
     if (digits.length != 8) return digits;
     return '${digits.substring(0, 5)}-${digits.substring(5, 8)}';
-  }
-
-  static String _onlyDigits(String value) {
-    return value.replaceAll(RegExp(r'\D'), '');
   }
 }

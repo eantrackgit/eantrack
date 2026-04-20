@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../../../../shared/utils/string_utils.dart';
+
 /// Serviço de consulta de CEP via ViaCEP usado na confirmação da agência.
 class CepService {
   CepService({
@@ -15,7 +17,7 @@ class CepService {
   /// Lança [CepNotFoundException] quando o CEP não existe e
   /// [CepServiceException] quando ocorre falha de rede ou parsing.
   Future<CepAddress> fetchCep(String cep) async {
-    final normalizedCep = _onlyDigits(cep);
+    final normalizedCep = onlyDigits(cep);
 
     try {
       final response = await _client.get(
@@ -39,7 +41,7 @@ class CepService {
       }
 
       return CepAddress(
-        cep: _onlyDigits(decoded['cep']?.toString() ?? normalizedCep),
+        cep: onlyDigits(decoded['cep']?.toString() ?? normalizedCep),
         logradouro: decoded['logradouro']?.toString().trim() ?? '',
         bairro: decoded['bairro']?.toString().trim() ?? '',
         municipio: decoded['localidade']?.toString().trim() ?? '',
@@ -56,10 +58,6 @@ class CepService {
         'Erro ao consultar CEP. Tente novamente.',
       );
     }
-  }
-
-  String _onlyDigits(String value) {
-    return value.replaceAll(RegExp(r'\D'), '');
   }
 }
 

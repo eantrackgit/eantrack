@@ -2,13 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../shared/theme/app_colors.dart';
-import '../../../../shared/theme/app_spacing.dart' as spacing_tokens;
-import '../../../../shared/theme/app_text_styles.dart';
-import '../../../../shared/theme/app_theme.dart';
-import '../../../../shared/widgets/app_button.dart';
-import '../../../../shared/widgets/app_error_box.dart';
-import '../../../../shared/widgets/auth_scaffold.dart';
+import '../../../../shared/shared.dart';
 import '../controllers/agency_cnpj_controller.dart';
 
 /// Primeira tela do onboarding de agência.
@@ -63,7 +57,7 @@ class _AgencyCnpjPageState extends State<AgencyCnpjPage> {
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Usaremos esse dado para localizar a empresa e validar o cadastro da ag\u00EAncia.',
+                'Usaremos esse dado para localizar a empresa e validar o cadastro da agência.',
                 textAlign: TextAlign.center,
                 style: AppTextStyles.bodySmall.copyWith(
                   color: et.secondaryText,
@@ -108,7 +102,7 @@ class _AgencyCnpjPageState extends State<AgencyCnpjPage> {
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: AppButton.primary(
-                      'Avan\u00E7ar',
+                      'Avançar',
                       onPressed: _controller.canAdvance
                           ? () => context.push(
                                 '/onboarding/agency/confirm',
@@ -150,7 +144,7 @@ class _CnpjField extends StatelessWidget {
       keyboardType: TextInputType.number,
       inputFormatters: [
         FilteringTextInputFormatter.digitsOnly,
-        _CnpjInputFormatter(),
+        const _CnpjInputFormatter(),
       ],
       style: AppTextStyles.bodyMedium.copyWith(color: et.primaryText),
       decoration: InputDecoration(
@@ -159,15 +153,15 @@ class _CnpjField extends StatelessWidget {
         filled: true,
         fillColor: enabled ? et.inputFill : et.inputFillDisabled,
         enabledBorder: OutlineInputBorder(
-          borderRadius: spacing_tokens.AppRadius.smAll,
+          borderRadius: AppRadius.smAll,
           borderSide: BorderSide(color: et.inputBorder),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: spacing_tokens.AppRadius.smAll,
+          borderRadius: AppRadius.smAll,
           borderSide: BorderSide(color: et.inputBorderFocused, width: 1.5),
         ),
         disabledBorder: OutlineInputBorder(
-          borderRadius: spacing_tokens.AppRadius.smAll,
+          borderRadius: AppRadius.smAll,
           borderSide: BorderSide(color: et.inputBorder),
         ),
       ),
@@ -197,7 +191,7 @@ class _CompanyPreviewCard extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.success.withValues(alpha: 0.08),
-        borderRadius: spacing_tokens.AppRadius.smAll,
+        borderRadius: AppRadius.smAll,
         border: Border.all(
           color: AppColors.success.withValues(alpha: 0.25),
         ),
@@ -210,7 +204,7 @@ class _CompanyPreviewCard extends StatelessWidget {
             style: AppTextStyles.titleSmall.copyWith(color: et.primaryText),
           ),
           if (nomeFantasia.trim().isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.xxs),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               nomeFantasia,
               style: AppTextStyles.bodySmall.copyWith(color: et.secondaryText),
@@ -218,11 +212,11 @@ class _CompanyPreviewCard extends StatelessWidget {
           ],
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Situa\u00E7\u00E3o: $situacao',
+            'Situação: $situacao',
             style: AppTextStyles.bodySmall.copyWith(color: et.primaryText),
           ),
           if (endereco.trim().isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.xxs),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               endereco,
               style: AppTextStyles.bodySmall.copyWith(color: et.secondaryText),
@@ -259,14 +253,4 @@ class _CnpjInputFormatter extends TextInputFormatter {
       selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
-}
-
-/// Alias local de espaçamentos para manter consistência visual nesta página.
-abstract final class AppSpacing {
-  static const double xxs = spacing_tokens.AppSpacing.xs;
-  static const double xs = spacing_tokens.AppSpacing.xs;
-  static const double sm = spacing_tokens.AppSpacing.sm;
-  static const double md = spacing_tokens.AppSpacing.md;
-  static const double lg = spacing_tokens.AppSpacing.lg;
-  static const double xl = spacing_tokens.AppSpacing.xl;
 }

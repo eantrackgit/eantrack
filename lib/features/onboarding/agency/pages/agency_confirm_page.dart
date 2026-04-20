@@ -70,7 +70,7 @@ class _AgencyConfirmPageState extends State<AgencyConfirmPage> {
                   height: 84,
                   decoration: BoxDecoration(
                     color: AppColors.actionBlue.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: AppRadius.mdAll,
                     border: Border.all(
                       color: AppColors.actionBlue.withValues(alpha: 0.16),
                     ),
@@ -92,14 +92,14 @@ class _AgencyConfirmPageState extends State<AgencyConfirmPage> {
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Essas informacoes serao usadas para validar sua conta.',
+                'Essas informações serão usadas para validar sua conta.',
                 textAlign: TextAlign.center,
                 style: AppTextStyles.bodySmall.copyWith(
                   color: et.secondaryText,
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              _SectionCard(
+              SectionCard(
                 title: 'DADOS FISCAIS',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -110,7 +110,7 @@ class _AgencyConfirmPageState extends State<AgencyConfirmPage> {
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     _ReadonlyField(
-                      label: 'Razao Social',
+                      label: 'Razão Social',
                       value: widget.cnpjModel.razaoSocial,
                     ),
                     const SizedBox(height: AppSpacing.sm),
@@ -128,7 +128,7 @@ class _AgencyConfirmPageState extends State<AgencyConfirmPage> {
                           child: Align(
                             alignment: Alignment.center,
                             child: _StatusCard(
-                              label: 'Situacao Cadastral',
+                              label: 'Situação Cadastral',
                               value: widget.cnpjModel.situacaoCadastral,
                               isActive: isActive,
                             ),
@@ -139,7 +139,7 @@ class _AgencyConfirmPageState extends State<AgencyConfirmPage> {
                     if (!isActive) ...[
                       const SizedBox(height: AppSpacing.sm),
                       const AppErrorBox(
-                        'Nao e possivel continuar com um CNPJ inativo.',
+                        'Não é possível continuar com um CNPJ inativo.',
                       ),
                     ],
                   ],
@@ -156,17 +156,19 @@ class _AgencyConfirmPageState extends State<AgencyConfirmPage> {
                       children: [
                         _EditableField(
                           label: 'Telefone de Contato',
+                          hintText: '(11) 9 9999-9999',
                           controller: _controller.phoneController,
                           keyboardType: TextInputType.phone,
                           inputFormatters: [
                             FilteringTextInputFormatter.digitsOnly,
-                            _PhoneInputFormatter(),
+                            const PhoneInputFormatter(),
                           ],
                           errorText: _controller.phoneError,
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         _EditableField(
                           label: 'E-mail',
+                          hintText: 'contato@suaempresa.com.br',
                           controller: _controller.emailController,
                           keyboardType: TextInputType.emailAddress,
                           errorText: _controller.emailError,
@@ -181,11 +183,12 @@ class _AgencyConfirmPageState extends State<AgencyConfirmPage> {
                       Expanded(
                         child: _EditableField(
                           label: 'Telefone de Contato',
+                          hintText: '(11) 9 9999-9999',
                           controller: _controller.phoneController,
                           keyboardType: TextInputType.phone,
                           inputFormatters: [
                             FilteringTextInputFormatter.digitsOnly,
-                            _PhoneInputFormatter(),
+                            const PhoneInputFormatter(),
                           ],
                           errorText: _controller.phoneError,
                         ),
@@ -194,6 +197,7 @@ class _AgencyConfirmPageState extends State<AgencyConfirmPage> {
                       Expanded(
                         child: _EditableField(
                           label: 'E-mail',
+                          hintText: 'contato@suaempresa.com.br',
                           controller: _controller.emailController,
                           keyboardType: TextInputType.emailAddress,
                           errorText: _controller.emailError,
@@ -204,7 +208,7 @@ class _AgencyConfirmPageState extends State<AgencyConfirmPage> {
                 },
               ),
               const SizedBox(height: AppSpacing.md),
-              const _SectionTitle('ENDERECO DA EMPRESA'),
+              const _SectionTitle('ENDEREÇO DA EMPRESA'),
               const SizedBox(height: AppSpacing.sm),
               IntrinsicHeight(
                 child: Row(
@@ -213,6 +217,7 @@ class _AgencyConfirmPageState extends State<AgencyConfirmPage> {
                     Expanded(
                       child: _EditableField(
                         label: 'CEP',
+                        hintText: '00000-000',
                         controller: _controller.cepController,
                         keyboardType: TextInputType.number,
                         onChanged: (_) => _controller.clearCepMessage(),
@@ -247,6 +252,7 @@ class _AgencyConfirmPageState extends State<AgencyConfirmPage> {
                     flex: 3,
                     child: _EditableField(
                       label: 'Logradouro',
+                      hintText: 'Av. Paulista',
                       controller: _controller.logradouroController,
                     ),
                   ),
@@ -254,7 +260,8 @@ class _AgencyConfirmPageState extends State<AgencyConfirmPage> {
                   SizedBox(
                     width: 110,
                     child: _EditableField(
-                      label: 'Numero',
+                      label: 'Número',
+                      hintText: '1000',
                       controller: _controller.numeroController,
                     ),
                   ),
@@ -267,6 +274,7 @@ class _AgencyConfirmPageState extends State<AgencyConfirmPage> {
                     flex: 2,
                     child: _EditableField(
                       label: 'Bairro',
+                      hintText: 'Centro',
                       controller: _controller.bairroController,
                     ),
                   ),
@@ -274,7 +282,8 @@ class _AgencyConfirmPageState extends State<AgencyConfirmPage> {
                   Expanded(
                     flex: 2,
                     child: _EditableField(
-                      label: 'Municipio',
+                      label: 'Município',
+                      hintText: 'São Paulo',
                       controller: _controller.municipioController,
                     ),
                   ),
@@ -283,6 +292,7 @@ class _AgencyConfirmPageState extends State<AgencyConfirmPage> {
                     width: 110,
                     child: _EditableField(
                       label: 'UF',
+                      hintText: 'SP',
                       controller: _controller.ufController,
                       textCapitalization: TextCapitalization.characters,
                     ),
@@ -307,7 +317,7 @@ class _AgencyConfirmPageState extends State<AgencyConfirmPage> {
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: AppButton.primary(
-                      'Avancar',
+                      'Avançar',
                       isLoading: _controller.isSubmitting,
                       trailingIcon: _controller.isSubmitting
                           ? null
@@ -327,39 +337,6 @@ class _AgencyConfirmPageState extends State<AgencyConfirmPage> {
             ],
           );
         },
-      ),
-    );
-  }
-}
-
-/// Agrupa visualmente cada seção principal do formulário.
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({
-    required this.title,
-    required this.child,
-  });
-
-  final String title;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final et = EanTrackTheme.of(context);
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: et.surface.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: et.surfaceBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _SectionTitle(title),
-          const SizedBox(height: AppSpacing.sm),
-          child,
-        ],
       ),
     );
   }
@@ -427,6 +404,7 @@ class _EditableField extends StatelessWidget {
   const _EditableField({
     required this.label,
     required this.controller,
+    this.hintText,
     this.errorText,
     this.onChanged,
     this.keyboardType,
@@ -436,6 +414,7 @@ class _EditableField extends StatelessWidget {
 
   final String label;
   final TextEditingController controller;
+  final String? hintText;
   final String? errorText;
   final ValueChanged<String>? onChanged;
   final TextInputType? keyboardType;
@@ -455,6 +434,10 @@ class _EditableField extends StatelessWidget {
       style: AppTextStyles.bodyMedium.copyWith(color: et.primaryText),
       decoration: InputDecoration(
         labelText: label,
+        hintText: hintText,
+        hintStyle: AppTextStyles.bodyMedium.copyWith(
+          color: et.secondaryText.withValues(alpha: 0.72),
+        ),
         errorText: errorText,
         filled: true,
         fillColor: et.inputFill,
@@ -551,11 +534,11 @@ class _SearchCepButton extends StatelessWidget {
           backgroundColor: AppColors.actionBlue,
           disabledBackgroundColor: AppColors.actionBlue,
           foregroundColor: AppColors.secondaryBackground,
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.smAll),
-        elevation: 0,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-        minimumSize: const Size(110, 0),
-      ),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.smAll),
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          minimumSize: const Size(110, 0),
+        ),
         child: isLoading
             ? const SizedBox(
                 width: 20,
@@ -578,32 +561,6 @@ class _SearchCepButton extends StatelessWidget {
                 ],
               ),
       ),
-    );
-  }
-}
-
-/// Formata o telefone no padrão visual esperado pela tela.
-class _PhoneInputFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    final buffer = StringBuffer();
-
-    for (var i = 0; i < digits.length && i < 11; i++) {
-      if (i == 0) buffer.write('(');
-      if (i == 2) buffer.write(') ');
-      if (i == 3) buffer.write(' ');
-      if (i == 7) buffer.write('-');
-      buffer.write(digits[i]);
-    }
-
-    final formatted = buffer.toString();
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }

@@ -28,3 +28,8 @@ export 'mixins/form_state_mixin.dart';
 export 'utils/async_action.dart';
 export 'utils/async_value.dart';
 export 'utils/password_validator.dart';
+export 'utils/string_utils.dart';
+
+export 'formatters/phone_input_formatter.dart';
+
+export 'widgets/section_card.dart';

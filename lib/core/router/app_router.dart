@@ -14,6 +14,7 @@ import '../../features/hub/presentation/screens/hub_screen.dart';
 import '../../features/onboarding/agency/pages/agency_cnpj_page.dart';
 import '../../features/onboarding/agency/pages/agency_confirm_page.dart';
 import '../../features/onboarding/agency/pages/agency_representative_page.dart';
+import '../../features/onboarding/agency/models/agency_confirm_payload.dart';
 import '../../features/onboarding/agency/models/cnpj_model.dart';
 import '../../features/onboarding/presentation/screens/choose_mode_screen.dart';
 import '../../features/onboarding/presentation/screens/company_data_screen.dart';
@@ -175,10 +176,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/onboarding/agency/representative',
-        pageBuilder: (_, state) => _fadePage(
-          state,
-          AgencyRepresentativePage(key: ValueKey(state.extra)),
-        ),
+        pageBuilder: (_, state) {
+          final payload = state.extra;
+          if (payload is! AgencyConfirmPayload) {
+            return _fadePage(state, const AgencyCnpjPage());
+          }
+
+          return _fadePage(
+            state,
+            AgencyRepresentativePage(
+              key: ValueKey(payload.agencyId),
+              payload: payload,
+            ),
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.regions,

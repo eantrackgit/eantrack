@@ -296,16 +296,16 @@ class PagPhotoProfile extends ConsumerWidget {
               Expanded(
                 child: AppButton.secondary(
                   'Pular',
-                  onPressed:
-                      state.isUploading ? null : () => _handleSkip(context, ref),
+                  onPressed: () => _handleSkip(context, ref),
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: AppButton.primary(
                   'Salvar',
-                  onPressed:
-                      state.isUploading ? null : () => _handleSave(context, ref),
+                  onPressed: state.draftPhoto != null
+                      ? () => _handleSave(context, ref)
+                      : null,
                 ),
               ),
             ],
