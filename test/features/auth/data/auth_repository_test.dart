@@ -82,7 +82,7 @@ void main() {
         () => repository.signIn(email: email, password: password),
         throwsA(
           isA<AuthAppException>().having(
-              (e) => e.message, 'message', 'Invalid login credentials'),
+              (e) => e.message, 'message', 'E-mail ou senha incorretos.'),
         ),
       );
     });

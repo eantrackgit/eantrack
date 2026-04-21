@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 abstract final class Breakpoints {
   static const double mobile = 600;
-  static const double tablet = 1200;
+  static const double tablet = 840;
 
   static bool isMobile(BuildContext context) =>
       MediaQuery.sizeOf(context).width < mobile;

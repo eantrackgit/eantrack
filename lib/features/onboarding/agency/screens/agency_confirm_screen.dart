@@ -40,273 +40,329 @@ class AgencyConfirmScreen extends ConsumerWidget {
     final notifier = ref.read(agencyConfirmProvider(cnpjModel).notifier);
     final et = EanTrackTheme.of(context);
     final isActive = cnpjModel.situacaoCadastral.trim().toUpperCase() == 'ATIVA';
+    final cnpjTextStyle = AppTextStyles.bodyMedium.copyWith(color: et.primaryText);
+    final cnpjTextPainter = TextPainter(
+      text: TextSpan(
+        text: cnpjModel.formattedCnpj,
+        style: cnpjTextStyle,
+      ),
+      maxLines: 1,
+      textDirection: Directionality.of(context),
+    )..layout();
+    final cnpjFieldWidth = cnpjTextPainter.width + 84;
+    final sectionDecoration = BoxDecoration(
+      color: et.surface.withValues(alpha: 0.55),
+      borderRadius: AppRadius.mdAll,
+      border: Border.all(color: et.surfaceBorder),
+    );
 
     return AuthScaffold(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Center(
-            child: Container(
-              width: 84,
-              height: 84,
-              decoration: BoxDecoration(
-                color: AppColors.actionBlue.withValues(alpha: 0.08),
-                borderRadius: AppRadius.mdAll,
-                border: Border.all(
-                  color: AppColors.actionBlue.withValues(alpha: 0.16),
-                ),
-              ),
-              child: const Icon(
-                Icons.business_rounded,
-                size: 44,
-                color: AppColors.secondary,
-              ),
-            ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: Breakpoints.isDesktop(context) ? 640 : 480,
           ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            'Confirme os dados da empresa',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.headlineSmall.copyWith(
-              color: et.primaryText,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Essas informações serão usadas para validar sua conta.',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: et.secondaryText,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          SectionCard(
-            title: 'DADOS FISCAIS',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _EditableField(
-                  label: 'Nome Fantasia',
-                  controller: notifier.fantasyNameController,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                _ReadonlyField(
-                  label: 'Razão Social',
-                  value: cnpjModel.razaoSocial,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: _ReadonlyField(
-                        label: 'CNPJ',
-                        value: cnpjModel.formattedCnpj,
-                      ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 84,
+                  height: 84,
+                  decoration: BoxDecoration(
+                    color: AppColors.actionBlue.withValues(alpha: 0.08),
+                    borderRadius: AppRadius.mdAll,
+                    border: Border.all(
+                      color: AppColors.actionBlue.withValues(alpha: 0.16),
                     ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Flexible(
-                      child: Align(
-                        alignment: Alignment.center,
-                        child: _StatusCard(
-                          label: 'Situação Cadastral',
-                          value: cnpjModel.situacaoCadastral,
-                          isActive: isActive,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (!isActive) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  const AppErrorBox(
-                    'Não é possível continuar com um CNPJ inativo.',
                   ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          const _SectionTitle('CONTATO DA EMPRESA'),
-          const SizedBox(height: AppSpacing.sm),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              if (constraints.maxWidth < 380) {
-                return Column(
+                  child: const Icon(
+                    Icons.business_rounded,
+                    size: 44,
+                    color: AppColors.secondary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Confirme os dados da empresa',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.headlineSmall.copyWith(
+                  color: et.primaryText,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Essas informações serão usadas para validar sua conta.',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: et.secondaryText,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              SectionCard(
+                title: 'DADOS FISCAIS',
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _EditableField(
-                      label: 'Telefone de Contato',
-                      hintText: '(11) 9 9999-9999',
-                      controller: notifier.phoneController,
-                      keyboardType: TextInputType.phone,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        const PhoneInputFormatter(),
-                      ],
-                      errorText: state.phoneError,
+                      label: 'Nome Fantasia',
+                      controller: notifier.fantasyNameController,
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    _EditableField(
-                      label: 'E-mail',
-                      hintText: 'contato@suaempresa.com.br',
-                      controller: notifier.emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      errorText: state.emailError,
+                    _ReadonlyField(
+                      label: 'Razão Social',
+                      value: cnpjModel.razaoSocial,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        const statusWidth = 118.0;
+                        final availableWidth =
+                            constraints.maxWidth - statusWidth - AppSpacing.sm;
+                        final cnpjWidth =
+                            cnpjFieldWidth < availableWidth
+                                ? cnpjFieldWidth
+                                : availableWidth;
+
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: cnpjWidth,
+                              child: _ReadonlyField(
+                                label: 'CNPJ',
+                                value: cnpjModel.formattedCnpj,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            SizedBox(
+                              width: statusWidth,
+                              child: Align(
+                                alignment: Alignment.center,
+                                child: _StatusCard(
+                                  label: 'Situação Cadastral',
+                                  value: cnpjModel.situacaoCadastral,
+                                  isActive: isActive,
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                    if (!isActive) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      const AppErrorBox(
+                        'Não é possível continuar com um CNPJ inativo.',
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: sectionDecoration,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const _SectionTitle('CONTATO DA EMPRESA'),
+                    const SizedBox(height: AppSpacing.sm),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        if (constraints.maxWidth < 380) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _EditableField(
+                                label: 'Telefone de Contato',
+                                hintText: '(11) 9 9999-9999',
+                                controller: notifier.phoneController,
+                                keyboardType: TextInputType.phone,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  const PhoneInputFormatter(),
+                                ],
+                                errorText: state.phoneError,
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              _EditableField(
+                                label: 'E-mail',
+                                hintText: 'contato@suaempresa.com.br',
+                                controller: notifier.emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                errorText: state.emailError,
+                              ),
+                            ],
+                          );
+                        }
+
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _EditableField(
+                                label: 'Telefone de Contato',
+                                hintText: '(11) 9 9999-9999',
+                                controller: notifier.phoneController,
+                                keyboardType: TextInputType.phone,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  const PhoneInputFormatter(),
+                                ],
+                                errorText: state.phoneError,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: _EditableField(
+                                label: 'E-mail',
+                                hintText: 'contato@suaempresa.com.br',
+                                controller: notifier.emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                errorText: state.emailError,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ],
-                );
-              }
-
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: sectionDecoration,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const _SectionTitle('ENDEREÇO DA EMPRESA'),
+                    const SizedBox(height: AppSpacing.sm),
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: _EditableField(
+                              label: 'CEP',
+                              hintText: '00000-000',
+                              controller: notifier.cepController,
+                              keyboardType: TextInputType.number,
+                              onChanged: (_) => notifier.clearCepMessage(),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                _CepInputFormatter(),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          SizedBox(
+                            width: 110,
+                            child: _SearchCepButton(
+                              isLoading: state.isSearchingCep,
+                              onPressed:
+                                  state.isSearchingCep ? null : notifier.searchCep,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (state.cepMessage != null) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      AppErrorBox(state.cepMessage!),
+                    ],
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: _EditableField(
+                            label: 'Logradouro',
+                            hintText: 'Av. Paulista',
+                            controller: notifier.logradouroController,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        SizedBox(
+                          width: 110,
+                          child: _EditableField(
+                            label: 'Número',
+                            hintText: '1000',
+                            controller: notifier.numeroController,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: _EditableField(
+                            label: 'Bairro',
+                            hintText: 'Centro',
+                            controller: notifier.bairroController,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          flex: 2,
+                          child: _EditableField(
+                            label: 'Município',
+                            hintText: 'São Paulo',
+                            controller: notifier.municipioController,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        SizedBox(
+                          width: 110,
+                          child: _EditableField(
+                            label: 'UF',
+                            hintText: 'SP',
+                            controller: notifier.ufController,
+                            textCapitalization: TextCapitalization.characters,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (state.submitErrorMessage != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                AppErrorBox(state.submitErrorMessage!),
+              ],
+              const SizedBox(height: AppSpacing.lg),
+              Row(
                 children: [
                   Expanded(
-                    child: _EditableField(
-                      label: 'Telefone de Contato',
-                      hintText: '(11) 9 9999-9999',
-                      controller: notifier.phoneController,
-                      keyboardType: TextInputType.phone,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        const PhoneInputFormatter(),
-                      ],
-                      errorText: state.phoneError,
+                    child: AppButton.secondary(
+                      'Voltar',
+                      onPressed: state.isSubmitting ? null : () => context.pop(),
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
+                  const SizedBox(width: AppSpacing.md),
                   Expanded(
-                    child: _EditableField(
-                      label: 'E-mail',
-                      hintText: 'contato@suaempresa.com.br',
-                      controller: notifier.emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      errorText: state.emailError,
+                    child: AppButton.primary(
+                      'Avançar',
+                      isLoading: state.isSubmitting,
+                      trailingIcon: state.isSubmitting
+                          ? null
+                          : const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                      onPressed:
+                          (state.canAdvance && isActive && !state.isSubmitting)
+                              ? () => _handleAdvance(context, notifier)
+                              : null,
                     ),
                   ),
                 ],
-              );
-            },
-          ),
-          const SizedBox(height: AppSpacing.md),
-          const _SectionTitle('ENDEREÇO DA EMPRESA'),
-          const SizedBox(height: AppSpacing.sm),
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: _EditableField(
-                    label: 'CEP',
-                    hintText: '00000-000',
-                    controller: notifier.cepController,
-                    keyboardType: TextInputType.number,
-                    onChanged: (_) => notifier.clearCepMessage(),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      _CepInputFormatter(),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                SizedBox(
-                  width: 110,
-                  child: _SearchCepButton(
-                    isLoading: state.isSearchingCep,
-                    onPressed: state.isSearchingCep ? null : notifier.searchCep,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (state.cepMessage != null) ...[
-            const SizedBox(height: AppSpacing.sm),
-            AppErrorBox(state.cepMessage!),
-          ],
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 3,
-                child: _EditableField(
-                  label: 'Logradouro',
-                  hintText: 'Av. Paulista',
-                  controller: notifier.logradouroController,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              SizedBox(
-                width: 110,
-                child: _EditableField(
-                  label: 'Número',
-                  hintText: '1000',
-                  controller: notifier.numeroController,
-                ),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: _EditableField(
-                  label: 'Bairro',
-                  hintText: 'Centro',
-                  controller: notifier.bairroController,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                flex: 2,
-                child: _EditableField(
-                  label: 'Município',
-                  hintText: 'São Paulo',
-                  controller: notifier.municipioController,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              SizedBox(
-                width: 110,
-                child: _EditableField(
-                  label: 'UF',
-                  hintText: 'SP',
-                  controller: notifier.ufController,
-                  textCapitalization: TextCapitalization.characters,
-                ),
-              ),
-            ],
-          ),
-          if (state.submitErrorMessage != null) ...[
-            const SizedBox(height: AppSpacing.md),
-            AppErrorBox(state.submitErrorMessage!),
-          ],
-          const SizedBox(height: AppSpacing.lg),
-          Row(
-            children: [
-              Expanded(
-                child: AppButton.secondary(
-                  'Voltar',
-                  onPressed: state.isSubmitting ? null : () => context.pop(),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: AppButton.primary(
-                  'Avançar',
-                  isLoading: state.isSubmitting,
-                  trailingIcon: state.isSubmitting
-                      ? null
-                      : const Icon(Icons.arrow_forward_ios_rounded, size: 16),
-                  onPressed: (state.canAdvance && isActive && !state.isSubmitting)
-                      ? () => _handleAdvance(context, notifier)
-                      : null,
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }

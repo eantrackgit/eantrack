@@ -53,6 +53,10 @@ abstract class AuthDataServiceBase {
   }) {
     final normalized = backendMessage.toLowerCase();
 
+    if (isInvalidCredentialsError(normalized)) {
+      return const AuthAppException('E-mail ou senha incorretos.');
+    }
+
     if (looksLikeSupabaseConfigError(normalized)) {
       return ServerException(backendMessage);
     }
@@ -71,6 +75,12 @@ abstract class AuthDataServiceBase {
   bool isEmailNotConfirmedError(String message) {
     final normalized = message.toLowerCase();
     return normalized.contains('confirm') || normalized.contains('not confirmed');
+  }
+
+  bool isInvalidCredentialsError(String normalizedMessage) {
+    return normalizedMessage.contains('invalid login credentials') ||
+        normalizedMessage.contains('invalid_credentials') ||
+        normalizedMessage.contains('user not found');
   }
 
   bool looksLikeSupabaseConfigError(String normalizedMessage) {
@@ -148,7 +158,7 @@ class AuthSigningService extends AuthDataServiceBase {
         password: password,
       );
       if (response.user == null) {
-        throw const AuthAppException('Credenciais invalidas.');
+        throw const AuthAppException('E-mail ou senha incorretos.');
       }
     } on AuthException catch (e) {
       throw mapAuthException(e);

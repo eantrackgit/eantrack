@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../shared/shared.dart';
 import '../controllers/agency_cnpj_controller.dart';
+import '../presentation/widgets/cnpj_not_found_dialog.dart';
 
 /// Primeira tela do onboarding de agência.
 ///
@@ -16,8 +17,31 @@ class AgencyCnpjScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(agencyCnpjProvider);
     final notifier = ref.read(agencyCnpjProvider.notifier);
+
+    ref.listen<AgencyCnpjState>(agencyCnpjProvider, (previous, next) {
+      if (previous?.status == AgencyCnpjStatus.notFound ||
+          next.status != AgencyCnpjStatus.notFound) {
+        return;
+      }
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+
+        showDialog<void>(
+          context: context,
+          builder: (dialogContext) => CnpjNotFoundDialog(
+            onSearchAgain: () {
+              notifier.textController.clear();
+              notifier.onChanged('');
+            },
+            onContinue: () => context.go(AppRoutes.onboardingAgency),
+          ),
+        );
+      });
+    });
+
+    final state = ref.watch(agencyCnpjProvider);
     final et = EanTrackTheme.of(context);
 
     return AuthScaffold(
@@ -52,7 +76,8 @@ class AgencyCnpjScreen extends ConsumerWidget {
             enabled: state.status != AgencyCnpjStatus.loading,
             onChanged: notifier.onChanged,
           ),
-          if (state.errorMessage != null) ...[
+          if (state.errorMessage != null &&
+              state.status != AgencyCnpjStatus.notFound) ...[
             const SizedBox(height: AppSpacing.sm),
             AppErrorBox(state.errorMessage!),
           ],
