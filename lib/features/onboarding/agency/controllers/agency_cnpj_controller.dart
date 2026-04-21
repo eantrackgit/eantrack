@@ -1,150 +1,185 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../shared/utils/cnpj_validator.dart';
 import '../../../../shared/utils/string_utils.dart';
 import '../models/cnpj_model.dart';
 import '../services/cnpj_service.dart';
 
-/// Estados possíveis da busca de CNPJ na etapa inicial do onboarding.
-enum CnpjState {
-  initial,
+const _agencyCnpjUnset = Object();
+const _kCnpjInvalido =
+    'CNPJ inválido. Verifique os números e tente novamente.';
+const _kCnpjNaoEncontrado = 'Não encontramos uma empresa com este CNPJ.';
+const _kCnpjInativo = 'Este CNPJ está inativo na Receita Federal.';
+const _kCnpjDuplicado = 'Este CNPJ já está cadastrado em nossa plataforma.';
+const _kCnpjErroGenerico = 'Erro ao consultar CNPJ. Tente novamente.';
+
+enum AgencyCnpjStatus {
+  idle,
   loading,
+  invalid,
+  notFound,
+  inactive,
+  duplicate,
+  genericError,
   success,
-  errorInvalid,
-  errorNotFound,
-  errorInactive,
-  errorAlreadyRegistered,
-  errorGeneric,
 }
 
-/// Controller da tela de consulta de CNPJ da agência.
-///
-/// Faz validação local do documento, consulta a BrasilAPI e verifica
-/// duplicidade da agência antes de liberar o avanço para a próxima etapa.
-class AgencyCnpjController extends ChangeNotifier {
-  AgencyCnpjController({
+class AgencyCnpjState {
+  const AgencyCnpjState({
+    this.status = AgencyCnpjStatus.idle,
+    this.cnpj = '',
+    this.isLoading = false,
+    this.error,
+    this.cnpjData,
+  });
+
+  final AgencyCnpjStatus status;
+  final String cnpj;
+  final bool isLoading;
+  final String? error;
+  final CnpjModel? cnpjData;
+
+  CnpjModel? get cnpjModel => cnpjData;
+
+  bool get canAdvance =>
+      status == AgencyCnpjStatus.success && cnpjData != null;
+
+  String? get errorMessage => error;
+
+  AgencyCnpjState copyWith({
+    AgencyCnpjStatus? status,
+    String? cnpj,
+    bool? isLoading,
+    Object? error = _agencyCnpjUnset,
+    Object? cnpjData = _agencyCnpjUnset,
+  }) {
+    return AgencyCnpjState(
+      status: status ?? this.status,
+      cnpj: cnpj ?? this.cnpj,
+      isLoading: isLoading ?? this.isLoading,
+      error: identical(error, _agencyCnpjUnset) ? this.error : error as String?,
+      cnpjData: identical(cnpjData, _agencyCnpjUnset)
+          ? this.cnpjData
+          : cnpjData as CnpjModel?,
+    );
+  }
+}
+
+final agencyCnpjProvider =
+    StateNotifierProvider.autoDispose<AgencyCnpjNotifier, AgencyCnpjState>(
+      (ref) {
+        final cnpjController = TextEditingController();
+        final focusNode = FocusNode();
+
+        ref.onDispose(() {
+          cnpjController.dispose();
+          focusNode.dispose();
+        });
+
+        return AgencyCnpjNotifier(cnpjController, focusNode);
+      },
+    );
+
+class AgencyCnpjNotifier extends StateNotifier<AgencyCnpjState> {
+  AgencyCnpjNotifier(
+    this._cnpjController,
+    this._focusNode, {
     CnpjService? service,
-  }) : _service = service ?? CnpjService();
+  })  : _service = service ?? CnpjService(),
+        super(const AgencyCnpjState());
 
   final CnpjService _service;
+  final TextEditingController _cnpjController;
+  final FocusNode _focusNode;
 
-  final TextEditingController textController = TextEditingController();
+  TextEditingController get textController => _cnpjController;
+  FocusNode get focusNode => _focusNode;
 
-  CnpjState _state = CnpjState.initial;
-  CnpjModel? _cnpjModel;
-
-  CnpjState get state => _state;
-  CnpjModel? get cnpjModel => _cnpjModel;
-
-  bool get canAdvance => _state == CnpjState.success && _cnpjModel != null;
-
-  String? get errorMessage {
-    switch (_state) {
-      case CnpjState.errorInvalid:
-        return 'CNPJ inv\u00E1lido. Verifique os n\u00FAmeros e tente novamente.';
-      case CnpjState.errorNotFound:
-        return 'N\u00E3o encontramos uma empresa com este CNPJ.';
-      case CnpjState.errorInactive:
-        return 'Este CNPJ est\u00E1 inativo na Receita Federal.';
-      case CnpjState.errorAlreadyRegistered:
-        return 'Este CNPJ j\u00E1 est\u00E1 cadastrado em nossa plataforma.';
-      case CnpjState.errorGeneric:
-        return 'Erro ao consultar CNPJ. Tente novamente.';
-      case CnpjState.initial:
-      case CnpjState.loading:
-      case CnpjState.success:
-        return null;
-    }
-  }
-
-  /// Limpa estado e resultado anteriores quando o usuário altera o campo.
-  void onChanged(String _) {
-    if (_state == CnpjState.initial) return;
-
-    _state = CnpjState.initial;
-    _cnpjModel = null;
-    notifyListeners();
-  }
-
-  /// Executa o fluxo completo de validação e consulta do CNPJ informado.
-  ///
-  /// Atualiza [state] para refletir carregamento, sucesso ou tipos de erro
-  /// esperados pelo fluxo de onboarding.
-  Future<void> consultCnpj() async {
-    final rawCnpj = onlyDigits(textController.text);
-
-    if (!_isValidCnpj(rawCnpj)) {
-      _state = CnpjState.errorInvalid;
-      _cnpjModel = null;
-      notifyListeners();
+  void onChanged(String value) {
+    if (state.status == AgencyCnpjStatus.idle && state.cnpj == value) {
       return;
     }
 
-    _state = CnpjState.loading;
-    _cnpjModel = null;
-    notifyListeners();
+    state = state.copyWith(
+      status: AgencyCnpjStatus.idle,
+      cnpj: value,
+      isLoading: false,
+      error: null,
+      cnpjData: null,
+    );
+  }
+
+  Future<void> consultCnpj() async {
+    final rawCnpj = onlyDigits(_cnpjController.text);
+
+    if (!isValidCnpj(rawCnpj)) {
+      state = state.copyWith(
+        status: AgencyCnpjStatus.invalid,
+        cnpj: _cnpjController.text,
+        isLoading: false,
+        error: _kCnpjInvalido,
+        cnpjData: null,
+      );
+      return;
+    }
+
+    state = state.copyWith(
+      status: AgencyCnpjStatus.loading,
+      cnpj: _cnpjController.text,
+      isLoading: true,
+      error: null,
+      cnpjData: null,
+    );
 
     try {
       final result = await _service.fetchCnpj(rawCnpj);
       final alreadyRegistered = await _service.cnpjExistsAgency(rawCnpj);
 
       if (alreadyRegistered) {
-        _state = CnpjState.errorAlreadyRegistered;
-        _cnpjModel = null;
-        notifyListeners();
+        state = state.copyWith(
+          status: AgencyCnpjStatus.duplicate,
+          isLoading: false,
+          error: _kCnpjDuplicado,
+          cnpjData: null,
+        );
         return;
       }
 
-      _cnpjModel = result;
-      _state = CnpjState.success;
-      notifyListeners();
+      state = state.copyWith(
+        status: AgencyCnpjStatus.success,
+        isLoading: false,
+        error: null,
+        cnpjData: result,
+      );
     } on CnpjNotFoundException {
-      _state = CnpjState.errorNotFound;
-      _cnpjModel = null;
-      notifyListeners();
+      state = state.copyWith(
+        status: AgencyCnpjStatus.notFound,
+        isLoading: false,
+        error: _kCnpjNaoEncontrado,
+        cnpjData: null,
+      );
     } on CnpjInactiveException {
-      _state = CnpjState.errorInactive;
-      _cnpjModel = null;
-      notifyListeners();
+      state = state.copyWith(
+        status: AgencyCnpjStatus.inactive,
+        isLoading: false,
+        error: _kCnpjInativo,
+        cnpjData: null,
+      );
     } on CnpjServiceException {
-      _state = CnpjState.errorGeneric;
-      _cnpjModel = null;
-      notifyListeners();
+      state = state.copyWith(
+        status: AgencyCnpjStatus.genericError,
+        isLoading: false,
+        error: _kCnpjErroGenerico,
+        cnpjData: null,
+      );
     } catch (_) {
-      _state = CnpjState.errorGeneric;
-      _cnpjModel = null;
-      notifyListeners();
+      state = state.copyWith(
+        status: AgencyCnpjStatus.genericError,
+        isLoading: false,
+        error: _kCnpjErroGenerico,
+        cnpjData: null,
+      );
     }
-  }
-
-  @override
-  void dispose() {
-    textController.dispose();
-    super.dispose();
-  }
-
-  /// Valida estrutura, repetição de dígitos e verificadores do CNPJ.
-  bool _isValidCnpj(String value) {
-    if (value.length != 14) return false;
-    if (RegExp(r'^(\d)\1{13}$').hasMatch(value)) return false;
-
-    final numbers = value.split('').map(int.parse).toList(growable: false);
-    final firstDigit = _calculateDigit(numbers, const [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
-    final secondDigit = _calculateDigit(
-      numbers,
-      const [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2],
-    );
-
-    return numbers[12] == firstDigit && numbers[13] == secondDigit;
-  }
-
-  /// Calcula um dígito verificador do CNPJ a partir dos pesos informados.
-  int _calculateDigit(List<int> numbers, List<int> weights) {
-    var sum = 0;
-    for (var i = 0; i < weights.length; i++) {
-      sum += numbers[i] * weights[i];
-    }
-
-    final remainder = sum % 11;
-    return remainder < 2 ? 0 : 11 - remainder;
   }
 }

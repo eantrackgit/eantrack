@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../shared/shared.dart';
+import '../shared.dart';
 
-class NoConnectionScreen extends StatelessWidget {
-  const NoConnectionScreen({
+class NoConnectionView extends StatelessWidget {
+  const NoConnectionView({
     super.key,
     this.isRetrying = false,
     this.onRetry,

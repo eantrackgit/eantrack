@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/router/app_routes.dart';
 import '../../../../shared/shared.dart';
 import '../controllers/agency_cnpj_controller.dart';
 
@@ -9,113 +11,92 @@ import '../controllers/agency_cnpj_controller.dart';
 ///
 /// Recebe o CNPJ, apresenta feedback visual de consulta e, em caso de sucesso,
 /// encaminha o usuário para a etapa de confirmação dos dados fiscais.
-class AgencyCnpjPage extends StatefulWidget {
-  const AgencyCnpjPage({super.key});
+class AgencyCnpjScreen extends ConsumerWidget {
+  const AgencyCnpjScreen({super.key});
 
   @override
-  State<AgencyCnpjPage> createState() => _AgencyCnpjPageState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(agencyCnpjProvider);
+    final notifier = ref.read(agencyCnpjProvider.notifier);
+    final et = EanTrackTheme.of(context);
 
-class _AgencyCnpjPageState extends State<AgencyCnpjPage> {
-  late final AgencyCnpjController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AgencyCnpjController();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return AuthScaffold(
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) {
-          final et = EanTrackTheme.of(context);
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Icon(
+            Icons.search_rounded,
+            size: 56,
+            color: AppColors.actionBlue,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'Informe o CNPJ da empresa',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.headlineSmall.copyWith(
+              color: et.primaryText,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Usaremos esse dado para localizar a empresa e validar o cadastro da agência.',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: et.secondaryText,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          _CnpjField(
+            controller: notifier.textController,
+            focusNode: notifier.focusNode,
+            enabled: state.status != AgencyCnpjStatus.loading,
+            onChanged: notifier.onChanged,
+          ),
+          if (state.errorMessage != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            AppErrorBox(state.errorMessage!),
+          ],
+          if (state.cnpjModel != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            _CompanyPreviewCard(
+              razaoSocial: state.cnpjModel!.razaoSocial,
+              nomeFantasia: state.cnpjModel!.nomeFantasia,
+              situacao: state.cnpjModel!.situacaoCadastral,
+              endereco: state.cnpjModel!.fullAddress,
+            ),
+          ],
+          const SizedBox(height: AppSpacing.lg),
+          AppButton.action(
+            'Consultar CNPJ',
+            isLoading: state.status == AgencyCnpjStatus.loading,
+            onPressed: state.status == AgencyCnpjStatus.loading
+                ? null
+                : notifier.consultCnpj,
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          Row(
             children: [
-              Icon(
-                Icons.search_rounded,
-                size: 56,
-                color: AppColors.actionBlue,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                'Informe o CNPJ da empresa',
-                textAlign: TextAlign.center,
-                style: AppTextStyles.headlineSmall.copyWith(
-                  color: et.primaryText,
+              Expanded(
+                child: AppButton.secondary(
+                  'Voltar',
+                  onPressed: () => context.pop(),
                 ),
               ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Usaremos esse dado para localizar a empresa e validar o cadastro da agência.',
-                textAlign: TextAlign.center,
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: et.secondaryText,
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: AppButton.primary(
+                  'Avançar',
+                  onPressed: state.canAdvance
+                      ? () => context.push(
+                            AppRoutes.onboardingAgencyConfirm,
+                            extra: state.cnpjModel,
+                          )
+                      : null,
                 ),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              _CnpjField(
-                controller: _controller.textController,
-                enabled: _controller.state != CnpjState.loading,
-                onChanged: _controller.onChanged,
-              ),
-              if (_controller.errorMessage != null) ...[
-                const SizedBox(height: AppSpacing.sm),
-                AppErrorBox(_controller.errorMessage!),
-              ],
-              if (_controller.cnpjModel != null) ...[
-                const SizedBox(height: AppSpacing.md),
-                _CompanyPreviewCard(
-                  razaoSocial: _controller.cnpjModel!.razaoSocial,
-                  nomeFantasia: _controller.cnpjModel!.nomeFantasia,
-                  situacao: _controller.cnpjModel!.situacaoCadastral,
-                  endereco: _controller.cnpjModel!.fullAddress,
-                ),
-              ],
-              const SizedBox(height: AppSpacing.lg),
-              AppButton.action(
-                'Consultar CNPJ',
-                isLoading: _controller.state == CnpjState.loading,
-                onPressed: _controller.state == CnpjState.loading
-                    ? null
-                    : _controller.consultCnpj,
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              Row(
-                children: [
-                  Expanded(
-                    child: AppButton.secondary(
-                      'Voltar',
-                      onPressed: () => context.pop(),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: AppButton.primary(
-                      'Avançar',
-                      onPressed: _controller.canAdvance
-                          ? () => context.push(
-                                '/onboarding/agency/confirm',
-                                extra: _controller.cnpjModel,
-                              )
-                          : null,
-                    ),
-                  ),
-                ],
               ),
             ],
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -125,11 +106,13 @@ class _AgencyCnpjPageState extends State<AgencyCnpjPage> {
 class _CnpjField extends StatelessWidget {
   const _CnpjField({
     required this.controller,
+    required this.focusNode,
     required this.enabled,
     required this.onChanged,
   });
 
   final TextEditingController controller;
+  final FocusNode focusNode;
   final bool enabled;
   final ValueChanged<String> onChanged;
 
@@ -139,6 +122,7 @@ class _CnpjField extends StatelessWidget {
 
     return TextField(
       controller: controller,
+      focusNode: focusNode,
       enabled: enabled,
       onChanged: onChanged,
       keyboardType: TextInputType.number,

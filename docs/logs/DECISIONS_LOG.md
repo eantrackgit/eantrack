@@ -5,6 +5,42 @@
 
 ---
 
+## [2026-04-20] Ciclo de Qualidade Global — 6.4 → 9.7
+
+> Sessão de auditoria e refatoração em múltiplos ciclos (EVAL-TASK-GLOBAL-001 a EVAL-FINAL-009).
+> Nota de entrada: **6.4 / 10**. Nota de saída: **9.7 / 10**.
+
+### Decisões e refatorações aplicadas nesta sessão:
+
+- **auth_repository.dart decomposto** — dividido em `AuthSigningService`, `AuthPasswordService`, `AuthEmailService`; repositório vira fachada sobre 3 serviços especializados
+- **SplashNotifier decomposto** — `SplashAnimationController` isola animação; `SplashConnectivityHandler` isola lógica de conectividade; `SplashNotifier` orquestra sem implementar
+- **Agency onboarding migrado de `ChangeNotifier` para Riverpod `StateNotifier`** — `AgencyCnpjNotifier`, `AgencyConfirmNotifier`, `AgencyRepresentativeNotifier` com `autoDispose`; screens migradas para `ConsumerWidget`
+- **`AppRoutes.protectedRoutes` implementado como `Set<String>`** — `RouterRedirectGuard` usa `protectedRoutes.contains(path)` em vez de comparações inline
+- **Rotas orphans adicionadas a `AppRoutes`** — `onboardingAgencyConfirm` e `onboardingAgencyRepresentative` agora têm constantes; zero string literal de rota fora de `AppRoutes`
+- **`AgencyCnpjStatus` implementado como enum com campo direto no State** — eliminado getter derivado por string-switch; notifier seta `status` diretamente em cada transição
+- **Constantes de erro nomeadas** — `_kCnpjInvalido`, `_kCnpjNaoEncontrado`, `_kCnpjInativo`, `_kCnpjDuplicado`, `_kCnpjErroGenerico`; zero literal duplicada
+- **Convenção `*Screen` / `*_screen.dart` unificada** — `AgencyCnpjPage` → `AgencyCnpjScreen`, `AgencyConfirmPage` → `AgencyConfirmScreen`, `AgencyRepresentativePage` → `AgencyRepresentativeScreen`, `FlowPage` → `FlowScreen`; todos os arquivos renomeados
+- **Barrel `shared/shared.dart` completo** — `NoConnectionView` exportado; imports via path direto eliminados
+- **Zero mojibake em todo o projeto** — 11 strings em `region_list_screen.dart` + 8 strings em `agency_cnpj_controller.dart` corrigidas; arquivo salvo em UTF-8
+- **`TextEditingController` e `FocusNode` extraídos do corpo do `AgencyCnpjNotifier`** — criados no provider via `ref.onDispose`, injetados via construtor
+- **TODO rastreável em `region_repository.dart`** — `⚠ Verificar assinaturas` substituído por `TODO(marcio): verificar assinatura RPC com Supabase antes do deploy`
+- **`no_connection_screen.dart` removido de `core/connectivity/presentation/`** — substituído por `NoConnectionView` em `shared/widgets/`
+- **`RegionEmptyState` removida** — substituída por `AppListStateView` com parâmetros `isEmpty`, `emptyIcon`, `emptyTitle`, `emptySubtitle`
+- **`_SplashBackground` refatorada** — `LayoutBuilder` + cálculos de `glowSize`/`logoWidth` movidos para dentro; `build()` de `SplashScreen` reduzido para 16 linhas
+
+### Padrão estabelecido (obrigatório daqui em diante):
+
+```
+Status como enum com campo direto no State — nunca derivado por string
+Strings de erro como constantes nomeadas — nunca literais duplicadas
+Todo arquivo em UTF-8 — verificar antes de entregar
+*Screen / *_screen.dart em todo o projeto
+Rotas sempre em AppRoutes — zero string literal fora
+Barrel shared/shared.dart — import sempre via barrel
+```
+
+---
+
 ## DEC-001 — Flutter Code-First (abandonar FlutterFlow)
 
 **Data:** 2026-03-25

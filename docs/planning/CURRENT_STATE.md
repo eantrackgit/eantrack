@@ -2,16 +2,18 @@
 
 > **Leia este arquivo primeiro ao retomar o projeto.**
 > Atualizar a cada sessão que avança o código.
-> Última atualização: 2026-04-14 (auditoria final — Riverpod 2 Notifier, IdentifierController, agencyId guard)
+> Última atualização: 2026-04-20 (ciclo de qualidade global 6.4 → 9.7; agency onboarding concluído e auditado)
 
 ---
 
 ## Fase Atual
 
 **Fase 1 — Auth** ✅ Completo (telas + dark mode + testes)
-**Fase 2 — Onboarding** ✅ Core completo — IdentifierController extraído e testado; integração Supabase parcial em cnpj/company/legal
+**Fase 2 — Onboarding** ✅ Core completo — IdentifierController extraído e testado; agency onboarding (CNPJ → confirmação → representante legal) **concluído e auditado (9.7)**
 **Fase 3 — Hub + Regiões** 🔄 Funcional (layout + navegação + agencyId guard), sem dark mode, sem testes de UI
 **Fase 4 — Testes** ✅ Auth, Onboarding controller e widget cobertos; Hub/Regiões sem testes de UI
+
+**Próximo objetivo:** Módulo de Validade (modo individual)
 
 ---
 
@@ -158,18 +160,21 @@
 **Nota auditada: 8.6 / 10** *(2026-04-11 — auditoria global)*
 **Pós-correções dark mode (2026-04-13): ~8.9**
 **Pós-auditoria final (2026-04-14): 9.35 — nível enterprise confirmado**
+**Pós-ciclo de qualidade global (2026-04-20): 9.7 / 10 — meta atingida** *(EVAL-FINAL-009)*
 
-| Área | Nota | Observação |
-|------|------|-----------|
-| Arquitetura | 9.5 | Riverpod 2 Notifier, agencyId guard, feature-first, repository boundary intacto |
-| Código | 9.4 | IdentifierController com _requestId pattern, normalize() static puro, sem magic |
-| Testabilidade | 9.5 | ~30 testes IdentifierController incl. race condition com Completer; auth coberto |
-| Segurança | 9.5 | agencyId hard throw (nunca null silencioso), sem erro raw na UI, dart-define |
-| Performance | 9.3 | Debounce 350ms + _requestId cancela stale; auto-invalidação na troca de conta |
-| UX/UI | 9.0 | 7 estados de IdentifierStatus com mensagens PT-BR; sugestões determinísticas |
-| Manutenibilidade | 9.2 | IdentifierController extraído; Notifier sem herança complexa; sealed states |
-| Consistência | 9.4 | Todos os providers seguem mesmo padrão; erros mapeados PT-BR; sealed exhaustivo |
-| Documentação | 9.2 | Fonte de verdade atualizada; decisões documentadas; exceções justificadas |
+| Critério | Nota | Observação |
+|----------|------|-----------|
+| Separação UI / Controller / Service | 9.5 | Agency Riverpod; Splash decomposta; TextEditingController injetado |
+| Consistência de nomenclatura | 10.0 | *Screen / *_screen.dart em todo o projeto; FlowScreen fecha o ciclo |
+| Tratamento de erros | 10.0 | AppException sealed; constantes nomeadas; status enum campo direto |
+| Modelos tipados | 10.0 | AgencyCnpjState, AgencyConfirmState, AgencyRepresentativeState corretos |
+| Ausência de lógica na UI | 9.5 | Screens puro ref.watch + ref.read; AppRoutes em toda navegação |
+| Reutilização de shared/ | 9.5 | Barrel completo; NoConnectionView exportado e importado via barrel |
+| Código morto / duplicado | 9.5 | Zero mojibake; zero literal duplicada; _kCnpjErroGenerico unifica |
+| Consistência arquitetural | 10.0 | Riverpod StateNotifier + autoDispose end-to-end; padrão único |
+| Router — guards, rotas, separação | 9.5 | AppRoutes completo; zero literal; _PlaceholderScreen stubs conhecidos |
+| Core — connectivity, config, error | 9.5 | TODO rastreável; connectivity + error hierarchy sólidos |
+| **GLOBAL** | **9.7** | **Meta atingida em 2026-04-20** |
 
 ---
 

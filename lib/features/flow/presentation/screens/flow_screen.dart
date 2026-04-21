@@ -10,14 +10,14 @@ import '../../../../shared/shared.dart';
 
 /// Tela transitória central de decisão do fluxo de auth.
 /// Lê [AuthFlowState] e encaminha automaticamente o usuário.
-class FlowPage extends ConsumerStatefulWidget {
-  const FlowPage({super.key});
+class FlowScreen extends ConsumerStatefulWidget {
+  const FlowScreen({super.key});
 
   @override
-  ConsumerState<FlowPage> createState() => _FlowPageState();
+  ConsumerState<FlowScreen> createState() => _FlowScreenState();
 }
 
-class _FlowPageState extends ConsumerState<FlowPage> {
+class _FlowScreenState extends ConsumerState<FlowScreen> {
   @override
   void initState() {
     super.initState();

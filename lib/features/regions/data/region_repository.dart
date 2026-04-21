@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/error/app_exception.dart';
@@ -10,8 +11,7 @@ import '../domain/region_model.dart';
 ///   - list_regions_by_agency_exhibition(p_agency_id) → lista de regiões
 ///   - is_region_name_available_for_current_user(p_name) → bool/json
 ///
-/// ⚠ Verificar assinaturas no Supabase Dashboard antes de integrar:
-///   - list_regions_by_agency_exhibition: parâmetros não confirmados no dump
+/// TODO(marcio): verificar assinatura RPC com Supabase antes do deploy
 class RegionRepository {
   const RegionRepository(this._client);
 
@@ -38,7 +38,8 @@ class RegionRepository {
       throw ServerException(
         'Não foi possível carregar as regiões. (${e.code})',
       );
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[EANTrack] ${e.toString()}');
       throw const ServerException('Erro inesperado ao carregar regiões.');
     }
   }
@@ -61,7 +62,8 @@ class RegionRepository {
             true;
       }
       return true;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[EANTrack] ${e.toString()}');
       // RPC falhou → assumir disponível, o banco vai rejeitar duplicata
       return true;
     }
@@ -88,7 +90,8 @@ class RegionRepository {
       throw ServerException(
         'Não foi possível criar a região. (${e.code})',
       );
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[EANTrack] ${e.toString()}');
       throw const ServerException('Erro inesperado ao criar região.');
     }
   }
@@ -107,7 +110,8 @@ class RegionRepository {
       throw ServerException(
         'Não foi possível atualizar a região. (${e.code})',
       );
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[EANTrack] ${e.toString()}');
       throw const ServerException('Erro inesperado ao atualizar região.');
     }
   }

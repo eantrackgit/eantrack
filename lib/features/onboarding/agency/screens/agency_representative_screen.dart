@@ -1,6 +1,7 @@
 import 'package:cross_file/cross_file.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../shared/shared.dart';
@@ -9,50 +10,36 @@ import '../models/agency_confirm_payload.dart';
 import '../models/agency_representative_model.dart';
 
 /// Tela de cadastro do representante legal da agência.
-class AgencyRepresentativePage extends StatefulWidget {
-  const AgencyRepresentativePage({
+class AgencyRepresentativeScreen extends ConsumerWidget {
+  const AgencyRepresentativeScreen({
     super.key,
     required this.payload,
   });
 
   final AgencyConfirmPayload payload;
 
-  @override
-  State<AgencyRepresentativePage> createState() =>
-      _AgencyRepresentativePageState();
-}
-
-class _AgencyRepresentativePageState extends State<AgencyRepresentativePage> {
-  late final AgencyRepresentativeController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AgencyRepresentativeController(payload: widget.payload);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  Future<void> _handleAdvance() async {
-    final ok = await _controller.submit();
-    if (!mounted || !ok) return;
+  Future<void> _handleAdvance(
+    BuildContext context,
+    AgencyRepresentativeNotifier notifier,
+  ) async {
+    final ok = await notifier.submit();
+    if (!context.mounted || !ok) return;
 
     context.go('/hub');
   }
 
   Future<void> _handleDocumentTypeSelection(
+    BuildContext context,
+    AgencyRepresentativeNotifier notifier,
+    AgencyRepresentativeState state,
     AgencyRepresentativeDocumentType type,
   ) async {
-    final hasAttachedFiles = _controller.frontFile != null ||
-        _controller.backFile != null ||
-        _controller.attachmentFile != null;
+    final hasAttachedFiles = state.frontFile != null ||
+        state.backFile != null ||
+        state.attachmentFile != null;
 
-    if (!hasAttachedFiles || _controller.selectedDocumentType == type) {
-      _controller.selectDocumentType(type);
+    if (!hasAttachedFiles || state.selectedDocumentType == type) {
+      notifier.selectDocumentType(type);
       return;
     }
 
@@ -62,231 +49,231 @@ class _AgencyRepresentativePageState extends State<AgencyRepresentativePage> {
         ) ??
         false;
 
-    if (!shouldChange || !mounted) return;
-    _controller.selectDocumentType(type);
+    if (!shouldChange || !context.mounted) return;
+    notifier.selectDocumentType(type);
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AuthScaffold(
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) {
-          final et = EanTrackTheme.of(context);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(agencyRepresentativeProvider(payload));
+    final notifier = ref.read(agencyRepresentativeProvider(payload).notifier);
+    final et = EanTrackTheme.of(context);
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 84,
-                  height: 84,
-                  decoration: BoxDecoration(
-                    color: AppColors.actionBlue.withValues(alpha: 0.08),
-                    borderRadius: AppRadius.mdAll,
-                    border: Border.all(
-                      color: AppColors.actionBlue.withValues(alpha: 0.16),
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.badge_rounded,
-                    size: 42,
-                    color: AppColors.secondary,
-                  ),
+    return AuthScaffold(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 84,
+              height: 84,
+              decoration: BoxDecoration(
+                color: AppColors.actionBlue.withValues(alpha: 0.08),
+                borderRadius: AppRadius.mdAll,
+                border: Border.all(
+                  color: AppColors.actionBlue.withValues(alpha: 0.16),
                 ),
               ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                'Cadastre o representante legal',
-                textAlign: TextAlign.center,
-                style: AppTextStyles.headlineSmall.copyWith(
-                  color: et.primaryText,
-                ),
+              child: const Icon(
+                Icons.badge_rounded,
+                size: 42,
+                color: AppColors.secondary,
               ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Esses dados serão usados para validar a responsabilidade legal da agência.',
-                textAlign: TextAlign.center,
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: et.secondaryText,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'Cadastre o representante legal',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.headlineSmall.copyWith(
+              color: et.primaryText,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Esses dados serão usados para validar a responsabilidade legal da agência.',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: et.secondaryText,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          SectionCard(
+            title: 'DADOS PESSOAIS E CARGO',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _AppTextField(
+                  label: 'Nome Completo',
+                  hintText: 'Ex: João da Silva',
+                  controller: notifier.fullNameController,
+                  errorText: state.fullNameError,
+                  textCapitalization: TextCapitalization.words,
                 ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              SectionCard(
-                title: 'DADOS PESSOAIS E CARGO',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _AppTextField(
-                      label: 'Nome Completo',
-                      hintText: 'Ex: João da Silva',
-                      controller: _controller.fullNameController,
-                      errorText: _controller.fullNameError,
-                      textCapitalization: TextCapitalization.words,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    _AppTextField(
-                      label: 'CPF',
-                      hintText: '000.000.000-00',
-                      controller: _controller.cpfController,
-                      focusNode: _controller.cpfFocusNode,
-                      keyboardType: TextInputType.number,
-                      errorText: _controller.cpfError,
-                      onEditingComplete: _controller.onCpfEditingComplete,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        _CpfInputFormatter(),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    _RoleDropdown(
-                      value: _controller.selectedRole,
-                      errorText: _controller.roleError,
-                      onChanged: _controller.updateRole,
-                    ),
+                const SizedBox(height: AppSpacing.sm),
+                _AppTextField(
+                  label: 'CPF',
+                  hintText: '000.000.000-00',
+                  controller: notifier.cpfController,
+                  focusNode: notifier.cpfFocusNode,
+                  keyboardType: TextInputType.number,
+                  errorText: state.cpfError,
+                  onEditingComplete: notifier.onCpfEditingComplete,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    _CpfInputFormatter(),
                   ],
                 ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              SectionCard(
-                title: 'CONTATO',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _AppTextField(
-                      label: 'Telefone do representante',
-                      hintText: '(11) 9 9999-9999',
-                      controller: _controller.phoneController,
-                      keyboardType: TextInputType.phone,
-                      errorText: _controller.phoneError,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        const PhoneInputFormatter(),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    _AppTextField(
-                      label: 'E-mail',
-                      hintText: 'joao.silva@suaempresa.com.br',
-                      controller: _controller.emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      errorText: _controller.emailError,
-                    ),
-                  ],
+                const SizedBox(height: AppSpacing.sm),
+                _RoleDropdown(
+                  value: state.selectedRole,
+                  errorText: state.roleError,
+                  onChanged: notifier.updateRole,
                 ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              SectionCard(
-                title: 'DOCUMENTO COM FOTO',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _DocumentTypeSelector(
-                      selectedType: _controller.selectedDocumentType,
-                      onSelected: (type) => _handleDocumentTypeSelection(type),
-                    ),
-                    if (_controller.documentTypeError != null) ...[
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        _controller.documentTypeError!,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.error,
-                        ),
-                      ),
-                    ],
-                    if (_controller.selectedDocumentType != null) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      ..._buildAttachmentFields(_controller),
-                    ],
-                    if (_controller.documentsError != null) ...[
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        _controller.documentsError!,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.error,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (_controller.errorMessage != null) ...[
-                const SizedBox(height: AppSpacing.md),
-                AppErrorBox(_controller.errorMessage!),
               ],
-              const SizedBox(height: AppSpacing.lg),
-              Row(
-                children: [
-                  Expanded(
-                    child: AppButton.secondary(
-                      'Voltar',
-                      onPressed: _controller.isSubmitting
-                          ? null
-                          : () => context.pop(),
-                    ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          SectionCard(
+            title: 'CONTATO',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _AppTextField(
+                  label: 'Telefone do representante',
+                  hintText: '(11) 9 9999-9999',
+                  controller: notifier.phoneController,
+                  keyboardType: TextInputType.phone,
+                  errorText: state.phoneError,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    const PhoneInputFormatter(),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _AppTextField(
+                  label: 'E-mail',
+                  hintText: 'joao.silva@suaempresa.com.br',
+                  controller: notifier.emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  errorText: state.emailError,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          SectionCard(
+            title: 'DOCUMENTO COM FOTO',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _DocumentTypeSelector(
+                  selectedType: state.selectedDocumentType,
+                  onSelected: (type) => _handleDocumentTypeSelection(
+                    context,
+                    notifier,
+                    state,
+                    type,
                   ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: AppButton.primary(
-                      'Avançar',
-                      isLoading: _controller.isSubmitting,
-                      trailingIcon: _controller.isSubmitting
-                          ? null
-                          : const Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              size: 16,
-                            ),
-                      onPressed: (_controller.canAdvance &&
-                              !_controller.isSubmitting)
-                          ? _handleAdvance
-                          : null,
+                ),
+                if (state.documentTypeError != null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    state.documentTypeError!,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.error,
                     ),
                   ),
                 ],
+                if (state.selectedDocumentType != null) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  ..._buildAttachmentFields(notifier, state),
+                ],
+                if (state.documentsError != null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    state.documentsError!,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.error,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (state.errorMessage != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            AppErrorBox(state.errorMessage!),
+          ],
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            children: [
+              Expanded(
+                child: AppButton.secondary(
+                  'Voltar',
+                  onPressed: state.isSubmitting ? null : () => context.pop(),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: AppButton.primary(
+                  'Avançar',
+                  isLoading: state.isSubmitting,
+                  trailingIcon: state.isSubmitting
+                      ? null
+                      : const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 16,
+                        ),
+                  onPressed: (state.canAdvance && !state.isSubmitting)
+                      ? () => _handleAdvance(context, notifier)
+                      : null,
+                ),
               ),
             ],
-          );
-        },
+          ),
+        ],
       ),
     );
   }
 
   List<Widget> _buildAttachmentFields(
-    AgencyRepresentativeController controller,
+    AgencyRepresentativeNotifier notifier,
+    AgencyRepresentativeState state,
   ) {
-    final type = controller.selectedDocumentType;
+    final type = state.selectedDocumentType;
     if (type == null) return const <Widget>[];
 
     if (type.requiresFrontAndBack) {
       return [
         _AttachmentDropArea(
           label: 'FRENTE',
-          file: controller.frontFile,
+          file: state.frontFile,
           copyText: 'JPG, PNG ou PDF • max. 5MB',
           acceptsPdfOnly: false,
           onAttach: () =>
-              controller.pickFile(AgencyRepresentativeAttachmentSlot.front),
-          onDroppedFile: (file) => controller.receiveDroppedFile(
+              notifier.pickFile(AgencyRepresentativeAttachmentSlot.front),
+          onDroppedFile: (file) => notifier.receiveDroppedFile(
             AgencyRepresentativeAttachmentSlot.front,
             file,
           ),
           onRemove: () =>
-              controller.removeFile(AgencyRepresentativeAttachmentSlot.front),
+              notifier.removeFile(AgencyRepresentativeAttachmentSlot.front),
         ),
         const SizedBox(height: AppSpacing.sm),
         _AttachmentDropArea(
           label: 'VERSO',
-          file: controller.backFile,
+          file: state.backFile,
           copyText: 'JPG, PNG ou PDF • max. 5MB',
           acceptsPdfOnly: false,
           onAttach: () =>
-              controller.pickFile(AgencyRepresentativeAttachmentSlot.back),
-          onDroppedFile: (file) => controller.receiveDroppedFile(
+              notifier.pickFile(AgencyRepresentativeAttachmentSlot.back),
+          onDroppedFile: (file) => notifier.receiveDroppedFile(
             AgencyRepresentativeAttachmentSlot.back,
             file,
           ),
           onRemove: () =>
-              controller.removeFile(AgencyRepresentativeAttachmentSlot.back),
+              notifier.removeFile(AgencyRepresentativeAttachmentSlot.back),
         ),
       ];
     }
@@ -294,17 +281,17 @@ class _AgencyRepresentativePageState extends State<AgencyRepresentativePage> {
     return [
       _AttachmentDropArea(
         label: 'ANEXO',
-        file: controller.attachmentFile,
+        file: state.attachmentFile,
         copyText: 'PDF • max. 5MB',
         acceptsPdfOnly: true,
         onAttach: () =>
-            controller.pickFile(AgencyRepresentativeAttachmentSlot.attachment),
-        onDroppedFile: (file) => controller.receiveDroppedFile(
+            notifier.pickFile(AgencyRepresentativeAttachmentSlot.attachment),
+        onDroppedFile: (file) => notifier.receiveDroppedFile(
           AgencyRepresentativeAttachmentSlot.attachment,
           file,
         ),
         onRemove: () =>
-            controller.removeFile(AgencyRepresentativeAttachmentSlot.attachment),
+            notifier.removeFile(AgencyRepresentativeAttachmentSlot.attachment),
       ),
     ];
   }
@@ -429,7 +416,7 @@ class _RoleDropdown extends StatelessWidget {
           borderSide: const BorderSide(color: AppColors.error, width: 1.5),
         ),
       ),
-      items: AgencyRepresentativeController.roles
+      items: AgencyRepresentativeNotifier.roles
           .map(
             (role) => DropdownMenuItem<String>(
               value: role,

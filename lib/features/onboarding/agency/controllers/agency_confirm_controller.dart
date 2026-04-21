@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../shared/utils/string_utils.dart';
 import '../models/agency_confirm_payload.dart';
@@ -6,26 +7,104 @@ import '../models/cnpj_model.dart';
 import '../services/agency_confirm_service.dart';
 import '../services/cep_service.dart';
 
-/// Estados do envio final da agência para o Supabase.
-enum AgencyConfirmSubmitState {
-  idle,
-  loading,
-  success,
-  errorAlreadyRegistered,
-  errorGeneric,
+const _agencyConfirmUnset = Object();
+
+class AgencyConfirmState {
+  const AgencyConfirmState({
+    this.submitted = false,
+    this.isSearchingCep = false,
+    this.cepMessage,
+    this.isLoading = false,
+    this.error,
+    this.isConfirmed = false,
+    this.savedAgencyId,
+    this.phoneText = '',
+    this.emailText = '',
+  });
+
+  final bool submitted;
+  final bool isSearchingCep;
+  final String? cepMessage;
+  final bool isLoading;
+  final String? error;
+  final bool isConfirmed;
+  final String? savedAgencyId;
+  final String phoneText;
+  final String emailText;
+
+  bool get isSubmitting => isLoading;
+
+  bool get canAdvance =>
+      _isPhoneValid(phoneText) && isValidEmail(emailText);
+
+  String? get submitErrorMessage => error;
+
+  String? get phoneError {
+    if (!submitted) return null;
+    if (onlyDigits(phoneText).isEmpty) {
+      return 'Informe o telefone de contato.';
+    }
+    if (!_isPhoneValid(phoneText)) {
+      return 'Informe um telefone vÃ¡lido.';
+    }
+    return null;
+  }
+
+  String? get emailError {
+    if (!submitted) return null;
+    if (emailText.trim().isEmpty) {
+      return 'Informe o e-mail.';
+    }
+    if (!isValidEmail(emailText)) {
+      return 'Informe um e-mail vÃ¡lido.';
+    }
+    return null;
+  }
+
+  AgencyConfirmState copyWith({
+    bool? submitted,
+    bool? isSearchingCep,
+    Object? cepMessage = _agencyConfirmUnset,
+    bool? isLoading,
+    Object? error = _agencyConfirmUnset,
+    bool? isConfirmed,
+    Object? savedAgencyId = _agencyConfirmUnset,
+    String? phoneText,
+    String? emailText,
+  }) {
+    return AgencyConfirmState(
+      submitted: submitted ?? this.submitted,
+      isSearchingCep: isSearchingCep ?? this.isSearchingCep,
+      cepMessage: identical(cepMessage, _agencyConfirmUnset)
+          ? this.cepMessage
+          : cepMessage as String?,
+      isLoading: isLoading ?? this.isLoading,
+      error: identical(error, _agencyConfirmUnset) ? this.error : error as String?,
+      isConfirmed: isConfirmed ?? this.isConfirmed,
+      savedAgencyId: identical(savedAgencyId, _agencyConfirmUnset)
+          ? this.savedAgencyId
+          : savedAgencyId as String?,
+      phoneText: phoneText ?? this.phoneText,
+      emailText: emailText ?? this.emailText,
+    );
+  }
+
+  static bool _isPhoneValid(String value) => onlyDigits(value).length == 11;
 }
 
-/// Controller da tela de confirmação de dados da agência.
-///
-/// Gerencia pré-preenchimento dos campos, busca de CEP, validações do formulário
-/// e o insert final da agência via [AgencyConfirmService].
-class AgencyConfirmController extends ChangeNotifier {
-  AgencyConfirmController({
+final agencyConfirmProvider = StateNotifierProvider.autoDispose.family<
+    AgencyConfirmNotifier, AgencyConfirmState, CnpjModel>(
+  (ref, cnpjModel) => AgencyConfirmNotifier(cnpjModel: cnpjModel),
+);
+
+class AgencyConfirmNotifier extends StateNotifier<AgencyConfirmState> {
+  AgencyConfirmNotifier({
     required this.cnpjModel,
     CepService? cepService,
     AgencyConfirmService? confirmService,
   })  : _cepService = cepService ?? CepService(),
-        _confirmService = confirmService ?? AgencyConfirmService() {
+        _confirmService = confirmService ?? AgencyConfirmService(),
+        super(const AgencyConfirmState()) {
     fantasyNameController.text = cnpjModel.displayName;
     phoneController.addListener(_onFormChanged);
     emailController.addListener(_onFormChanged);
@@ -36,6 +115,8 @@ class AgencyConfirmController extends ChangeNotifier {
     bairroController.text = cnpjModel.bairro;
     municipioController.text = cnpjModel.municipio;
     ufController.text = cnpjModel.uf;
+
+    _syncFormState();
   }
 
   final CnpjModel cnpjModel;
@@ -52,72 +133,17 @@ class AgencyConfirmController extends ChangeNotifier {
   final TextEditingController municipioController = TextEditingController();
   final TextEditingController ufController = TextEditingController();
 
-  bool _submitted = false;
-  bool _isSearchingCep = false;
-  String? _cepMessage;
-  AgencyConfirmSubmitState _submitState = AgencyConfirmSubmitState.idle;
-  String? _savedAgencyId;
-
-  bool get isSearchingCep => _isSearchingCep;
-  String? get cepMessage => _cepMessage;
-  AgencyConfirmSubmitState get submitState => _submitState;
-  bool get isSubmitting => _submitState == AgencyConfirmSubmitState.loading;
-  String? get savedAgencyId => _savedAgencyId;
-
-  bool get canAdvance =>
-      _isPhoneValid(phoneController.text) && isValidEmail(emailController.text);
-
-  String? get submitErrorMessage {
-    switch (_submitState) {
-      case AgencyConfirmSubmitState.errorAlreadyRegistered:
-        return 'Esta agência já está cadastrada em nossa plataforma.';
-      case AgencyConfirmSubmitState.errorGeneric:
-        return 'Erro ao salvar agência. Tente novamente.';
-      case AgencyConfirmSubmitState.idle:
-      case AgencyConfirmSubmitState.loading:
-      case AgencyConfirmSubmitState.success:
-        return null;
-    }
-  }
-
-  String? get phoneError {
-    if (!_submitted) return null;
-    if (onlyDigits(phoneController.text).isEmpty) {
-      return 'Informe o telefone de contato.';
-    }
-    if (!_isPhoneValid(phoneController.text)) {
-      return 'Informe um telefone válido.';
-    }
-    return null;
-  }
-
-  String? get emailError {
-    if (!_submitted) return null;
-    if (emailController.text.trim().isEmpty) {
-      return 'Informe o e-mail.';
-    }
-    if (!isValidEmail(emailController.text)) {
-      return 'Informe um e-mail válido.';
-    }
-    return null;
-  }
-
-  /// Consulta o CEP digitado e preenche os campos de endereço.
-  ///
-  /// Mantém o CEP digitado e limpa os demais campos quando a busca falha.
   Future<void> searchCep() async {
     final rawCep = onlyDigits(cepController.text);
-    _cepMessage = null;
+    state = state.copyWith(cepMessage: null);
 
     if (rawCep.length != 8) {
       _clearAddressFields();
-      _cepMessage = 'CEP não encontrado.';
-      notifyListeners();
+      state = state.copyWith(cepMessage: 'CEP nÃ£o encontrado.');
       return;
     }
 
-    _isSearchingCep = true;
-    notifyListeners();
+    state = state.copyWith(isSearchingCep: true);
 
     try {
       final result = await _cepService.fetchCep(rawCep);
@@ -126,50 +152,45 @@ class AgencyConfirmController extends ChangeNotifier {
       bairroController.text = result.bairro.toUpperCase();
       municipioController.text = result.municipio.toUpperCase();
       ufController.text = result.uf.toUpperCase();
-      _cepMessage = null;
-      notifyListeners();
+      state = state.copyWith(cepMessage: null);
     } on CepNotFoundException {
       _clearAddressFields();
-      _cepMessage = 'CEP não encontrado.';
-      notifyListeners();
+      state = state.copyWith(cepMessage: 'CEP nÃ£o encontrado.');
     } on CepServiceException {
       _clearAddressFields();
-      _cepMessage = 'Erro ao consultar CEP. Tente novamente.';
-      notifyListeners();
+      state = state.copyWith(
+        cepMessage: 'Erro ao consultar CEP. Tente novamente.',
+      );
     } catch (_) {
       _clearAddressFields();
-      _cepMessage = 'Erro ao consultar CEP. Tente novamente.';
-      notifyListeners();
+      state = state.copyWith(
+        cepMessage: 'Erro ao consultar CEP. Tente novamente.',
+      );
     } finally {
-      _isSearchingCep = false;
-      notifyListeners();
+      state = state.copyWith(isSearchingCep: false);
     }
   }
 
-  /// Remove a mensagem exibida após uma tentativa de busca de CEP.
   void clearCepMessage() {
-    if (_cepMessage == null) return;
-    _cepMessage = null;
-    notifyListeners();
+    if (state.cepMessage == null) return;
+    state = state.copyWith(cepMessage: null);
   }
 
-  /// Valida o formulário e tenta salvar a agência.
-  ///
-  /// Retorna `true` em sucesso e atualiza [submitState] para que a UI
-  /// reaja a carregamento, sucesso e tipos de erro esperados.
   Future<bool> submit() async {
-    _submitted = true;
+    state = state.copyWith(submitted: true);
 
-    if (!canAdvance) {
-      notifyListeners();
+    if (!state.canAdvance) {
       return false;
     }
 
-    _submitState = AgencyConfirmSubmitState.loading;
-    notifyListeners();
+    state = state.copyWith(
+      isLoading: true,
+      error: null,
+      isConfirmed: false,
+    );
 
     try {
-      _savedAgencyId = await _confirmService.saveAgency(
+      final agencyId = await _confirmService.saveAgency(
         cnpjModel: cnpjModel,
         nomeFantasia: fantasyNameController.text.trim(),
         telefoneContato: phoneController.text.trim(),
@@ -181,29 +202,41 @@ class AgencyConfirmController extends ChangeNotifier {
         uf: ufController.text.trim(),
       );
 
-      _submitState = AgencyConfirmSubmitState.success;
-      notifyListeners();
+      state = state.copyWith(
+        isLoading: false,
+        error: null,
+        isConfirmed: true,
+        savedAgencyId: agencyId,
+      );
       return true;
     } on AgencyAlreadyRegisteredException {
-      _submitState = AgencyConfirmSubmitState.errorAlreadyRegistered;
-      notifyListeners();
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Esta agÃªncia jÃ¡ estÃ¡ cadastrada em nossa plataforma.',
+        isConfirmed: false,
+      );
       return false;
     } on AgencyConfirmServiceException {
-      _submitState = AgencyConfirmSubmitState.errorGeneric;
-      notifyListeners();
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Erro ao salvar agÃªncia. Tente novamente.',
+        isConfirmed: false,
+      );
       return false;
     } catch (_) {
-      _submitState = AgencyConfirmSubmitState.errorGeneric;
-      notifyListeners();
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Erro ao salvar agÃªncia. Tente novamente.',
+        isConfirmed: false,
+      );
       return false;
     }
   }
 
-  /// Monta o payload que segue para a próxima etapa do onboarding.
   AgencyConfirmPayload buildPayload() {
-    final agencyId = _savedAgencyId;
+    final agencyId = state.savedAgencyId;
     if (agencyId == null || agencyId.isEmpty) {
-      throw StateError('Agency ID não disponível para a próxima etapa.');
+      throw StateError('Agency ID nÃ£o disponÃ­vel para a prÃ³xima etapa.');
     }
 
     return AgencyConfirmPayload(
@@ -224,11 +257,18 @@ class AgencyConfirmController extends ChangeNotifier {
   }
 
   void _onFormChanged() {
-    if (_submitState == AgencyConfirmSubmitState.errorAlreadyRegistered ||
-        _submitState == AgencyConfirmSubmitState.errorGeneric) {
-      _submitState = AgencyConfirmSubmitState.idle;
-    }
-    notifyListeners();
+    state = state.copyWith(
+      error: null,
+      phoneText: phoneController.text,
+      emailText: emailController.text,
+    );
+  }
+
+  void _syncFormState() {
+    state = state.copyWith(
+      phoneText: phoneController.text,
+      emailText: emailController.text,
+    );
   }
 
   void _clearAddressFields() {
@@ -236,10 +276,6 @@ class AgencyConfirmController extends ChangeNotifier {
     bairroController.text = '';
     municipioController.text = '';
     ufController.text = '';
-  }
-
-  bool _isPhoneValid(String value) {
-    return onlyDigits(value).length == 11;
   }
 
   @override

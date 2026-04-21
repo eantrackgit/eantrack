@@ -309,6 +309,162 @@ import '../domain/auth_state.dart';
 
 ---
 
+## 15. Estado (State Management)
+
+```dart
+// ✅ StateNotifier com autoDispose obrigatório em providers de tela
+final myProvider = StateNotifierProvider.autoDispose<MyNotifier, MyState>(
+  (ref) => MyNotifier(),
+);
+
+// ✅ Status sempre como enum com campo direto no State — NUNCA derivado por string
+class MyState {
+  const MyState({this.status = MyStatus.idle, this.error, this.data});
+  final MyStatus status;  // campo direto
+  final String? error;
+  final MyData? data;
+
+  MyState copyWith({...}) => MyState(...); // copyWith obrigatório
+}
+
+// ❌ Proibido: status derivado por switch em string
+AgencyCnpjStatus get status {
+  switch (error) {
+    case 'CNPJ inválido': return AgencyCnpjStatus.invalid; // proibido
+  }
+}
+
+// ✅ Notifier seta status diretamente em cada transição
+state = state.copyWith(status: MyStatus.loading, ...);
+state = state.copyWith(status: MyStatus.success, data: result);
+state = state.copyWith(status: MyStatus.error, error: _kErrMsg);
+```
+
+**Regra:** `copyWith` é obrigatório em todo `State`. Status como enum com campo direto garante que o compilador detecte estados inconsistentes.
+
+---
+
+## 16. Strings de Erro
+
+```dart
+// ✅ Strings de erro como constantes nomeadas — nunca literais duplicadas
+const _kCnpjInvalido = 'CNPJ inválido. Verifique os números e tente novamente.';
+const _kCnpjNaoEncontrado = 'Não encontramos uma empresa com este CNPJ.';
+const _kCnpjErroGenerico = 'Erro ao consultar CNPJ. Tente novamente.';
+
+// ✅ Usar a constante em todos os lugares
+state = state.copyWith(error: _kCnpjInvalido);
+
+// ❌ Proibido: string literal duplicada em múltiplos lugares
+state = state.copyWith(error: 'Erro ao consultar CNPJ. Tente novamente.'); // linha 45
+state = state.copyWith(error: 'Erro ao consultar CNPJ. Tente novamente.'); // linha 72 — duplicação proibida
+
+// ✅ Catch não pode ser vazio
+} catch (e) {
+  debugPrint('[EANTrack] $e');
+  state = state.copyWith(status: MyStatus.error, error: _kErroGenerico);
+}
+
+// ❌ Proibido: catch vazio
+} catch (_) {} // silencia erro — proibido
+
+// ✅ Repositórios: throw AppException subclasse
+} on PostgrestException catch (e) {
+  throw ServerException('Mensagem PT-BR. (${e.code})');
+} catch (e) {
+  debugPrint('[EANTrack] $e');
+  throw const ServerException('Erro inesperado.');
+}
+```
+
+---
+
+## 17. Nomenclatura Consolidada
+
+```
+Telas:       *Screen      /  *_screen.dart
+Notifiers:   *Notifier    /  StateNotifier<*State>
+Estados:     *State       /  campo status: *Status (enum)
+Providers:   *Provider    /  StateNotifierProvider.autoDispose
+Status:      *Status      /  enum com campo direto no State
+Controllers: *Controller  /  para helpers de animação/conectividade
+```
+
+**Regra:** arquivo e classe devem ter o mesmo sufixo. `login_screen.dart` → `LoginScreen`. Nunca `login_page.dart` → `LoginScreen`.
+
+---
+
+## 18. Router — Regras Absolutas
+
+```dart
+// ✅ Toda rota registrada em AppRoutes como static const String
+abstract final class AppRoutes {
+  static const login = '/login';
+  static const hub = '/hub';
+  static const onboardingAgencyConfirm = '/onboarding/agency/confirm';
+}
+
+// ✅ Rotas protegidas em AppRoutes.protectedRoutes como Set<String>
+static const Set<String> protectedRoutes = {hub, regions, ...};
+
+// ✅ RouterRedirectGuard usa o Set para guard declarativo
+final isAppRoute = AppRoutes.protectedRoutes.contains(path);
+
+// ❌ Proibido: string literal de rota fora de AppRoutes
+context.push('/onboarding/agency/confirm'); // proibido
+context.push(AppRoutes.onboardingAgencyConfirm); // ✅
+```
+
+---
+
+## 19. Shared Layer
+
+```dart
+// ✅ Todo widget/util novo exportado em shared/shared.dart
+export 'widgets/my_new_widget.dart'; // adicionar ao barrel
+
+// ✅ Import sempre via barrel — nunca path direto
+import '../../../shared/shared.dart'; // ✅
+import '../../../shared/widgets/app_button.dart'; // ❌ proibido (exceto em shared/ si mesmo)
+```
+
+---
+
+## 20. UI — Regras de Build
+
+```dart
+// ✅ build() com no máximo 50 linhas — extrair widgets privados
+Widget build(BuildContext context, WidgetRef ref) {
+  final state = ref.watch(myProvider);    // watch para estado
+  final notifier = ref.read(myProvider.notifier); // read para ações
+  return Scaffold(
+    body: _Body(state: state, onAction: notifier.doAction),
+  );
+} // ~6 linhas — ideal
+
+// ❌ Proibido: lógica de negócio no build()
+Widget build(...) {
+  final result = await repository.fetchData(); // proibido
+  if (user.age > 18 && user.plan == 'pro') { ... } // lógica no widget — proibido
+}
+
+// ✅ Screens: apenas ref.watch + ref.read + chamadas ao notifier
+```
+
+---
+
+## 21. Encoding — UTF-8
+
+```
+- Todo arquivo salvo em UTF-8 (sem BOM)
+- Strings com acentuação (ã, ç, é, ô, etc.) verificadas antes de entregar
+- Sinal de mojibake: 'RegiÃµes', 'NÃ£o', 'invÃ¡lido' — indica arquivo salvo em encoding errado
+- Constantes de string com acentuação devem ser verificadas visualmente antes do commit
+- Erro de encoding em mensagem de erro é bug crítico — visível ao usuário
+```
+
+---
+
 ## Resumo em Uma Frase por Regra
 
 1. Arquivo grande → divide antes que vire problema

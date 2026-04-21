@@ -1,5 +1,8 @@
 import 'app_routes.dart';
 
+// Supabase error message — atualizar se backend mudar
+const _kExpiredLinkMessage = 'email link is invalid or has expired';
+
 /// Parses Supabase password-recovery deep-link parameters and detects
 /// expired/invalid links.
 class RecoveryLinkParser {
@@ -39,7 +42,7 @@ class RecoveryLinkParser {
 
     return error == 'access_denied' ||
         errorCode == 'otp_expired' ||
-        description.contains('email link is invalid or has expired') ||
+        description.contains(_kExpiredLinkMessage) ||
         description.contains('invalid or has expired') ||
         description.contains('already used') ||
         description.contains('already been used');

@@ -9,11 +9,11 @@ import '../../features/auth/presentation/screens/password_recovery_link_expired_
 import '../../features/auth/presentation/screens/recover_password_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/screens/update_password_screen.dart';
-import '../../features/flow/presentation/screens/flow_page.dart';
+import '../../features/flow/presentation/screens/flow_screen.dart';
 import '../../features/hub/presentation/screens/hub_screen.dart';
-import '../../features/onboarding/agency/pages/agency_cnpj_page.dart';
-import '../../features/onboarding/agency/pages/agency_confirm_page.dart';
-import '../../features/onboarding/agency/pages/agency_representative_page.dart';
+import '../../features/onboarding/agency/screens/agency_cnpj_screen.dart';
+import '../../features/onboarding/agency/screens/agency_confirm_screen.dart';
+import '../../features/onboarding/agency/screens/agency_representative_screen.dart';
 import '../../features/onboarding/agency/models/agency_confirm_payload.dart';
 import '../../features/onboarding/agency/models/cnpj_model.dart';
 import '../../features/onboarding/presentation/screens/choose_mode_screen.dart';
@@ -27,20 +27,17 @@ import 'app_routes.dart';
 import 'recovery_link_parser.dart';
 import 'router_redirect_guard.dart';
 
-CustomTransitionPage<void> _fadePage(GoRouterState state, Widget child) {
-  return CustomTransitionPage<void>(
-    key: state.pageKey,
-    child: child,
-    transitionDuration: const Duration(milliseconds: 200),
-    reverseTransitionDuration: const Duration(milliseconds: 200),
-    transitionsBuilder: (_, animation, __, child) {
-      return FadeTransition(
-        opacity: CurvedAnimation(parent: animation, curve: Curves.easeInOut),
-        child: child,
-      );
-    },
-  );
-}
+Page<void> _fade(Widget child) => CustomTransitionPage<void>(
+      child: child,
+      transitionDuration: const Duration(milliseconds: 200),
+      reverseTransitionDuration: const Duration(milliseconds: 200),
+      transitionsBuilder: (_, animation, __, child) {
+        return FadeTransition(
+          opacity: CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+          child: child,
+        );
+      },
+    );
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final guard = RouterRedirectGuard(ref);
@@ -68,7 +65,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: AppRoutes.splash,
-        pageBuilder: (_, state) => _fadePage(state, const SplashScreen()),
+        pageBuilder: (_, __) => _fade(const SplashScreen()),
       ),
       GoRoute(
         path: AppRoutes.login,
@@ -81,8 +78,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   ? LoginScreenNotice.recoveryEmailSent
                   : null;
 
-          return _fadePage(
-            state,
+          return _fade(
             LoginScreen(
               notice: notice,
               consumeRecoveryQueryParam: recoveryFromQuery,
@@ -92,46 +88,39 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.register,
-        pageBuilder: (_, state) => _fadePage(state, const RegisterScreen()),
+        pageBuilder: (_, __) => _fade(const RegisterScreen()),
       ),
       GoRoute(
         path: AppRoutes.emailVerification,
-        pageBuilder: (_, state) =>
-            _fadePage(state, const EmailVerificationScreen()),
+        pageBuilder: (_, __) => _fade(const EmailVerificationScreen()),
       ),
       GoRoute(
         path: AppRoutes.recoverPassword,
-        pageBuilder: (_, state) =>
-            _fadePage(state, const RecoverPasswordScreen()),
+        pageBuilder: (_, __) => _fade(const RecoverPasswordScreen()),
       ),
       GoRoute(
         path: AppRoutes.updatePassword,
-        pageBuilder: (_, state) =>
-            _fadePage(state, const UpdatePasswordScreen()),
+        pageBuilder: (_, __) => _fade(const UpdatePasswordScreen()),
       ),
       GoRoute(
         path: AppRoutes.passwordRecoveryLinkExpired,
-        pageBuilder: (_, state) => _fadePage(
-          state,
-          const PasswordRecoveryLinkExpiredScreen(),
-        ),
+        pageBuilder: (_, __) => _fade(const PasswordRecoveryLinkExpiredScreen()),
       ),
       GoRoute(
         path: AppRoutes.hub,
-        pageBuilder: (_, state) => _fadePage(state, const HubScreen()),
+        pageBuilder: (_, __) => _fade(const HubScreen()),
       ),
       GoRoute(
         path: AppRoutes.flow,
-        pageBuilder: (_, state) => _fadePage(state, const FlowPage()),
+        pageBuilder: (_, __) => _fade(const FlowScreen()),
       ),
       GoRoute(
         path: AppRoutes.onboarding,
-        pageBuilder: (_, state) => _fadePage(state, const ChooseModeScreen()),
+        pageBuilder: (_, __) => _fade(const ChooseModeScreen()),
       ),
       GoRoute(
         path: AppRoutes.onboardingIndividual,
-        pageBuilder: (_, state) => _fadePage(
-          state,
+        pageBuilder: (_, state) => _fade(
           OnboardingProfileScreen(
             mode: state.uri.queryParameters['mode'] ?? 'individual',
           ),
@@ -139,8 +128,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.photoProfile,
-        pageBuilder: (_, state) => _fadePage(
-          state,
+        pageBuilder: (_, state) => _fade(
           PagPhotoProfile(
             mode: state.uri.queryParameters['mode'] ?? 'individual',
           ),
@@ -148,43 +136,39 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.onboardingCnpj,
-        pageBuilder: (_, state) => _fadePage(state, const AgencyCnpjPage()),
+        pageBuilder: (_, __) => _fade(const AgencyCnpjScreen()),
       ),
       GoRoute(
         path: AppRoutes.onboardingAgency,
-        pageBuilder: (_, state) =>
-            _fadePage(state, const CompanyDataScreen()),
+        pageBuilder: (_, __) => _fade(const CompanyDataScreen()),
       ),
       GoRoute(
         path: AppRoutes.onboardingLegalRep,
-        pageBuilder: (_, state) =>
-            _fadePage(state, const LegalRepresentativeScreen()),
+        pageBuilder: (_, __) => _fade(const LegalRepresentativeScreen()),
       ),
       GoRoute(
-        path: '/onboarding/agency/confirm',
+        path: AppRoutes.onboardingAgencyConfirm,
         pageBuilder: (_, state) {
           final cnpjModel = state.extra;
           if (cnpjModel is! CnpjModel) {
-            return _fadePage(state, const AgencyCnpjPage());
+            return _fade(const AgencyCnpjScreen());
           }
 
-          return _fadePage(
-            state,
-            AgencyConfirmPage(cnpjModel: cnpjModel),
+          return _fade(
+            AgencyConfirmScreen(cnpjModel: cnpjModel),
           );
         },
       ),
       GoRoute(
-        path: '/onboarding/agency/representative',
+        path: AppRoutes.onboardingAgencyRepresentative,
         pageBuilder: (_, state) {
           final payload = state.extra;
           if (payload is! AgencyConfirmPayload) {
-            return _fadePage(state, const AgencyCnpjPage());
+            return _fade(const AgencyCnpjScreen());
           }
 
-          return _fadePage(
-            state,
-            AgencyRepresentativePage(
+          return _fade(
+            AgencyRepresentativeScreen(
               key: ValueKey(payload.agencyId),
               payload: payload,
             ),
@@ -193,19 +177,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.regions,
-        pageBuilder: (_, state) => _fadePage(state, const RegionListScreen()),
+        pageBuilder: (_, __) => _fade(const RegionListScreen()),
       ),
       GoRoute(
         path: AppRoutes.termsOfUse,
-        pageBuilder: (_, state) =>
-            _fadePage(state, const _PlaceholderScreen(title: 'Termos de Uso')),
+        pageBuilder: (_, __) =>
+            _fade(const _PlaceholderScreen(title: 'Termos de Uso')),
       ),
       GoRoute(
         path: AppRoutes.privacyPolicy,
-        pageBuilder: (_, state) => _fadePage(
-          state,
-          const _PlaceholderScreen(title: 'Politica de Privacidade'),
-        ),
+        pageBuilder: (_, __) =>
+            _fade(const _PlaceholderScreen(title: 'Politica de Privacidade')),
       ),
     ],
   );

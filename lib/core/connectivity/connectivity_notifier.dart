@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'connectivity_service.dart';
@@ -43,7 +44,8 @@ class ConnectivityNotifier extends StateNotifier<ConnectionStatus> {
       final hasInternet = await _service.hasInternet();
       if (_isDisposed) return state;
       state = hasInternet ? ConnectionStatus.online : ConnectionStatus.offline;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[EANTrack] ${e.toString()}');
       if (_isDisposed) return state;
       state = ConnectionStatus.offline;
     } finally {

@@ -4,6 +4,62 @@
 
 ---
 
+## PAPÉIS
+
+| Agente | Papel | Responsabilidade |
+|--------|-------|-----------------|
+| **Claude** | Arquiteto / Avaliador | Gera tasks, audita código, decide arquitetura, define padrões |
+| **Codex** | Executor | Executa tasks mecanicamente — **nunca decide arquitetura** |
+
+**Separação absoluta:** Codex não propõe refatorações, não altera arquitetura, não cria padrões novos. Se a task for ambígua, pedir esclarecimento antes de implementar.
+
+---
+
+## REGRAS ABSOLUTAS DO CODEX
+
+1. **Máximo 3 arquivos por task** — tarefas maiores devem ser quebradas (DEC-011)
+2. **Um objetivo por task** — escopo único, sem "aproveitar para..."
+3. **Salvar sempre em UTF-8** — strings com acentuação verificadas antes de entregar
+4. **NUNCA executar:**
+   - `dart analyze`
+   - `dart format`
+   - `flutter analyze`
+   - `flutter test`
+   - `flutter run`
+   - `flutter build`
+   - `flutter pub get`
+   - qualquer comando de validação global
+
+---
+
+## FLUXO DE DESENVOLVIMENTO
+
+```
+Feature nova
+    → Claude gera CODEX-TASK
+    → Codex executa
+    → Claude gera EVAL-TASK
+    → Claude VS Code avalia
+    → Issues encontrados?
+        Sim → FIX-TASK → Codex corrige → reavalia
+        Não → feature aprovada → avança para próxima
+```
+
+**Auditoria periódica:** a cada 3 features entregues, Claude gera EVAL-TASK-GLOBAL para reavaliar os 10 critérios arquiteturais.
+
+---
+
+## META DE QUALIDADE
+
+| Métrica | Valor |
+|---------|-------|
+| Nota atual do projeto | **9.7 / 10** *(2026-04-20 — EVAL-FINAL-009)* |
+| Mínimo aceitável por task | 7.0 |
+| Padrão EANTrack | 9.5+ |
+| Auditoria periódica | A cada 3 features entregues |
+
+---
+
 ## PAPEL DO AGENTE
 
 Executor técnico. Implementa tarefas definidas. **Não decide arquitetura.**

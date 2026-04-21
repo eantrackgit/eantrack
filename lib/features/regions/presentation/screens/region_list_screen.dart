@@ -36,15 +36,17 @@ class _RegionListScreenState extends ConsumerState<RegionListScreen> {
             _SearchBar(
               onChanged: (v) => setState(() => _search = v),
             ),
-            Expanded(child: _Body(
-              state: regionState,
-              search: _search,
-              tabIndex: _tabIndex,
-              onRetry: () => ref.read(regionNotifierProvider.notifier).load(),
-              onToggleActive: (id, active) => ref
-                  .read(regionNotifierProvider.notifier)
-                  .toggleActive(id, isActive: active),
-            )),
+            Expanded(
+              child: _Body(
+                state: regionState,
+                search: _search,
+                tabIndex: _tabIndex,
+                onRetry: () => ref.read(regionNotifierProvider.notifier).load(),
+                onToggleActive: (id, active) => ref
+                    .read(regionNotifierProvider.notifier)
+                    .toggleActive(id, isActive: active),
+              ),
+            ),
           ],
         ),
       ),
@@ -299,14 +301,6 @@ class _RegionList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (regions.isEmpty) {
-      return const AppEmptyState(
-        icon: Icons.map_outlined,
-        title: 'Nenhuma região encontrada',
-        subtitle: 'Crie uma região para organizar seus territórios.',
-      );
-    }
-
     return ListView.separated(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
@@ -314,7 +308,7 @@ class _RegionList extends StatelessWidget {
       ),
       itemCount: regions.length,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (_, i) => _RegionCard(
+      itemBuilder: (_, i) => RegionListItem(
         region: regions[i],
         onToggleActive: onToggleActive,
       ),
@@ -323,11 +317,11 @@ class _RegionList extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Region card
+// Region widgets
 // ---------------------------------------------------------------------------
 
-class _RegionCard extends StatelessWidget {
-  const _RegionCard({required this.region, required this.onToggleActive});
+class RegionListItem extends StatelessWidget {
+  const RegionListItem({required this.region, required this.onToggleActive});
   final RegionModel region;
   final void Function(String id, bool active) onToggleActive;
 

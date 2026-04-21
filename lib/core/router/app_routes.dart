@@ -23,6 +23,9 @@ abstract final class AppRoutes {
   static const onboardingCnpj = '/onboarding/cnpj';
   static const onboardingAgency = '/onboarding/agency';
   static const onboardingLegalRep = '/onboarding/legal-rep';
+  static const onboardingAgencyConfirm = '/onboarding/agency/confirm';
+  static const onboardingAgencyRepresentative =
+      '/onboarding/agency/representative';
   static const onboardingOperationalStyle = '/onboarding/operational-style';
   static const onboardingStatus = '/onboarding/status';
 

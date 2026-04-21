@@ -1,27 +1,217 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../shared/utils/string_utils.dart';
 import '../models/agency_confirm_payload.dart';
 import '../models/agency_representative_model.dart';
 import '../services/agency_representative_service.dart';
 
-/// Controller da tela de cadastro do representante legal da agência.
-class AgencyRepresentativeController extends ChangeNotifier {
-  AgencyRepresentativeController({
+const _agencyRepresentativeUnset = Object();
+
+class AgencyRepresentativeState {
+  const AgencyRepresentativeState({
+    this.submitted = false,
+    this.isLoading = false,
+    this.error,
+    this.documents = const <AgencyRepresentativePickedFile>[],
+    this.cpfValidatedOnBlur = false,
+    this.hasCpfBlurred = false,
+    this.selectedRole,
+    this.selectedDocumentType,
+    this.frontFile,
+    this.backFile,
+    this.attachmentFile,
+    this.fullNameText = '',
+    this.cpfText = '',
+    this.phoneText = '',
+    this.emailText = '',
+  });
+
+  final bool submitted;
+  final bool isLoading;
+  final String? error;
+  final List<AgencyRepresentativePickedFile> documents;
+  final bool cpfValidatedOnBlur;
+  final bool hasCpfBlurred;
+  final String? selectedRole;
+  final AgencyRepresentativeDocumentType? selectedDocumentType;
+  final AgencyRepresentativePickedFile? frontFile;
+  final AgencyRepresentativePickedFile? backFile;
+  final AgencyRepresentativePickedFile? attachmentFile;
+  final String fullNameText;
+  final String cpfText;
+  final String phoneText;
+  final String emailText;
+
+  bool get isSubmitting => isLoading;
+  String? get errorMessage => error;
+
+  bool get isContractSocialSelected =>
+      selectedDocumentType == AgencyRepresentativeDocumentType.contract;
+
+  bool get canAdvance {
+    return _normalizedName.isNotEmpty &&
+        cpfValidatedOnBlur &&
+        (selectedRole?.trim().isNotEmpty ?? false) &&
+        _rawPhone.length == 11 &&
+        isValidEmail(emailText) &&
+        _hasRequiredDocuments;
+  }
+
+  String? get fullNameError {
+    if (!submitted || _normalizedName.isNotEmpty) return null;
+    return 'Informe o nome completo.';
+  }
+
+  String? get cpfError {
+    if (submitted && _rawCpf.isEmpty) {
+      return 'Informe o CPF.';
+    }
+
+    final shouldShowInvalidCpfError =
+        (submitted || hasCpfBlurred) &&
+        !cpfValidatedOnBlur &&
+        _rawCpf.length == 11;
+
+    if (shouldShowInvalidCpfError) {
+      return 'Informe um CPF vÃ¡lido.';
+    }
+
+    return null;
+  }
+
+  String? get roleError {
+    if (!submitted || (selectedRole?.trim().isNotEmpty ?? false)) return null;
+    return 'Selecione o cargo.';
+  }
+
+  String? get phoneError {
+    if (!submitted) return null;
+    if (_rawPhone.isEmpty) return 'Informe o telefone do representante.';
+    if (_rawPhone.length != 11) return 'Informe um telefone vÃ¡lido.';
+    return null;
+  }
+
+  String? get emailError {
+    if (!submitted) return null;
+    final email = emailText.trim();
+    if (email.isEmpty) return 'Informe o e-mail.';
+    if (!isValidEmail(email)) return 'Informe um e-mail vÃ¡lido.';
+    return null;
+  }
+
+  String? get documentTypeError {
+    if (!submitted || selectedDocumentType != null) return null;
+    return 'Selecione o tipo de documento.';
+  }
+
+  String? get documentsError {
+    if (!submitted || selectedDocumentType == null || _hasRequiredDocuments) {
+      return null;
+    }
+
+    if (selectedDocumentType!.requiresFrontAndBack) {
+      return 'Anexe a frente e o verso do documento.';
+    }
+
+    return 'Anexe o documento solicitado.';
+  }
+
+  AgencyRepresentativeState copyWith({
+    bool? submitted,
+    bool? isLoading,
+    Object? error = _agencyRepresentativeUnset,
+    Object? documents = _agencyRepresentativeUnset,
+    bool? cpfValidatedOnBlur,
+    bool? hasCpfBlurred,
+    Object? selectedRole = _agencyRepresentativeUnset,
+    Object? selectedDocumentType = _agencyRepresentativeUnset,
+    Object? frontFile = _agencyRepresentativeUnset,
+    Object? backFile = _agencyRepresentativeUnset,
+    Object? attachmentFile = _agencyRepresentativeUnset,
+    String? fullNameText,
+    String? cpfText,
+    String? phoneText,
+    String? emailText,
+  }) {
+    return AgencyRepresentativeState(
+      submitted: submitted ?? this.submitted,
+      isLoading: isLoading ?? this.isLoading,
+      error: identical(error, _agencyRepresentativeUnset)
+          ? this.error
+          : error as String?,
+      documents: identical(documents, _agencyRepresentativeUnset)
+          ? this.documents
+          : List<AgencyRepresentativePickedFile>.unmodifiable(
+              documents as List<AgencyRepresentativePickedFile>,
+            ),
+      cpfValidatedOnBlur: cpfValidatedOnBlur ?? this.cpfValidatedOnBlur,
+      hasCpfBlurred: hasCpfBlurred ?? this.hasCpfBlurred,
+      selectedRole: identical(selectedRole, _agencyRepresentativeUnset)
+          ? this.selectedRole
+          : selectedRole as String?,
+      selectedDocumentType:
+          identical(selectedDocumentType, _agencyRepresentativeUnset)
+              ? this.selectedDocumentType
+              : selectedDocumentType as AgencyRepresentativeDocumentType?,
+      frontFile: identical(frontFile, _agencyRepresentativeUnset)
+          ? this.frontFile
+          : frontFile as AgencyRepresentativePickedFile?,
+      backFile: identical(backFile, _agencyRepresentativeUnset)
+          ? this.backFile
+          : backFile as AgencyRepresentativePickedFile?,
+      attachmentFile: identical(attachmentFile, _agencyRepresentativeUnset)
+          ? this.attachmentFile
+          : attachmentFile as AgencyRepresentativePickedFile?,
+      fullNameText: fullNameText ?? this.fullNameText,
+      cpfText: cpfText ?? this.cpfText,
+      phoneText: phoneText ?? this.phoneText,
+      emailText: emailText ?? this.emailText,
+    );
+  }
+
+  bool get _hasRequiredDocuments {
+    final type = selectedDocumentType;
+    if (type == null) return false;
+
+    if (type.requiresFrontAndBack) {
+      return frontFile != null && backFile != null;
+    }
+
+    return attachmentFile != null;
+  }
+
+  String get _normalizedName => fullNameText.trim();
+  String get _rawCpf => onlyDigits(cpfText);
+  String get _rawPhone => onlyDigits(phoneText);
+}
+
+final agencyRepresentativeProvider = StateNotifierProvider.autoDispose.family<
+    AgencyRepresentativeNotifier,
+    AgencyRepresentativeState,
+    AgencyConfirmPayload>(
+  (ref, payload) => AgencyRepresentativeNotifier(payload: payload),
+);
+
+class AgencyRepresentativeNotifier
+    extends StateNotifier<AgencyRepresentativeState> {
+  AgencyRepresentativeNotifier({
     required AgencyConfirmPayload payload,
     AgencyRepresentativeService? service,
   })  : _payload = payload,
-        _service = service ?? AgencyRepresentativeService() {
+        _service = service ?? AgencyRepresentativeService(),
+        super(const AgencyRepresentativeState()) {
     fullNameController.addListener(_onFormChanged);
     cpfController.addListener(_onCpfChanged);
     phoneController.addListener(_onFormChanged);
     emailController.addListener(_onFormChanged);
     cpfFocusNode.addListener(_handleCpfFocusChange);
+    _syncTextState();
   }
 
   static const List<String> roles = <String>[
-    'Sócio',
+    'SÃ³cio',
     'Diretor',
     'Administrador',
     'Procurador',
@@ -37,127 +227,38 @@ class AgencyRepresentativeController extends ChangeNotifier {
   final TextEditingController emailController = TextEditingController();
   final FocusNode cpfFocusNode = FocusNode();
 
-  bool _submitted = false;
-  bool _isSubmitting = false;
-  bool _cpfValidatedOnBlur = false;
-  bool _hasCpfBlurred = false;
-  String? _selectedRole;
-  String? _errorMessage;
-  AgencyRepresentativeDocumentType? _selectedDocumentType;
-  AgencyRepresentativePickedFile? _frontFile;
-  AgencyRepresentativePickedFile? _backFile;
-  AgencyRepresentativePickedFile? _attachmentFile;
-
   String get agencyId => _payload.agencyId;
-  bool get isSubmitting => _isSubmitting;
-  String? get errorMessage => _errorMessage;
-  String? get selectedRole => _selectedRole;
-  AgencyRepresentativeDocumentType? get selectedDocumentType =>
-      _selectedDocumentType;
-  AgencyRepresentativePickedFile? get frontFile => _frontFile;
-  AgencyRepresentativePickedFile? get backFile => _backFile;
-  AgencyRepresentativePickedFile? get attachmentFile => _attachmentFile;
-
-  bool get isContractSocialSelected =>
-      _selectedDocumentType == AgencyRepresentativeDocumentType.contract;
-
-  bool get canAdvance {
-    return _normalizedName.isNotEmpty &&
-        _cpfValidatedOnBlur &&
-        (_selectedRole?.trim().isNotEmpty ?? false) &&
-        _rawPhone.length == 11 &&
-        isValidEmail(emailController.text) &&
-        _hasRequiredDocuments;
-  }
-
-  String? get fullNameError {
-    if (!_submitted || _normalizedName.isNotEmpty) return null;
-    return 'Informe o nome completo.';
-  }
-
-  String? get cpfError {
-    if (_submitted && _rawCpf.isEmpty) {
-      return 'Informe o CPF.';
-    }
-
-    final shouldShowInvalidCpfError =
-        (_submitted || _hasCpfBlurred) &&
-        !_cpfValidatedOnBlur &&
-        _rawCpf.length == 11;
-
-    if (shouldShowInvalidCpfError) {
-      return 'Informe um CPF válido.';
-    }
-
-    return null;
-  }
-
-  String? get roleError {
-    if (!_submitted || (_selectedRole?.trim().isNotEmpty ?? false)) return null;
-    return 'Selecione o cargo.';
-  }
-
-  String? get phoneError {
-    if (!_submitted) return null;
-    if (_rawPhone.isEmpty) return 'Informe o telefone do representante.';
-    if (_rawPhone.length != 11) return 'Informe um telefone válido.';
-    return null;
-  }
-
-  String? get emailError {
-    if (!_submitted) return null;
-    final email = emailController.text.trim();
-    if (email.isEmpty) return 'Informe o e-mail.';
-    if (!isValidEmail(email)) return 'Informe um e-mail válido.';
-    return null;
-  }
-
-  String? get documentTypeError {
-    if (!_submitted || _selectedDocumentType != null) return null;
-    return 'Selecione o tipo de documento.';
-  }
-
-  String? get documentsError {
-    if (!_submitted || _selectedDocumentType == null || _hasRequiredDocuments) {
-      return null;
-    }
-
-    if (_selectedDocumentType!.requiresFrontAndBack) {
-      return 'Anexe a frente e o verso do documento.';
-    }
-
-    return 'Anexe o documento solicitado.';
-  }
 
   void onCpfEditingComplete() {
     onCpfBlur();
   }
 
   void onCpfBlur() {
-    _hasCpfBlurred = true;
-    _cpfValidatedOnBlur = _isCpfValid(_rawCpf);
-    notifyListeners();
+    state = state.copyWith(
+      hasCpfBlurred: true,
+      cpfValidatedOnBlur: _isCpfValid(_rawCpf),
+    );
   }
 
   void updateRole(String? value) {
-    _selectedRole = value;
-    _clearErrorMessage();
-    notifyListeners();
+    state = state.copyWith(error: null, selectedRole: value);
   }
 
   void selectDocumentType(AgencyRepresentativeDocumentType type) {
-    if (_selectedDocumentType == type) return;
+    if (state.selectedDocumentType == type) return;
 
-    _selectedDocumentType = type;
-    _frontFile = null;
-    _backFile = null;
-    _attachmentFile = null;
-    _clearErrorMessage();
-    notifyListeners();
+    state = state.copyWith(
+      selectedDocumentType: type,
+      frontFile: null,
+      backFile: null,
+      attachmentFile: null,
+      documents: const <AgencyRepresentativePickedFile>[],
+      error: null,
+    );
   }
 
   Future<void> pickFile(AgencyRepresentativeAttachmentSlot slot) async {
-    final type = _selectedDocumentType;
+    final type = state.selectedDocumentType;
     if (type == null) return;
 
     final allowedExtensions = type.requiresSingleAttachment
@@ -180,61 +281,55 @@ class AgencyRepresentativeController extends ChangeNotifier {
       );
 
       if (_isFileAlreadyAttachedInAnotherSlot(slot, pickedFile.fileName)) {
-        _errorMessage = 'Este arquivo já foi anexado em outro campo.';
-        notifyListeners();
+        state = state.copyWith(
+          error: 'Este arquivo jÃ¡ foi anexado em outro campo.',
+        );
         return;
       }
 
       _assignFile(slot, pickedFile);
-      _clearErrorMessage();
-      notifyListeners();
+      state = state.copyWith(error: null);
     } on AgencyRepresentativeServiceException catch (e) {
-      _errorMessage = e.message;
-      notifyListeners();
+      state = state.copyWith(error: e.message);
     } catch (_) {
-      _errorMessage = 'Não foi possível selecionar o arquivo.';
-      notifyListeners();
+      state = state.copyWith(
+        error: 'NÃ£o foi possÃ­vel selecionar o arquivo.',
+      );
     }
   }
 
-  /// Aceita um arquivo obtido via drag & drop e o atribui ao [slot] indicado.
   void receiveDroppedFile(
     AgencyRepresentativeAttachmentSlot slot,
     AgencyRepresentativePickedFile file,
   ) {
     if (_isFileAlreadyAttachedInAnotherSlot(slot, file.fileName)) {
-      _errorMessage = 'Este arquivo já foi anexado em outro campo.';
-      notifyListeners();
+      state = state.copyWith(
+        error: 'Este arquivo jÃ¡ foi anexado em outro campo.',
+      );
       return;
     }
 
     _assignFile(slot, file);
-    _clearErrorMessage();
-    notifyListeners();
+    state = state.copyWith(error: null);
   }
 
   void removeFile(AgencyRepresentativeAttachmentSlot slot) {
     _assignFile(slot, null);
-    _clearErrorMessage();
-    notifyListeners();
+    state = state.copyWith(error: null);
   }
 
-  /// Valida o formulário, envia os documentos e persiste o representante legal.
-  ///
-  /// Retorna `true` em sucesso. Em caso de falha, [errorMessage] é preenchido
-  /// com a mensagem correspondente para exibição na UI.
   Future<bool> submit() async {
-    _submitted = true;
+    state = state.copyWith(submitted: true);
     onCpfBlur();
 
-    if (!canAdvance || _selectedDocumentType == null) {
-      notifyListeners();
+    if (!state.canAdvance || state.selectedDocumentType == null) {
       return false;
     }
 
-    _isSubmitting = true;
-    _errorMessage = null;
-    notifyListeners();
+    state = state.copyWith(
+      isLoading: true,
+      error: null,
+    );
 
     try {
       await _service.submit(
@@ -242,28 +337,29 @@ class AgencyRepresentativeController extends ChangeNotifier {
           agencyId: agencyId,
           name: _normalizedName,
           cpf: _rawCpf,
-          role: _selectedRole!,
+          role: state.selectedRole!,
           phone: _rawPhone,
           email: emailController.text.trim(),
-          documentType: _selectedDocumentType!,
-          frontFile: _frontFile,
-          backFile: _backFile,
-          attachmentFile: _attachmentFile,
+          documentType: state.selectedDocumentType!,
+          frontFile: state.frontFile,
+          backFile: state.backFile,
+          attachmentFile: state.attachmentFile,
         ),
       );
 
-      _isSubmitting = false;
-      notifyListeners();
+      state = state.copyWith(isLoading: false);
       return true;
     } on AgencyRepresentativeServiceException catch (e) {
-      _isSubmitting = false;
-      _errorMessage = e.message;
-      notifyListeners();
+      state = state.copyWith(
+        isLoading: false,
+        error: e.message,
+      );
       return false;
     } catch (_) {
-      _isSubmitting = false;
-      _errorMessage = 'Não foi possível salvar o representante legal.';
-      notifyListeners();
+      state = state.copyWith(
+        isLoading: false,
+        error: 'NÃ£o foi possÃ­vel salvar o representante legal.',
+      );
       return false;
     }
   }
@@ -275,19 +371,29 @@ class AgencyRepresentativeController extends ChangeNotifier {
   }
 
   void _onCpfChanged() {
-    _cpfValidatedOnBlur = false;
-    _clearErrorMessage();
-    notifyListeners();
+    state = state.copyWith(
+      cpfValidatedOnBlur: false,
+      error: null,
+      cpfText: cpfController.text,
+    );
   }
 
   void _onFormChanged() {
-    _clearErrorMessage();
-    notifyListeners();
+    state = state.copyWith(
+      error: null,
+      fullNameText: fullNameController.text,
+      phoneText: phoneController.text,
+      emailText: emailController.text,
+    );
   }
 
-  void _clearErrorMessage() {
-    if (_errorMessage == null) return;
-    _errorMessage = null;
+  void _syncTextState() {
+    state = state.copyWith(
+      fullNameText: fullNameController.text,
+      cpfText: cpfController.text,
+      phoneText: phoneController.text,
+      emailText: emailController.text,
+    );
   }
 
   bool _isCpfValid(String value) {
@@ -311,29 +417,43 @@ class AgencyRepresentativeController extends ChangeNotifier {
     return remainder < 2 ? 0 : 11 - remainder;
   }
 
-  bool get _hasRequiredDocuments {
-    final type = _selectedDocumentType;
-    if (type == null) return false;
-
-    if (type.requiresFrontAndBack) {
-      return _frontFile != null && _backFile != null;
-    }
-
-    return _attachmentFile != null;
-  }
-
   void _assignFile(
     AgencyRepresentativeAttachmentSlot slot,
     AgencyRepresentativePickedFile? file,
   ) {
-    switch (slot) {
-      case AgencyRepresentativeAttachmentSlot.front:
-        _frontFile = file;
-      case AgencyRepresentativeAttachmentSlot.back:
-        _backFile = file;
-      case AgencyRepresentativeAttachmentSlot.attachment:
-        _attachmentFile = file;
-    }
+    final nextFrontFile = slot == AgencyRepresentativeAttachmentSlot.front
+        ? file
+        : state.frontFile;
+    final nextBackFile = slot == AgencyRepresentativeAttachmentSlot.back
+        ? file
+        : state.backFile;
+    final nextAttachmentFile =
+        slot == AgencyRepresentativeAttachmentSlot.attachment
+            ? file
+            : state.attachmentFile;
+
+    state = state.copyWith(
+      frontFile: nextFrontFile,
+      backFile: nextBackFile,
+      attachmentFile: nextAttachmentFile,
+      documents: _buildDocuments(
+        frontFile: nextFrontFile,
+        backFile: nextBackFile,
+        attachmentFile: nextAttachmentFile,
+      ),
+    );
+  }
+
+  List<AgencyRepresentativePickedFile> _buildDocuments({
+    AgencyRepresentativePickedFile? frontFile,
+    AgencyRepresentativePickedFile? backFile,
+    AgencyRepresentativePickedFile? attachmentFile,
+  }) {
+    return <AgencyRepresentativePickedFile>[
+      if (frontFile != null) frontFile,
+      if (backFile != null) backFile,
+      if (attachmentFile != null) attachmentFile,
+    ];
   }
 
   bool _isFileAlreadyAttachedInAnotherSlot(
@@ -346,9 +466,9 @@ class AgencyRepresentativeController extends ChangeNotifier {
       AgencyRepresentativeAttachmentSlot,
       AgencyRepresentativePickedFile?
     )>[
-      (AgencyRepresentativeAttachmentSlot.front, _frontFile),
-      (AgencyRepresentativeAttachmentSlot.back, _backFile),
-      (AgencyRepresentativeAttachmentSlot.attachment, _attachmentFile),
+      (AgencyRepresentativeAttachmentSlot.front, state.frontFile),
+      (AgencyRepresentativeAttachmentSlot.back, state.backFile),
+      (AgencyRepresentativeAttachmentSlot.attachment, state.attachmentFile),
     ]) {
       final entrySlot = entry.$1;
       final pickedFile = entry.$2;

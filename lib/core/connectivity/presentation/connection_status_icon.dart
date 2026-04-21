@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/theme/app_colors.dart';
 import '../connectivity_provider.dart';
 import '../connectivity_state.dart';
 
@@ -24,7 +25,7 @@ class ConnectionStatusIcon extends ConsumerWidget {
           key: const ValueKey('online'),
           icon: Icons.wifi_rounded,
           label: 'Online',
-          color: const Color(0xFF22C55E),
+          color: AppColors.success,
         );
 
       case ConnectionStatus.offline:
@@ -32,7 +33,7 @@ class ConnectionStatusIcon extends ConsumerWidget {
           key: const ValueKey('offline'),
           icon: Icons.wifi_off_rounded,
           label: 'Offline',
-          color: const Color(0xFFEF4444),
+          color: AppColors.error,
         );
 
       case ConnectionStatus.checking:

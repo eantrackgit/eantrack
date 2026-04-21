@@ -16,6 +16,7 @@ export 'widgets/app_feedback_dialog.dart';
 export 'widgets/app_text_field.dart';
 export 'widgets/app_version_badge.dart';
 export 'widgets/auth_scaffold.dart';
+export 'widgets/no_connection_view.dart';
 export 'widgets/password_rule_row.dart';
 
 export 'widgets/app_bottom_nav.dart';

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:http/http.dart' as http;
 
@@ -53,13 +54,15 @@ class HttpConnectivityService implements ConnectivityService {
           try {
             final response = await client.get(endpoint).timeout(_timeout);
             return response.statusCode >= 200 && response.statusCode < 400;
-          } catch (_) {
+          } catch (e) {
+            debugPrint('[EANTrack] ${e.toString()}');
             return false;
           }
         }),
       );
       return results.any((r) => r);
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[EANTrack] ${e.toString()}');
       return false;
     } finally {
       client.close();
