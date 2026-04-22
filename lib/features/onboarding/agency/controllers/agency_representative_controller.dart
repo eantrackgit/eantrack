@@ -212,7 +212,7 @@ class AgencyRepresentativeNotifier
   }
 
   static const List<String> roles = <String>[
-    'SÃ³cio',
+    'Sócio',
     'Diretor',
     'Administrador',
     'Procurador',
@@ -329,7 +329,7 @@ class AgencyRepresentativeNotifier
 
       if (_isFileAlreadyAttachedInAnotherSlot(slot, pickedFile.fileName)) {
         state = state.copyWith(
-          error: 'Este arquivo jÃ¡ foi anexado em outro campo.',
+          error: 'Este arquivo já foi anexado em outro campo.',
         );
         return;
       }
@@ -351,7 +351,7 @@ class AgencyRepresentativeNotifier
   ) {
     if (_isFileAlreadyAttachedInAnotherSlot(slot, file.fileName)) {
       state = state.copyWith(
-        error: 'Este arquivo jÃ¡ foi anexado em outro campo.',
+        error: 'Este arquivo já foi anexado em outro campo.',
       );
       return;
     }

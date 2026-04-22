@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/router/app_routes.dart';
 import '../../../../shared/shared.dart';
 import '../controllers/agency_representative_controller.dart';
 import '../models/agency_confirm_payload.dart';
@@ -28,7 +29,7 @@ class AgencyRepresentativeScreen extends ConsumerWidget {
     final ok = await notifier.submit();
     if (!context.mounted || !ok) return;
 
-    context.go('/hub');
+    context.pushReplacement(AppRoutes.onboardingAgencyStatus);
   }
 
   Future<void> _handleDocumentTypeSelection(

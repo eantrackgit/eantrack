@@ -383,26 +383,21 @@ class _ActionButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final status = data.consolidatedDocumentStatus;
-    late final Widget button;
+    late final String ctaLabel;
+    late final VoidCallback? ctaAction;
 
     if (status == AgencyDocumentStatus.approved) {
-      button = AppButton.primary(
-        'Continuar para configuração',
-        onPressed: () => context.go(AppRoutes.hub),
-      );
+      ctaLabel = 'Continuar para configuração';
+      ctaAction = () => context.go(AppRoutes.hub);
     } else if (status == AgencyDocumentStatus.rejected) {
-      button = AppButton.primary(
-        'Corrigir documentação',
-        onPressed: () => context.push(
+      ctaLabel = 'Corrigir documentação';
+      ctaAction = () => context.push(
           AppRoutes.onboardingAgencyRepresentative,
           extra: ref.read(agencyStatusProvider(debugStatus)).data,
-        ),
       );
     } else {
-      button = AppButton.primary(
-        'Aguardando validação dos documentos.',
-        onPressed: null,
-      );
+      ctaLabel = 'Aguardando validação dos documentos.';
+      ctaAction = null;
     }
 
     return Container(
@@ -410,7 +405,11 @@ class _ActionButton extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          button,
+          _StatusCtaButton(
+            label: ctaLabel,
+            onPressed: ctaAction,
+            backgroundColor: _ctaColor(status),
+          ),
           const SizedBox(height: 8),
           ColorFiltered(
             colorFilter: const ColorFilter.mode(
@@ -425,6 +424,44 @@ class _ActionButton extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _StatusCtaButton extends StatelessWidget {
+  const _StatusCtaButton({
+    required this.label,
+    required this.onPressed,
+    required this.backgroundColor,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final Color backgroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: backgroundColor,
+          disabledBackgroundColor: backgroundColor,
+          foregroundColor: Colors.white,
+          disabledForegroundColor: Colors.white,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.smAll),
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyles.titleSmall.copyWith(color: Colors.white),
+        ),
       ),
     );
   }
@@ -617,6 +654,17 @@ String _agencyStatusLabel(AgencyDocumentStatus status) {
       return 'Aguardando';
     case AgencyDocumentStatus.rejected:
       return 'Rejeitada';
+  }
+}
+
+Color _ctaColor(AgencyDocumentStatus status) {
+  switch (status) {
+    case AgencyDocumentStatus.approved:
+      return AppColors.success;
+    case AgencyDocumentStatus.rejected:
+      return AppColors.error;
+    case AgencyDocumentStatus.pending:
+      return AppColors.secondaryText.withValues(alpha: 0.3);
   }
 }
 

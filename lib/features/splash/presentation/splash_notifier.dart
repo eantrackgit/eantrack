@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/connectivity/connectivity_provider.dart';
 import '../../../core/connectivity/connectivity_state.dart';
@@ -28,7 +29,7 @@ class SplashNotifier extends ChangeNotifier {
     _connectivity = SplashConnectivityHandler(
       connectivityNotifier: _ref.read(connectivityProvider.notifier),
       onChanged: notifyListeners,
-      onNavigate: _goToLogin,
+      onNavigate: _resolveRoute,
       canNavigate: () => !_hasNavigated,
       isAnimationCompleted: () => _animation.isCompleted,
     );
@@ -48,10 +49,39 @@ class SplashNotifier extends ChangeNotifier {
   bool get isRetryingConnection => _connectivity.isRetryingConnection;
   void handleConnectionStatus(ConnectionStatus status) => _connectivity.handleConnectionStatus(status);
   Future<void> retryConnection() => _connectivity.retryConnection();
-  void _goToLogin() {
+  Future<void> _resolveRoute() async {
     if (_hasNavigated) return;
     _hasNavigated = true;
-    _ref.read(appRouterProvider).go(AppRoutes.login);
+
+    final supabase = Supabase.instance.client;
+    final session = supabase.auth.currentSession;
+
+    if (session == null) {
+      _ref.read(appRouterProvider).go(AppRoutes.login);
+      return;
+    }
+
+    try {
+      final route = await supabase.rpc('get_user_onboarding_route') as String?;
+
+      switch (route) {
+        case 'hub':
+          _ref.read(appRouterProvider).go(AppRoutes.hub);
+        case 'onboarding/agency/status':
+          _ref.read(appRouterProvider).go(AppRoutes.onboardingAgencyStatus);
+        case 'onboarding/agency/representative':
+          _ref.read(appRouterProvider).go(AppRoutes.onboardingAgencyRepresentative);
+        case 'onboarding/agency/cnpj':
+          _ref.read(appRouterProvider).go(AppRoutes.onboardingAgencyCnpj);
+        case 'onboarding/individual/profile':
+          _ref.read(appRouterProvider).go(AppRoutes.onboardingIndividualProfile);
+        default:
+          _ref.read(appRouterProvider).go(AppRoutes.onboarding);
+      }
+    } on Exception catch (e) {
+      debugPrint('[Splash] Erro ao resolver rota: $e');
+      _ref.read(appRouterProvider).go(AppRoutes.login);
+    }
   }
 
   @override
