@@ -1,4 +1,4 @@
-import '../../../../shared/utils/string_utils.dart';
+import '../../../../shared/shared.dart';
 
 /// Modelo de dados da empresa retornado pela BrasilAPI e reutilizado
 /// ao longo do onboarding de agências.

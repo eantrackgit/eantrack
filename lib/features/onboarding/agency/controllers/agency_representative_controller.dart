@@ -2,7 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../shared/utils/string_utils.dart';
+import '../../../../shared/shared.dart';
 import '../models/agency_confirm_payload.dart';
 import '../models/agency_representative_model.dart';
 import 'agency_status_notifier.dart';
@@ -76,7 +76,7 @@ class AgencyRepresentativeState {
         _rawCpf.length == 11;
 
     if (shouldShowInvalidCpfError) {
-      return 'Informe um CPF vÃ¡lido.';
+      return 'Informe um CPF válido.';
     }
 
     return null;
@@ -90,7 +90,7 @@ class AgencyRepresentativeState {
   String? get phoneError {
     if (!submitted) return null;
     if (_rawPhone.isEmpty) return 'Informe o telefone do representante.';
-    if (_rawPhone.length != 11) return 'Informe um telefone vÃ¡lido.';
+    if (_rawPhone.length != 11) return 'Informe um telefone válido.';
     return null;
   }
 
@@ -98,7 +98,7 @@ class AgencyRepresentativeState {
     if (!submitted) return null;
     final email = emailText.trim();
     if (email.isEmpty) return 'Informe o e-mail.';
-    if (!isValidEmail(email)) return 'Informe um e-mail vÃ¡lido.';
+    if (!isValidEmail(email)) return 'Informe um e-mail válido.';
     return null;
   }
 
@@ -340,7 +340,7 @@ class AgencyRepresentativeNotifier
       state = state.copyWith(error: e.message);
     } catch (_) {
       state = state.copyWith(
-        error: 'NÃ£o foi possÃ­vel selecionar o arquivo.',
+        error: 'Não foi possível selecionar o arquivo.',
       );
     }
   }
@@ -405,7 +405,7 @@ class AgencyRepresentativeNotifier
     } catch (_) {
       state = state.copyWith(
         isLoading: false,
-        error: 'NÃ£o foi possÃ­vel salvar o representante legal.',
+        error: 'Não foi possível salvar o representante legal.',
       );
       return false;
     }

@@ -1,11 +1,11 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/error/app_exception.dart';
-import '../../../shared/utils/password_validator.dart';
+import '../../../shared/shared.dart';
 import '../domain/user_flow_state.dart';
 
 abstract class AuthDataServiceBase {
@@ -182,7 +182,9 @@ class AuthSigningService extends AuthDataServiceBase {
       }
     } on EmailAlreadyInUseException {
       rethrow;
-    } catch (_) {}
+    } on Exception catch (e) {
+      debugPrint('[AuthSigning] Erro: $e');
+    }
 
     try {
       final response = await client.auth.signUp(
@@ -210,7 +212,9 @@ class AuthSigningService extends AuthDataServiceBase {
   Future<void> signOut() async {
     try {
       await client.auth.signOut();
-    } catch (_) {}
+    } on Exception catch (e) {
+      debugPrint('[AuthSigning] Erro: $e');
+    }
   }
 
   Future<UserFlowState?> getUserFlowState(String userId) async {

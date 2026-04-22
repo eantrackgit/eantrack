@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../shared/utils/cnpj_validator.dart';
-import '../../../../shared/utils/string_utils.dart';
+import '../../../../shared/shared.dart';
 import '../models/cnpj_model.dart';
 import '../services/cnpj_service.dart';
 

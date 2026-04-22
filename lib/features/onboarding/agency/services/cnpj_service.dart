@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../../shared/utils/string_utils.dart';
+import '../../../../shared/shared.dart';
 import '../models/cnpj_model.dart';
 
 /// Serviço responsável por consultar dados de CNPJ na BrasilAPI

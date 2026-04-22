@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-import '../../../../shared/utils/string_utils.dart';
+import '../../../../shared/shared.dart';
 
 /// Serviço de consulta de CEP via ViaCEP usado na confirmação da agência.
 class CepService {

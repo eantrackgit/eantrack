@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../shared/utils/string_utils.dart';
+import '../../../../shared/shared.dart';
 import '../models/agency_confirm_payload.dart';
 import '../models/cnpj_model.dart';
 import '../services/agency_confirm_service.dart';
@@ -45,7 +45,7 @@ class AgencyConfirmState {
       return 'Informe o telefone de contato.';
     }
     if (!_isPhoneValid(phoneText)) {
-      return 'Informe um telefone vÃ¡lido.';
+      return 'Informe um telefone válido.';
     }
     return null;
   }
@@ -56,7 +56,7 @@ class AgencyConfirmState {
       return 'Informe o e-mail.';
     }
     if (!isValidEmail(emailText)) {
-      return 'Informe um e-mail vÃ¡lido.';
+      return 'Informe um e-mail válido.';
     }
     return null;
   }
@@ -139,7 +139,7 @@ class AgencyConfirmNotifier extends StateNotifier<AgencyConfirmState> {
 
     if (rawCep.length != 8) {
       _clearAddressFields();
-      state = state.copyWith(cepMessage: 'CEP nÃ£o encontrado.');
+      state = state.copyWith(cepMessage: 'CEP não encontrado.');
       return;
     }
 
@@ -155,7 +155,7 @@ class AgencyConfirmNotifier extends StateNotifier<AgencyConfirmState> {
       state = state.copyWith(cepMessage: null);
     } on CepNotFoundException {
       _clearAddressFields();
-      state = state.copyWith(cepMessage: 'CEP nÃ£o encontrado.');
+      state = state.copyWith(cepMessage: 'CEP não encontrado.');
     } on CepServiceException {
       _clearAddressFields();
       state = state.copyWith(
@@ -212,21 +212,21 @@ class AgencyConfirmNotifier extends StateNotifier<AgencyConfirmState> {
     } on AgencyAlreadyRegisteredException {
       state = state.copyWith(
         isLoading: false,
-        error: 'Esta agÃªncia jÃ¡ estÃ¡ cadastrada em nossa plataforma.',
+        error: 'Esta agência já está cadastrada.',
         isConfirmed: false,
       );
       return false;
     } on AgencyConfirmServiceException {
       state = state.copyWith(
         isLoading: false,
-        error: 'Erro ao salvar agÃªncia. Tente novamente.',
+        error: 'Erro ao salvar agência.',
         isConfirmed: false,
       );
       return false;
     } catch (_) {
       state = state.copyWith(
         isLoading: false,
-        error: 'Erro ao salvar agÃªncia. Tente novamente.',
+        error: 'Erro ao salvar agência.',
         isConfirmed: false,
       );
       return false;
@@ -236,7 +236,7 @@ class AgencyConfirmNotifier extends StateNotifier<AgencyConfirmState> {
   AgencyConfirmPayload buildPayload() {
     final agencyId = state.savedAgencyId;
     if (agencyId == null || agencyId.isEmpty) {
-      throw StateError('Agency ID nÃ£o disponÃ­vel para a prÃ³xima etapa.');
+      throw StateError('Agency ID não disponível.');
     }
 
     return AgencyConfirmPayload(
