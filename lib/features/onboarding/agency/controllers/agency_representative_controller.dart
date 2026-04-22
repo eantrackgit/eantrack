@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../shared/utils/string_utils.dart';
 import '../models/agency_confirm_payload.dart';
 import '../models/agency_representative_model.dart';
+import 'agency_status_notifier.dart';
 import '../services/agency_representative_service.dart';
 
 const _agencyRepresentativeUnset = Object();
@@ -190,14 +191,14 @@ class AgencyRepresentativeState {
 final agencyRepresentativeProvider = StateNotifierProvider.autoDispose.family<
     AgencyRepresentativeNotifier,
     AgencyRepresentativeState,
-    AgencyConfirmPayload>(
+    AgencyConfirmPayload?>(
   (ref, payload) => AgencyRepresentativeNotifier(payload: payload),
 );
 
 class AgencyRepresentativeNotifier
     extends StateNotifier<AgencyRepresentativeState> {
   AgencyRepresentativeNotifier({
-    required AgencyConfirmPayload payload,
+    required AgencyConfirmPayload? payload,
     AgencyRepresentativeService? service,
   })  : _payload = payload,
         _service = service ?? AgencyRepresentativeService(),
@@ -218,7 +219,7 @@ class AgencyRepresentativeNotifier
     'Outro',
   ];
 
-  final AgencyConfirmPayload _payload;
+  final AgencyConfirmPayload? _payload;
   final AgencyRepresentativeService _service;
 
   final TextEditingController fullNameController = TextEditingController();
@@ -227,7 +228,7 @@ class AgencyRepresentativeNotifier
   final TextEditingController emailController = TextEditingController();
   final FocusNode cpfFocusNode = FocusNode();
 
-  String get agencyId => _payload.agencyId;
+  String get agencyId => _payload?.agencyId ?? '';
 
   void onCpfEditingComplete() {
     onCpfBlur();
@@ -242,6 +243,52 @@ class AgencyRepresentativeNotifier
 
   void updateRole(String? value) {
     state = state.copyWith(error: null, selectedRole: value);
+  }
+
+  void prefill(AgencyStatusData data) {
+    final nextFullName = data.representativeName;
+    final nextEmail = data.representativeEmail;
+    final nextPhone = data.representativePhone;
+    final nextCpf = data.representativeCpf;
+    final nextDocumentType = _documentTypeFromStatusData(data.documentType);
+
+    final hasSameValues = state.fullNameText == nextFullName &&
+        state.emailText == nextEmail &&
+        (nextPhone == null || state.phoneText == nextPhone) &&
+        (nextCpf == null || state.cpfText == nextCpf) &&
+        (nextDocumentType == null ||
+            state.selectedDocumentType == nextDocumentType);
+
+    if (hasSameValues) return;
+
+    fullNameController.text = nextFullName;
+    emailController.text = nextEmail;
+    if (nextPhone != null) phoneController.text = nextPhone;
+    if (nextCpf != null) cpfController.text = nextCpf;
+
+    state = state.copyWith(
+      fullNameText: nextFullName,
+      emailText: nextEmail,
+      phoneText: nextPhone,
+      cpfText: nextCpf,
+      selectedDocumentType: nextDocumentType ?? state.selectedDocumentType,
+      error: null,
+    );
+  }
+
+  AgencyRepresentativeDocumentType? _documentTypeFromStatusData(String value) {
+    final normalized = value.trim().toLowerCase();
+    if (normalized.isEmpty) return null;
+
+    for (final type in AgencyRepresentativeDocumentType.values) {
+      if (type.name.toLowerCase() == normalized ||
+          type.label.toLowerCase() == normalized ||
+          type.databaseValue.toLowerCase() == normalized) {
+        return type;
+      }
+    }
+
+    return null;
   }
 
   void selectDocumentType(AgencyRepresentativeDocumentType type) {

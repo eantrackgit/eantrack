@@ -26,6 +26,7 @@ abstract final class AppRoutes {
   static const onboardingAgencyConfirm = '/onboarding/agency/confirm';
   static const onboardingAgencyRepresentative =
       '/onboarding/agency/representative';
+  static const onboardingAgencyStatus = '/onboarding/agency/status';
   static const onboardingOperationalStyle = '/onboarding/operational-style';
   static const onboardingStatus = '/onboarding/status';
 

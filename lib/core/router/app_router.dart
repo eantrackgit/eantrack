@@ -14,6 +14,7 @@ import '../../features/hub/presentation/screens/hub_screen.dart';
 import '../../features/onboarding/agency/screens/agency_cnpj_screen.dart';
 import '../../features/onboarding/agency/screens/agency_confirm_screen.dart';
 import '../../features/onboarding/agency/screens/agency_representative_screen.dart';
+import '../../features/onboarding/agency/screens/agency_status_screen.dart';
 import '../../features/onboarding/agency/models/agency_confirm_payload.dart';
 import '../../features/onboarding/agency/models/cnpj_model.dart';
 import '../../features/onboarding/presentation/screens/choose_mode_screen.dart';
@@ -24,6 +25,8 @@ import '../../features/onboarding/presentation/screens/photo_profile_screen.dart
 import '../../features/regions/presentation/screens/region_list_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 import 'app_routes.dart';
+import '../../features/onboarding/agency/controllers/agency_status_notifier.dart';
+import '../../features/onboarding/agency/controllers/agency_status_notifier.dart';
 import 'recovery_link_parser.dart';
 import 'router_redirect_guard.dart';
 
@@ -162,16 +165,32 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.onboardingAgencyRepresentative,
         pageBuilder: (_, state) {
-          final payload = state.extra;
-          if (payload is! AgencyConfirmPayload) {
+          final extra = state.extra;
+          final payload = extra is AgencyConfirmPayload ? extra : null;
+          final prefillData = extra is AgencyStatusData ? extra : null;
+
+          if (payload == null && prefillData == null) {
             return _fade(const AgencyCnpjScreen());
           }
 
           return _fade(
             AgencyRepresentativeScreen(
-              key: ValueKey(payload.agencyId),
+              key: ValueKey(payload?.agencyId ?? prefillData?.agencyLegalName),
               payload: payload,
+              prefillData: prefillData,
             ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.onboardingAgencyStatus,
+        pageBuilder: (_, state) {
+          final debugStatus = state.extra is AgencyDocumentStatus
+              ? state.extra! as AgencyDocumentStatus
+              : null;
+
+          return _fade(
+            AgencyStatusScreen(debugStatus: debugStatus),
           );
         },
       ),

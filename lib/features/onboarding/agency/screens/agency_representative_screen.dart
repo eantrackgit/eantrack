@@ -8,15 +8,18 @@ import '../../../../shared/shared.dart';
 import '../controllers/agency_representative_controller.dart';
 import '../models/agency_confirm_payload.dart';
 import '../models/agency_representative_model.dart';
+import '../controllers/agency_status_notifier.dart';
 
 /// Tela de cadastro do representante legal da agência.
 class AgencyRepresentativeScreen extends ConsumerWidget {
   const AgencyRepresentativeScreen({
     super.key,
-    required this.payload,
+    this.payload,
+    this.prefillData,
   });
 
-  final AgencyConfirmPayload payload;
+  final AgencyConfirmPayload? payload;
+  final AgencyStatusData? prefillData;
 
   Future<void> _handleAdvance(
     BuildContext context,
@@ -58,6 +61,12 @@ class AgencyRepresentativeScreen extends ConsumerWidget {
     final state = ref.watch(agencyRepresentativeProvider(payload));
     final notifier = ref.read(agencyRepresentativeProvider(payload).notifier);
     final et = EanTrackTheme.of(context);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (prefillData != null) {
+        notifier.prefill(prefillData!);
+      }
+    });
 
     return AuthScaffold(
       child: Column(

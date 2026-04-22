@@ -18,6 +18,8 @@ abstract final class AppColors {
   static const secondaryText = Color(0xFF57636C);
 
   // Backgrounds
+  static const scaffoldBackground = Color(0xFF080D1F);
+  static const cardBackground = Color(0xFF0F1735);
   static const primaryBackground = Color(0xFFF1F4F8);
   static const secondaryBackground = Color(0xFFFFFFFF);
   static const modalOverlayBase = Color(0xFF050816);
@@ -28,6 +30,13 @@ abstract final class AppColors {
   // Action
   static const actionBlue =
       Color(0xFF1A56DB); // consulta/busca (Consultar CNPJ, Buscar CEP)
+
+  // Informational balloons
+  static const balloonBorder = Color(0xFF38BDF8);
+  static const balloonBackground = Color(0x2E38BDF8);
+  static const balloonIconAction = Color(0xFFFF5963);
+  static const balloonIconInfo = Color(0xFFAED221);
+  static const balloonTitle = Color(0xFF38BDF8);
 
   // Accents
   static const accent1 = Color(0xFFC7CBD1);

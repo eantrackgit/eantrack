@@ -86,6 +86,28 @@ class AgencyRepresentativeService {
     String? legalRepresentativeId;
 
     try {
+      try {
+        final existing = await _supabaseClient
+            .from('legal_documents')
+            .select('front_url, back_url')
+            .eq('agency_id', submission.agencyId)
+            .maybeSingle();
+
+        final pathsToDelete = <String>[];
+        if (existing?['front_url'] != null) {
+          pathsToDelete.add(_extractPath(existing!['front_url'] as String));
+        }
+        if (existing?['back_url'] != null) {
+          pathsToDelete.add(_extractPath(existing!['back_url'] as String));
+        }
+
+        if (pathsToDelete.isNotEmpty) {
+          await _supabaseClient.storage.from(_bucketName).remove(pathsToDelete);
+        }
+      } catch (e) {
+        debugPrint('Failed to clean previous legal documents: $e');
+      }
+
       final frontFile = submission.frontFileForUpload;
       if (frontFile == null) {
         throw const AgencyRepresentativeServiceException(
@@ -220,6 +242,14 @@ class AgencyRepresentativeService {
     } catch (_) {
       // Rollback de banco também é best effort; preservamos o erro original.
     }
+  }
+
+  String _extractPath(String publicUrl) {
+    final marker = '/$_bucketName/';
+    final markerIndex = publicUrl.indexOf(marker);
+    if (markerIndex == -1) return publicUrl;
+
+    return publicUrl.substring(markerIndex + marker.length);
   }
 
   bool _isAcceptedExtension(String extension) {
