@@ -343,26 +343,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  DropdownButton<AgencyDocumentStatus>(
-                    value: _debugStatus,
-                    dropdownColor: et.surface,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: et.secondaryText,
-                      fontWeight: FontWeight.w500,
+                  Flexible(
+                    child: DropdownButton<AgencyDocumentStatus>(
+                      value: _debugStatus,
+                      isExpanded: true,
+                      dropdownColor: et.surface,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: et.secondaryText,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      underline: const SizedBox.shrink(),
+                      onChanged: isBusy
+                          ? null
+                          : (value) {
+                              if (value == null) return;
+                              setState(() => _debugStatus = value);
+                            },
+                      items: AgencyDocumentStatus.values.map((status) {
+                        return DropdownMenuItem<AgencyDocumentStatus>(
+                          value: status,
+                          child: Text(_debugStatusLabel(status)),
+                        );
+                      }).toList(),
                     ),
-                    underline: const SizedBox.shrink(),
-                    onChanged: isBusy
-                        ? null
-                        : (value) {
-                            if (value == null) return;
-                            setState(() => _debugStatus = value);
-                          },
-                    items: AgencyDocumentStatus.values.map((status) {
-                      return DropdownMenuItem<AgencyDocumentStatus>(
-                        value: status,
-                        child: Text(_debugStatusLabel(status)),
-                      );
-                    }).toList(),
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   TextButton(

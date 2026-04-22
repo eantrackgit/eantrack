@@ -434,17 +434,15 @@ class _StatusSectionCard extends StatelessWidget {
   const _StatusSectionCard({
     required this.child,
     this.title,
-    this.padding = const EdgeInsets.all(AppSpacing.md),
   });
 
   final Widget child;
   final String? title;
-  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: padding,
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: AppRadius.mdAll,

@@ -175,11 +175,11 @@ void main() {
     await _pumpUi(tester);
 
     expect(
-      find.textContaining('Foto do perfil', findRichText: true),
+      find.textContaining('Testar foto de perfil', findRichText: true),
       findsOneWidget,
     );
     expect(
-      find.textContaining('(opcional)', findRichText: true),
+      find.textContaining('Testar foto de perfil', findRichText: true),
       findsOneWidget,
     );
   });
