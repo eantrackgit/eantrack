@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -33,7 +34,7 @@ class _SplashBackground extends StatelessWidget {
 
   final SplashNotifier notifier;
 
-  static const _glowColor = Color(0xFF4D72F5);
+  static const _glowColor = AppColors.splashGlow;
 
   @override
   Widget build(BuildContext context) {
@@ -49,9 +50,9 @@ class _SplashBackground extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Color(0xFF080B1A),
-                Color(0xFF0E1631),
-                Color(0xFF111B3A),
+            AppColors.gradientStart,
+            AppColors.gradientMid,
+            AppColors.gradientEnd,
               ],
             ),
           ),
@@ -178,7 +179,7 @@ class _SplashSubtitle extends StatelessWidget {
                 'Smart Tracking',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Color(0xB8E4EAF6),
+                    color: AppColors.splashSubtitle,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 2.0,

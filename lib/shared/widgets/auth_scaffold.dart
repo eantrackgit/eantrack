@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text_styles.dart';
 import '../theme/app_theme.dart';
@@ -55,7 +56,10 @@ class AuthScaffold extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: isDark
-                ? const [Color(0xFF0F1829), Color(0xFF080D16)]
+                ? const [
+                    AppColors.authScaffoldTop,
+                    AppColors.authScaffoldBottom,
+                  ]
                 : [
                     Color.lerp(et.scaffoldOuter, Colors.white, 0.06)!,
                     Color.lerp(et.scaffoldOuter, Colors.black, 0.06)!,

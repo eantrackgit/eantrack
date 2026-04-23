@@ -27,9 +27,39 @@ abstract final class AppColors {
   // Intentionally same blue as actionBlue — used as glow accent in modal backdrop.
   static const modalOverlayGlow = Color(0xFF1A56DB);
 
+  // Gradients
+  static const gradientStart = Color(0xFF080B1A);
+  static const gradientMid = Color(0xFF0E1631);
+  static const gradientEnd = Color(0xFF111B3A);
+
+  // Splash
+  static const splashGlow = Color(0xFF4D72F5);
+  static const splashSubtitle = Color(0xB8E4EAF6);
+
+  // Auth scaffold
+  static const authScaffoldTop = Color(0xFF0F1829);
+  static const authScaffoldBottom = Color(0xFF080D16);
+
   // Action
   static const actionBlue =
       Color(0xFF1A56DB); // consulta/busca (Consultar CNPJ, Buscar CEP)
+
+  // Misc
+  static const cardGlow = Color(0xFF4D72F5);
+  static const versionText = Color(0xFF8E8D8D);
+
+  // Theme tokens
+  static const scaffoldOuter = Color(0xFF0D1117);
+  static const cardSurface = Color(0xFF161D2F);
+  static const inputFill = Color(0xFF1C2537);
+  static const inputFillDisabled = Color(0xFF141C2B);
+  static const inputBorder = Color(0xFF2E3B58);
+  static const inputBorderFocused = Color(0xFF4D72F5);
+  static const primaryTextLight = Color(0xFFE4EAF6);
+  static const secondaryTextMuted = Color(0xFF7A8DB0);
+  static const divider = Color(0xFF232C45);
+  static const outlinedFg = Color(0xFF8896B3);
+  static const accentLink = Color(0xFF7CA5E8);
 
   // Informational balloons
   static const balloonBorder = Color(0xFF38BDF8);

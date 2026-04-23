@@ -3,70 +3,12 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../data/profile_photo_service.dart';
-
-enum _CropDragMode {
-  none,
-  move,
-  topLeft,
-  top,
-  topRight,
-  right,
-  bottomRight,
-  bottom,
-  bottomLeft,
-  left,
-}
-
-enum _PhotoFilter {
-  original(
-    label: 'Original',
-    matrix: null,
-  ),
-  natural(
-    label: 'Natural',
-    matrix: <double>[
-      1.04, 0.00, 0.00, 0.00, 4.0,
-      0.00, 1.02, 0.00, 0.00, 2.0,
-      0.00, 0.00, 0.98, 0.00, -3.0,
-      0.00, 0.00, 0.00, 1.00, 0.0,
-    ],
-  ),
-  vibrant(
-    label: 'Vibrante',
-    matrix: <double>[
-      1.12, -0.05, -0.05, 0.00, 6.0,
-      -0.04, 1.10, -0.04, 0.00, 4.0,
-      -0.03, -0.03, 1.14, 0.00, 5.0,
-      0.00, 0.00, 0.00, 1.00, 0.0,
-    ],
-  ),
-  blackAndWhite(
-    label: 'Preto & Branco',
-    matrix: <double>[
-      0.2126, 0.7152, 0.0722, 0.00, 0.0,
-      0.2126, 0.7152, 0.0722, 0.00, 0.0,
-      0.2126, 0.7152, 0.0722, 0.00, 0.0,
-      0.0000, 0.0000, 0.0000, 1.00, 0.0,
-    ],
-  );
-
-  const _PhotoFilter({
-    required this.label,
-    required this.matrix,
-  });
-
-  final String label;
-  final List<double>? matrix;
-
-  ColorFilter? get colorFilter {
-    final matrix = this.matrix;
-    if (matrix == null) return null;
-    return ColorFilter.matrix(matrix);
-  }
-}
+import 'crop_engine.dart';
+import 'crop_painters.dart';
+import 'image_processor.dart';
+import 'photo_filter.dart';
 
 class PhotoCropDialog extends StatefulWidget {
   const PhotoCropDialog({
@@ -98,7 +40,6 @@ class PhotoCropDialog extends StatefulWidget {
 class _PhotoCropDialogState extends State<PhotoCropDialog> {
   static const int _previewDecodeTargetWidth = 1440;
   static const double _viewportPadding = 20;
-  static const double _handleHitSize = 34;
   static const double _handleVisualSize = 24;
   static const double _minCropSize = 110;
 
@@ -108,11 +49,11 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
   Rect? _cropRect;
   Rect? _lastImageRect;
   Size? _lastViewport;
-  _CropDragMode _dragMode = _CropDragMode.none;
+  CropDragMode _dragMode = CropDragMode.none;
   bool _isProcessing = false;
   bool _hasUserAdjustedCrop = false;
   int _rotationTurns = 0;
-  _PhotoFilter _selectedFilter = _PhotoFilter.original;
+  PhotoFilter _selectedFilter = PhotoFilter.original;
   int _decodeRequestId = 0;
 
   @override
@@ -145,11 +86,11 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
     _cropRect = null;
     _lastImageRect = null;
     _lastViewport = null;
-    _dragMode = _CropDragMode.none;
+    _dragMode = CropDragMode.none;
     _isProcessing = false;
     _hasUserAdjustedCrop = false;
     _rotationTurns = 0;
-    _selectedFilter = _PhotoFilter.original;
+    _selectedFilter = PhotoFilter.original;
   }
 
   Future<void> _decodePreviewImage() async {
@@ -166,7 +107,7 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
       );
 
       if (originalImage.width > _previewDecodeTargetWidth) {
-        image = await _decodeImageBytes(
+        image = await decodeImageBytes(
           sourceBytes,
           targetWidth: _previewDecodeTargetWidth,
         );
@@ -174,7 +115,7 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
         image = originalImage;
       }
     } catch (_) {
-      image = await _buildFallbackImage();
+      image = await buildFallbackImage();
       imageSize = Size(image.width.toDouble(), image.height.toDouble());
     }
 
@@ -184,30 +125,6 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
       _decodedImageSize = imageSize;
       _sourceBytes = sourceBytes;
     });
-  }
-
-  Future<ui.Image> _decodeImageBytes(
-    Uint8List bytes, {
-    int? targetWidth,
-  }) async {
-    final codec = await ui.instantiateImageCodec(
-      bytes,
-      targetWidth: targetWidth,
-    );
-    final frame = await codec.getNextFrame();
-    return frame.image;
-  }
-
-  Future<ui.Image> _buildFallbackImage() async {
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
-    const side = 512.0;
-    canvas.drawRect(
-      const Rect.fromLTWH(0, 0, side, side),
-      Paint()..color = const Color(0xFFBFC5CD),
-    );
-    final picture = recorder.endRecording();
-    return picture.toImage(side.toInt(), side.toInt());
   }
 
   Size _displayImageSize(Size imageSize) {
@@ -257,259 +174,6 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
     );
   }
 
-  _CropDragMode _hitTestCrop(Offset localPosition, Rect cropRect) {
-    final handles = <_CropDragMode, Offset>{
-      _CropDragMode.topLeft: cropRect.topLeft,
-      _CropDragMode.top: cropRect.topCenter,
-      _CropDragMode.topRight: cropRect.topRight,
-      _CropDragMode.right: cropRect.centerRight,
-      _CropDragMode.bottomRight: cropRect.bottomRight,
-      _CropDragMode.bottom: cropRect.bottomCenter,
-      _CropDragMode.bottomLeft: cropRect.bottomLeft,
-      _CropDragMode.left: cropRect.centerLeft,
-    };
-
-    for (final entry in handles.entries) {
-      final handleRect = Rect.fromCenter(
-        center: entry.value,
-        width: _handleHitSize,
-        height: _handleHitSize,
-      );
-      if (handleRect.contains(localPosition)) return entry.key;
-    }
-
-    if (cropRect.contains(localPosition)) return _CropDragMode.move;
-    return _CropDragMode.none;
-  }
-
-  Offset _clampToImageRect(Offset position, Rect imageRect) {
-    return Offset(
-      position.dx.clamp(imageRect.left, imageRect.right).toDouble(),
-      position.dy.clamp(imageRect.top, imageRect.bottom).toDouble(),
-    );
-  }
-
-  Rect _moveCropRect(Rect current, Offset delta, Rect imageRect) {
-    var next = current.shift(delta);
-
-    if (next.left < imageRect.left) {
-      next = next.shift(Offset(imageRect.left - next.left, 0));
-    }
-    if (next.top < imageRect.top) {
-      next = next.shift(Offset(0, imageRect.top - next.top));
-    }
-    if (next.right > imageRect.right) {
-      next = next.shift(Offset(imageRect.right - next.right, 0));
-    }
-    if (next.bottom > imageRect.bottom) {
-      next = next.shift(Offset(0, imageRect.bottom - next.bottom));
-    }
-
-    return next;
-  }
-
-  double _horizontalLimitForCenter(double centerX, Rect imageRect) {
-    return math.min(
-          centerX - imageRect.left,
-          imageRect.right - centerX,
-        ) *
-        2;
-  }
-
-  double _verticalLimitForCenter(double centerY, Rect imageRect) {
-    return math.min(
-          centerY - imageRect.top,
-          imageRect.bottom - centerY,
-        ) *
-        2;
-  }
-
-  Rect _resizeCropRect(
-    Rect current,
-    Offset localPosition,
-    Rect imageRect,
-    _CropDragMode mode,
-  ) {
-    final clamped = _clampToImageRect(localPosition, imageRect);
-    late final Rect next;
-
-    switch (mode) {
-      case _CropDragMode.topLeft:
-        final anchor = current.bottomRight;
-        final side = math.max(
-          _minCropSize,
-          math.min(anchor.dx - clamped.dx, anchor.dy - clamped.dy),
-        );
-        next = Rect.fromLTWH(anchor.dx - side, anchor.dy - side, side, side);
-      case _CropDragMode.top:
-        final centerX = current.center.dx;
-        final bottom = current.bottom;
-        final maxSide = math.min(
-          _horizontalLimitForCenter(centerX, imageRect),
-          bottom - imageRect.top,
-        );
-        if (maxSide < _minCropSize) return current;
-        final side =
-            (bottom - clamped.dy).clamp(_minCropSize, maxSide).toDouble();
-        next = Rect.fromLTWH(centerX - (side / 2), bottom - side, side, side);
-      case _CropDragMode.topRight:
-        final anchor = current.bottomLeft;
-        final side = math.max(
-          _minCropSize,
-          math.min(clamped.dx - anchor.dx, anchor.dy - clamped.dy),
-        );
-        next = Rect.fromLTWH(anchor.dx, anchor.dy - side, side, side);
-      case _CropDragMode.right:
-        final centerY = current.center.dy;
-        final left = current.left;
-        final maxSide = math.min(
-          imageRect.right - left,
-          _verticalLimitForCenter(centerY, imageRect),
-        );
-        if (maxSide < _minCropSize) return current;
-        final side =
-            (clamped.dx - left).clamp(_minCropSize, maxSide).toDouble();
-        next = Rect.fromLTWH(left, centerY - (side / 2), side, side);
-      case _CropDragMode.bottomRight:
-        final anchor = current.topLeft;
-        final side = math.max(
-          _minCropSize,
-          math.min(clamped.dx - anchor.dx, clamped.dy - anchor.dy),
-        );
-        next = Rect.fromLTWH(anchor.dx, anchor.dy, side, side);
-      case _CropDragMode.bottom:
-        final centerX = current.center.dx;
-        final top = current.top;
-        final maxSide = math.min(
-          _horizontalLimitForCenter(centerX, imageRect),
-          imageRect.bottom - top,
-        );
-        if (maxSide < _minCropSize) return current;
-        final side =
-            (clamped.dy - top).clamp(_minCropSize, maxSide).toDouble();
-        next = Rect.fromLTWH(centerX - (side / 2), top, side, side);
-      case _CropDragMode.bottomLeft:
-        final anchor = current.topRight;
-        final side = math.max(
-          _minCropSize,
-          math.min(anchor.dx - clamped.dx, clamped.dy - anchor.dy),
-        );
-        next = Rect.fromLTWH(anchor.dx - side, anchor.dy, side, side);
-      case _CropDragMode.left:
-        final centerY = current.center.dy;
-        final right = current.right;
-        final maxSide = math.min(
-          right - imageRect.left,
-          _verticalLimitForCenter(centerY, imageRect),
-        );
-        if (maxSide < _minCropSize) return current;
-        final side =
-            (right - clamped.dx).clamp(_minCropSize, maxSide).toDouble();
-        next = Rect.fromLTWH(right - side, centerY - (side / 2), side, side);
-      case _CropDragMode.none:
-      case _CropDragMode.move:
-        return current;
-    }
-
-    return Rect.fromLTWH(
-      next.left
-          .clamp(imageRect.left, imageRect.right - next.width)
-          .toDouble(),
-      next.top
-          .clamp(imageRect.top, imageRect.bottom - next.height)
-          .toDouble(),
-      math.min(next.width, imageRect.width),
-      math.min(next.height, imageRect.height),
-    );
-  }
-
-  Future<void> _confirmCrop(Rect imageRect) async {
-    final cropRect = _cropRect ?? _initialCropRect(imageRect);
-    if (_decodedImage == null || _isProcessing) return;
-
-    setState(() => _isProcessing = true);
-
-    try {
-      final sourceBytes = _sourceBytes ?? await widget.photo.readBytes();
-      final image = await _decodeImageBytes(sourceBytes);
-      final displaySize = _displayImageSize(
-        Size(image.width.toDouble(), image.height.toDouble()),
-      );
-      final renderedWidth = math.max(1, displaySize.width.round());
-      final renderedHeight = math.max(1, displaySize.height.round());
-
-      final rotatedRecorder = ui.PictureRecorder();
-      final rotatedCanvas = Canvas(rotatedRecorder);
-      _paintImageWithRotation(
-        rotatedCanvas,
-        image: image,
-        destRect: Rect.fromLTWH(
-          0,
-          0,
-          renderedWidth.toDouble(),
-          renderedHeight.toDouble(),
-        ),
-        rotationTurns: _rotationTurns,
-      );
-      final rotatedPicture = rotatedRecorder.endRecording();
-      final rotatedImage = await rotatedPicture.toImage(
-        renderedWidth,
-        renderedHeight,
-      );
-
-      final scaleX = renderedWidth / imageRect.width;
-      final scaleY = renderedHeight / imageRect.height;
-      final sourceRect = Rect.fromLTWH(
-        (cropRect.left - imageRect.left) * scaleX,
-        (cropRect.top - imageRect.top) * scaleY,
-        cropRect.width * scaleX,
-        cropRect.height * scaleY,
-      );
-
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder);
-      const outputSize = 1080.0;
-
-      canvas.drawImageRect(
-        rotatedImage,
-        sourceRect,
-        const Rect.fromLTWH(0, 0, outputSize, outputSize),
-        Paint()
-          ..isAntiAlias = true
-          ..colorFilter = _selectedFilter.colorFilter,
-      );
-
-      final picture = recorder.endRecording();
-      final rendered = await picture.toImage(
-        outputSize.toInt(),
-        outputSize.toInt(),
-      );
-      final byteData = await rendered.toByteData(format: ui.ImageByteFormat.png);
-      final bytes = byteData?.buffer.asUint8List();
-
-      if (!mounted || bytes == null) {
-        if (mounted) setState(() => _isProcessing = false);
-        return;
-      }
-
-      final croppedPhoto = PickedProfilePhoto(
-        file: XFile.fromData(
-          bytes,
-          name: 'avatar_cropped.png',
-          mimeType: 'image/png',
-        ),
-        bytes: bytes,
-        contentType: 'image/png',
-      );
-
-      Navigator.of(context).pop(croppedPhoto);
-    } catch (_) {
-      if (mounted) {
-        setState(() => _isProcessing = false);
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final image = _decodedImage;
@@ -550,25 +214,25 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
                           behavior: HitTestBehavior.opaque,
                           onPanStart: (details) {
                             final activeCropRect = _cropRect ?? cropRect;
-                            _dragMode = _hitTestCrop(
+                            _dragMode = hitTestCrop(
                               details.localPosition,
                               activeCropRect,
                             );
                           },
                           onPanUpdate: (details) {
-                            if (_dragMode == _CropDragMode.none) return;
+                            if (_dragMode == CropDragMode.none) return;
                             final activeCropRect = _cropRect ?? cropRect;
 
                             setState(() {
                               _hasUserAdjustedCrop = true;
-                              if (_dragMode == _CropDragMode.move) {
-                                _cropRect = _moveCropRect(
+                              if (_dragMode == CropDragMode.move) {
+                                _cropRect = moveCropRect(
                                   activeCropRect,
                                   details.delta,
                                   imageRect,
                                 );
                               } else {
-                                _cropRect = _resizeCropRect(
+                                _cropRect = resizeCropRect(
                                   activeCropRect,
                                   details.localPosition,
                                   imageRect,
@@ -577,8 +241,8 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
                               }
                             });
                           },
-                          onPanEnd: (_) => _dragMode = _CropDragMode.none,
-                          onPanCancel: () => _dragMode = _CropDragMode.none,
+                          onPanEnd: (_) => _dragMode = CropDragMode.none,
+                          onPanCancel: () => _dragMode = CropDragMode.none,
                           child: SizedBox(
                             width: viewport.width,
                             height: viewport.height,
@@ -587,7 +251,7 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
                               children: [
                                 CustomPaint(
                                   size: viewport,
-                                  painter: _PhotoImagePainter(
+                                  painter: PhotoImagePainter(
                                     image: image,
                                     imageRect: imageRect,
                                     rotationTurns: _rotationTurns,
@@ -596,13 +260,13 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
                                 ),
                                 CustomPaint(
                                   size: viewport,
-                                  painter: _CropOverlayPainter(
+                                  painter: CropOverlayPainter(
                                     cropRect: cropRect,
                                   ),
                                 ),
                                 CustomPaint(
                                   size: viewport,
-                                  painter: _CropWindowImagePainter(
+                                  painter: CropWindowImagePainter(
                                     image: image,
                                     imageRect: imageRect,
                                     cropRect: cropRect,
@@ -612,7 +276,7 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
                                 ),
                                 CustomPaint(
                                   size: viewport,
-                                  painter: _CropChromePainter(
+                                  painter: CropChromePainter(
                                     cropRect: cropRect,
                                     handleVisualSize: _handleVisualSize,
                                   ),
@@ -627,7 +291,7 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
             if (image != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(0, 8, 0, 4),
-                child: _FilterSelector(
+                child: FilterSelector(
                   photoBytes: _sourceBytes,
                   selectedFilter: _selectedFilter,
                   onSelected: _isProcessing
@@ -675,7 +339,7 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
                                     _rotationTurns = (_rotationTurns + 1) % 4;
                                     _cropRect = null;
                                     _lastImageRect = null;
-                                    _dragMode = _CropDragMode.none;
+                                    _dragMode = CropDragMode.none;
                                     _hasUserAdjustedCrop = false;
                                   });
                                 },
@@ -689,7 +353,7 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
                       TextButton(
                         onPressed: _isProcessing || image == null
                             ? null
-                            : () {
+                            : () async {
                                 final imageRect =
                                     _lastImageRect ??
                                     (_lastViewport == null || imageSize == null
@@ -699,7 +363,29 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
                                             imageSize,
                                           ));
                                 if (imageRect == null) return;
-                                _confirmCrop(imageRect);
+                                final cropRect =
+                                    _cropRect ?? _initialCropRect(imageRect);
+                                if (_decodedImage == null || _isProcessing) {
+                                  return;
+                                }
+
+                                setState(() => _isProcessing = true);
+                                final croppedPhoto = await confirmCrop(
+                                  cropRect: cropRect,
+                                  imageRect: imageRect,
+                                  photo: widget.photo,
+                                  sourceBytes: _sourceBytes,
+                                  rotationTurns: _rotationTurns,
+                                  selectedFilter: _selectedFilter,
+                                );
+
+                                if (!mounted) return;
+                                if (croppedPhoto == null) {
+                                  setState(() => _isProcessing = false);
+                                  return;
+                                }
+
+                                Navigator.of(context).pop(croppedPhoto);
                               },
                         style: TextButton.styleFrom(
                           foregroundColor: const Color(0xFF22C55E),
@@ -725,338 +411,4 @@ class _PhotoCropDialogState extends State<PhotoCropDialog> {
       ),
     );
   }
-}
-
-class _PhotoImagePainter extends CustomPainter {
-  const _PhotoImagePainter({
-    required this.image,
-    required this.imageRect,
-    required this.rotationTurns,
-    required this.filter,
-  });
-
-  final ui.Image image;
-  final Rect imageRect;
-  final int rotationTurns;
-  final _PhotoFilter filter;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    _paintImageWithRotation(
-      canvas,
-      image: image,
-      destRect: imageRect,
-      rotationTurns: rotationTurns,
-      colorFilter: filter.colorFilter,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _PhotoImagePainter oldDelegate) {
-    return oldDelegate.image != image ||
-        oldDelegate.imageRect != imageRect ||
-        oldDelegate.rotationTurns != rotationTurns ||
-        oldDelegate.filter != filter;
-  }
-}
-
-class _CropOverlayPainter extends CustomPainter {
-  const _CropOverlayPainter({
-    required this.cropRect,
-  });
-
-  final Rect cropRect;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final fullRect = Offset.zero & size;
-    final fullPath = Path()..addRect(fullRect);
-    final cropPath = Path()..addRect(cropRect);
-    final overlayPath = Path.combine(
-      PathOperation.difference,
-      fullPath,
-      cropPath,
-    );
-    final overlayPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.58)
-      ..isAntiAlias = false;
-    canvas.drawPath(overlayPath, overlayPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _CropOverlayPainter oldDelegate) {
-    return oldDelegate.cropRect != cropRect;
-  }
-}
-
-class _CropWindowImagePainter extends CustomPainter {
-  const _CropWindowImagePainter({
-    required this.image,
-    required this.imageRect,
-    required this.cropRect,
-    required this.rotationTurns,
-    required this.filter,
-  });
-
-  final ui.Image image;
-  final Rect imageRect;
-  final Rect cropRect;
-  final int rotationTurns;
-  final _PhotoFilter filter;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.save();
-    canvas.clipRect(cropRect);
-    _paintImageWithRotation(
-      canvas,
-      image: image,
-      destRect: imageRect,
-      rotationTurns: rotationTurns,
-      colorFilter: filter.colorFilter,
-    );
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _CropWindowImagePainter oldDelegate) {
-    return oldDelegate.image != image ||
-        oldDelegate.imageRect != imageRect ||
-        oldDelegate.cropRect != cropRect ||
-        oldDelegate.rotationTurns != rotationTurns ||
-        oldDelegate.filter != filter;
-  }
-}
-
-class _CropChromePainter extends CustomPainter {
-  const _CropChromePainter({
-    required this.cropRect,
-    required this.handleVisualSize,
-  });
-
-  final Rect cropRect;
-  final double handleVisualSize;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final borderPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    canvas.drawRect(cropRect, borderPaint);
-
-    final gridPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.32)
-      ..strokeWidth = 1;
-    final thirdWidth = cropRect.width / 3;
-    final thirdHeight = cropRect.height / 3;
-
-    for (var i = 1; i < 3; i++) {
-      final dx = cropRect.left + (thirdWidth * i);
-      final dy = cropRect.top + (thirdHeight * i);
-      canvas.drawLine(
-        Offset(dx, cropRect.top),
-        Offset(dx, cropRect.bottom),
-        gridPaint,
-      );
-      canvas.drawLine(
-        Offset(cropRect.left, dy),
-        Offset(cropRect.right, dy),
-        gridPaint,
-      );
-    }
-
-    final handlePaint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 5
-      ..strokeCap = StrokeCap.round;
-    final edgeTick = handleVisualSize * 0.78;
-
-    void drawCorner(Offset pivot, double dx, double dy) {
-      canvas.drawLine(
-        pivot,
-        Offset(pivot.dx + (dx * handleVisualSize), pivot.dy),
-        handlePaint,
-      );
-      canvas.drawLine(
-        pivot,
-        Offset(pivot.dx, pivot.dy + (dy * handleVisualSize)),
-        handlePaint,
-      );
-    }
-
-    drawCorner(cropRect.topLeft, 1, 1);
-    drawCorner(cropRect.topRight, -1, 1);
-    drawCorner(cropRect.bottomRight, -1, -1);
-    drawCorner(cropRect.bottomLeft, 1, -1);
-
-    canvas.drawLine(
-      Offset(cropRect.topCenter.dx - edgeTick / 2, cropRect.topCenter.dy),
-      Offset(cropRect.topCenter.dx + edgeTick / 2, cropRect.topCenter.dy),
-      handlePaint,
-    );
-    canvas.drawLine(
-      Offset(
-        cropRect.bottomCenter.dx - edgeTick / 2,
-        cropRect.bottomCenter.dy,
-      ),
-      Offset(
-        cropRect.bottomCenter.dx + edgeTick / 2,
-        cropRect.bottomCenter.dy,
-      ),
-      handlePaint,
-    );
-    canvas.drawLine(
-      Offset(cropRect.centerLeft.dx, cropRect.centerLeft.dy - edgeTick / 2),
-      Offset(cropRect.centerLeft.dx, cropRect.centerLeft.dy + edgeTick / 2),
-      handlePaint,
-    );
-    canvas.drawLine(
-      Offset(cropRect.centerRight.dx, cropRect.centerRight.dy - edgeTick / 2),
-      Offset(cropRect.centerRight.dx, cropRect.centerRight.dy + edgeTick / 2),
-      handlePaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _CropChromePainter oldDelegate) {
-    return oldDelegate.cropRect != cropRect ||
-        oldDelegate.handleVisualSize != handleVisualSize;
-  }
-}
-
-class _FilterSelector extends StatelessWidget {
-  const _FilterSelector({
-    required this.photoBytes,
-    required this.selectedFilter,
-    required this.onSelected,
-  });
-
-  final Uint8List? photoBytes;
-  final _PhotoFilter selectedFilter;
-  final ValueChanged<_PhotoFilter>? onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final bytes = photoBytes;
-
-    return SizedBox(
-      height: 102,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: _PhotoFilter.values.map((filter) {
-            final isSelected = filter == selectedFilter;
-            return Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: GestureDetector(
-                onTap: onSelected == null ? null : () => onSelected!(filter),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  width: 72,
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? Colors.white.withValues(alpha: 0.12)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: isSelected
-                          ? const Color(0xFF22C55E)
-                          : Colors.white.withValues(alpha: 0.10),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: SizedBox(
-                          width: 64,
-                          height: 64,
-                          child: bytes == null
-                              ? const ColoredBox(color: Color(0xFF111111))
-                              : filter.colorFilter == null
-                                  ? Image.memory(
-                                      bytes,
-                                      fit: BoxFit.cover,
-                                      cacheWidth: 128,
-                                      cacheHeight: 128,
-                                      gaplessPlayback: false,
-                                    )
-                                  : ColorFiltered(
-                                      colorFilter: filter.colorFilter!,
-                                      child: Image.memory(
-                                        bytes,
-                                        fit: BoxFit.cover,
-                                        cacheWidth: 128,
-                                        cacheHeight: 128,
-                                        gaplessPlayback: false,
-                                      ),
-                                    ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        filter.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: isSelected
-                              ? Colors.white
-                              : Colors.white.withValues(alpha: 0.72),
-                          fontSize: 12,
-                          fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
-}
-
-void _paintImageWithRotation(
-  Canvas canvas, {
-  required ui.Image image,
-  required Rect destRect,
-  required int rotationTurns,
-  ColorFilter? colorFilter,
-}) {
-  final turns = rotationTurns % 4;
-  canvas.save();
-  canvas.clipRect(destRect);
-  canvas.translate(destRect.center.dx, destRect.center.dy);
-  canvas.rotate(turns * math.pi / 2);
-
-  final drawRect = turns.isOdd
-      ? Rect.fromCenter(
-          center: Offset.zero,
-          width: destRect.height,
-          height: destRect.width,
-        )
-      : Rect.fromCenter(
-          center: Offset.zero,
-          width: destRect.width,
-          height: destRect.height,
-        );
-
-  final paint = Paint()..isAntiAlias = true;
-  if (colorFilter != null) {
-    paint.colorFilter = colorFilter;
-  }
-
-  canvas.drawImageRect(
-    image,
-    Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-    drawRect,
-    paint,
-  );
-  canvas.restore();
 }

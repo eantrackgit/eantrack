@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
+
 import '../../core/config/app_version.dart';
 
 /// Exibição discreta da versão do app.
@@ -22,7 +24,7 @@ class AppVersionBadge extends StatelessWidget {
         AppVersion.label,
         style: const TextStyle(
           fontSize: 11,
-          color: Color(0xFF8E8D8D),
+        color: AppColors.versionText,
           letterSpacing: 0.2,
         ),
       ),
