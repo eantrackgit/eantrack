@@ -267,44 +267,7 @@ class _OnboardingProfileScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(
-              child: Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: et.surface,
-                  borderRadius: AppRadius.mdAll,
-                  border: Border.all(color: et.surfaceBorder),
-                  boxShadow: [
-                    BoxShadow(
-                      color: et.inputBorderFocused.withValues(alpha: 0.10),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  Icons.person,
-                  color: et.inputBorderFocused,
-                  size: 40,
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              'Complete seu perfil para continuar',
-              style: AppTextStyles.headlineSmall.copyWith(
-                color: et.primaryText,
-                fontWeight: FontWeight.w600,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Leva menos de 1 minuto',
-              style: AppTextStyles.bodySmall.copyWith(color: et.secondaryText),
-              textAlign: TextAlign.center,
-            ),
+            _ProfileHeader(et: et),
             const SizedBox(height: AppSpacing.lg),
             Container(
               padding: const EdgeInsets.all(AppSpacing.lg),
@@ -454,47 +417,12 @@ class _OnboardingProfileScreenState
                       ),
                     ),
                   ],
-                  if (_identifierController.suggestions.isNotEmpty) ...[
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      _identifierSuggestionsTitle(),
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: et.primaryText,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  if (_identifierController.suggestions.isNotEmpty)
+                    _IdentifierSuggestions(
+                      suggestions: _identifierController.suggestions,
+                      title: _identifierSuggestionsTitle(),
+                      onTap: _identifierController.applySuggestion,
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Wrap(
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.sm,
-                      children: _identifierController.suggestions
-                          .map((suggestion) {
-                        return InkWell(
-                          onTap: () =>
-                              _identifierController.applySuggestion(suggestion),
-                          borderRadius: BorderRadius.circular(999),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: et.surface,
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(color: et.surfaceBorder),
-                            ),
-                            child: Text(
-                              suggestion,
-                              style: AppTextStyles.bodySmall.copyWith(
-                                color: et.secondaryText,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(growable: false),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -532,6 +460,109 @@ class _OnboardingProfileScreenState
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({required this.et});
+  final EanTrackTheme et;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Center(
+          child: Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: et.surface,
+              borderRadius: AppRadius.mdAll,
+              border: Border.all(color: et.surfaceBorder),
+              boxShadow: [
+                BoxShadow(
+                  color: et.inputBorderFocused.withValues(alpha: 0.10),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Icon(Icons.person, color: et.inputBorderFocused, size: 40),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Text(
+          'Complete seu perfil para continuar',
+          style: AppTextStyles.headlineSmall.copyWith(
+            color: et.primaryText,
+            fontWeight: FontWeight.w600,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          'Leva menos de 1 minuto',
+          style: AppTextStyles.bodySmall.copyWith(color: et.secondaryText),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+}
+
+class _IdentifierSuggestions extends StatelessWidget {
+  const _IdentifierSuggestions({
+    required this.suggestions,
+    required this.title,
+    required this.onTap,
+  });
+
+  final List<String> suggestions;
+  final String title;
+  final void Function(String) onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          title,
+          style: AppTextStyles.bodySmall.copyWith(
+            color: et.primaryText,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: suggestions.map((s) {
+            return InkWell(
+              onTap: () => onTap(s),
+              borderRadius: BorderRadius.circular(999),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: et.surface,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: et.surfaceBorder),
+                ),
+                child: Text(
+                  s,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: et.secondaryText,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            );
+          }).toList(growable: false),
+        ),
+      ],
     );
   }
 }

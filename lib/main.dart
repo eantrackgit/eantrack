@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/app.dart';
@@ -16,7 +17,6 @@ void main() async {
     return;
   }
 
-  // Lock to portrait on mobile (matches original behavior)
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -31,9 +31,14 @@ void main() async {
     ),
   );
 
-  runApp(
-    const ProviderScope(
-      child: EanTrackApp(),
+  await SentryFlutter.init(
+    (options) {
+      options.dsn = AppConfig.sentryDsn;
+      options.tracesSampleRate = 0.2;
+      options.environment = AppConfig.sentryDsn.isEmpty ? 'development' : 'production';
+    },
+    appRunner: () => runApp(
+      const ProviderScope(child: EanTrackApp()),
     ),
   );
 }

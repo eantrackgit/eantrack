@@ -7,15 +7,13 @@ import '../../../../shared/shared.dart';
 import '../controllers/agency_status_notifier.dart';
 
 class AgencyStatusScreen extends ConsumerWidget {
-  const AgencyStatusScreen({
-    super.key,
-    this.debugStatus,
-  });
+  const AgencyStatusScreen({super.key, this.debugStatus});
 
   final AgencyDocumentStatus? debugStatus;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final et = EanTrackTheme.of(context);
     final provider = agencyStatusProvider(debugStatus);
     final state = ref.watch(provider);
     final isLoading = state.status == AgencyStatusLoading.loading;
@@ -29,10 +27,10 @@ class AgencyStatusScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
+      backgroundColor: et.scaffoldOuter,
       appBar: AppBar(
-        backgroundColor: AppColors.scaffoldBackground,
-        foregroundColor: AppColors.secondaryBackground,
+        backgroundColor: et.scaffoldOuter,
+        foregroundColor: et.primaryText,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
@@ -54,14 +52,8 @@ class AgencyStatusScreen extends ConsumerWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520),
             child: data == null
-                ? _InitialState(
-                    state: state,
-                    debugStatus: debugStatus,
-                  )
-                : _StatusContent(
-                    data: data,
-                    debugStatus: debugStatus,
-                  ),
+                ? _InitialState(state: state, debugStatus: debugStatus)
+                : _StatusContent(data: data, debugStatus: debugStatus),
           ),
         ),
       ),
@@ -70,26 +62,22 @@ class AgencyStatusScreen extends ConsumerWidget {
 }
 
 class _StatusContent extends StatelessWidget {
-  const _StatusContent({
-    required this.data,
-    required this.debugStatus,
-  });
+  const _StatusContent({required this.data, required this.debugStatus});
 
   final AgencyStatusData data;
   final AgencyDocumentStatus? debugStatus;
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: AppColors.cardBackground,
+          color: et.cardSurface,
           borderRadius: AppRadius.mdAll,
-          border: Border.all(
-            color: AppColors.actionBlue.withValues(alpha: 0.18),
-          ),
+          border: Border.all(color: et.ctaBackground.withValues(alpha: 0.18)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -102,10 +90,7 @@ class _StatusContent extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             _NextStepsCard(status: data.consolidatedDocumentStatus),
             const SizedBox(height: AppSpacing.md),
-            _ActionButton(
-              data: data,
-              debugStatus: debugStatus,
-            ),
+            _ActionButton(data: data, debugStatus: debugStatus),
             const SizedBox(height: AppSpacing.md),
             const _HelpCard(),
           ],
@@ -116,10 +101,7 @@ class _StatusContent extends StatelessWidget {
 }
 
 class _InitialState extends StatelessWidget {
-  const _InitialState({
-    required this.state,
-    required this.debugStatus,
-  });
+  const _InitialState({required this.state, required this.debugStatus});
 
   final AgencyStatusState state;
   final AgencyDocumentStatus? debugStatus;
@@ -149,10 +131,7 @@ class _InitialState extends StatelessWidget {
         ),
       );
     }
-
-    return const Center(
-      child: CircularProgressIndicator(strokeWidth: 2.5),
-    );
+    return const Center(child: CircularProgressIndicator(strokeWidth: 2.5));
   }
 }
 
@@ -161,6 +140,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -169,24 +149,18 @@ class _Header extends StatelessWidget {
           height: 56,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: AppColors.cardBackground,
+            color: et.cardSurface,
             borderRadius: AppRadius.mdAll,
-            border: Border.all(
-              color: AppColors.actionBlue.withValues(alpha: 0.18),
-            ),
+            border: Border.all(color: et.ctaBackground.withValues(alpha: 0.18)),
           ),
-          child: const Icon(
-            Icons.business_rounded,
-            size: 28,
-            color: AppColors.secondaryBackground,
-          ),
+          child: Icon(Icons.business_rounded, size: 28, color: et.primaryText),
         ),
         const SizedBox(width: AppSpacing.md),
         Expanded(
           child: Text(
             'Status da Agência',
             style: AppTextStyles.titleLarge.copyWith(
-              color: AppColors.secondaryBackground,
+              color: et.primaryText,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -203,15 +177,13 @@ class _AgencyInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     return _StatusSectionCard(
       title: 'AGÊNCIA',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            data.agencyLegalName,
-            style: _cardBodyLargeStyle(),
-          ),
+          Text(data.agencyLegalName, style: _cardBodyLargeStyle(et)),
           const SizedBox(height: AppSpacing.md),
           _InfoRow(
             label: 'ÚLTIMA ATUALIZAÇÃO',
@@ -232,6 +204,7 @@ class _DocumentStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     final descriptor = _StatusDescriptor.from(data.consolidatedDocumentStatus);
 
     return _StatusSectionCard(
@@ -244,26 +217,17 @@ class _DocumentStatusCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _documentTitle(data.documentType),
-                  style: _cardTitleStyle(),
-                ),
+                Text(_documentTitle(data.documentType), style: _cardTitleStyle(et)),
                 const SizedBox(height: AppSpacing.xs),
-                Text(data.representativeName, style: _cardBodyStyle()),
+                Text(data.representativeName, style: _cardBodyStyle(et)),
                 const SizedBox(height: AppSpacing.xs),
-                Text(
-                  data.representativeEmail,
-                  style: _cardMutedStyle(),
-                ),
+                Text(data.representativeEmail, style: _cardMutedStyle(et)),
               ],
             ),
           ),
           const SizedBox(width: AppSpacing.md),
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 6,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: descriptor.color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
@@ -271,17 +235,11 @@ class _DocumentStatusCard extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  descriptor.icon,
-                  color: descriptor.color,
-                  size: 22,
-                ),
+                Icon(descriptor.icon, color: descriptor.color, size: 22),
                 const SizedBox(width: AppSpacing.xs),
                 Text(
                   _documentStatusText(data.consolidatedDocumentStatus),
-                  style: _cardBodyStyle().copyWith(
-                    color: descriptor.color,
-                  ),
+                  style: _cardBodyStyle(et).copyWith(color: descriptor.color),
                 ),
               ],
             ),
@@ -307,6 +265,7 @@ class _BalloonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -325,13 +284,13 @@ class _BalloonCard extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: _supportTextStyle().copyWith(
+                  style: _supportTextStyle(et).copyWith(
                     color: AppColors.balloonTitle,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
-                Text(body, style: _supportTextStyle()),
+                Text(body, style: _supportTextStyle(et)),
               ],
             ),
           ),
@@ -372,16 +331,14 @@ class _HelpCard extends StatelessWidget {
 }
 
 class _ActionButton extends ConsumerWidget {
-  const _ActionButton({
-    required this.data,
-    required this.debugStatus,
-  });
+  const _ActionButton({required this.data, required this.debugStatus});
 
   final AgencyStatusData data;
   final AgencyDocumentStatus? debugStatus;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final et = EanTrackTheme.of(context);
     final status = data.consolidatedDocumentStatus;
     late final String ctaLabel;
     late final VoidCallback? ctaAction;
@@ -392,9 +349,9 @@ class _ActionButton extends ConsumerWidget {
     } else if (status == AgencyDocumentStatus.rejected) {
       ctaLabel = 'Corrigir documentação';
       ctaAction = () => context.push(
-          AppRoutes.onboardingAgencyRepresentative,
-          extra: ref.read(agencyStatusProvider(debugStatus)).data,
-      );
+            AppRoutes.onboardingAgencyRepresentative,
+            extra: ref.read(agencyStatusProvider(debugStatus)).data,
+          );
     } else {
       ctaLabel = 'Aguardando validação dos documentos.';
       ctaAction = null;
@@ -406,14 +363,11 @@ class _ActionButton extends ConsumerWidget {
         _StatusCtaButton(
           label: ctaLabel,
           onPressed: ctaAction,
-          backgroundColor: _ctaColor(status),
+          backgroundColor: _ctaColor(status, et),
         ),
         const SizedBox(height: 8),
         ColorFiltered(
-          colorFilter: const ColorFilter.mode(
-            Colors.white,
-            BlendMode.srcIn,
-          ),
+          colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
           child: AppButton.secondary(
             'Atualizar status da solicitação',
             onPressed: () =>
@@ -439,6 +393,7 @@ class _StatusCtaButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     return SizedBox(
       width: double.infinity,
       height: 52,
@@ -447,8 +402,8 @@ class _StatusCtaButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
           disabledBackgroundColor: backgroundColor,
-          foregroundColor: AppColors.secondaryBackground,
-          disabledForegroundColor: AppColors.secondaryBackground,
+          foregroundColor: et.ctaForeground,
+          disabledForegroundColor: et.ctaForeground,
           elevation: 0,
           shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: AppRadius.smAll),
@@ -457,9 +412,7 @@ class _StatusCtaButton extends StatelessWidget {
           label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: AppTextStyles.titleSmall.copyWith(
-            color: AppColors.secondaryBackground,
-          ),
+          style: AppTextStyles.titleSmall.copyWith(color: et.ctaForeground),
         ),
       ),
     );
@@ -467,30 +420,26 @@ class _StatusCtaButton extends StatelessWidget {
 }
 
 class _StatusSectionCard extends StatelessWidget {
-  const _StatusSectionCard({
-    required this.child,
-    this.title,
-  });
+  const _StatusSectionCard({required this.child, this.title});
 
   final Widget child;
   final String? title;
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
+        color: et.cardSurface,
         borderRadius: AppRadius.mdAll,
-        border: Border.all(
-          color: AppColors.actionBlue.withValues(alpha: 0.18),
-        ),
+        border: Border.all(color: et.ctaBackground.withValues(alpha: 0.18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (title != null) ...[
-            Text(title!, style: _cardLabelStyle()),
+            Text(title!, style: _cardLabelStyle(et)),
             const SizedBox(height: AppSpacing.sm),
           ],
           child,
@@ -501,22 +450,20 @@ class _StatusSectionCard extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.label,
-    required this.value,
-  });
+  const _InfoRow({required this.label, required this.value});
 
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: _cardLabelStyle()),
+        Text(label, style: _cardLabelStyle(et)),
         const SizedBox(height: AppSpacing.xs),
-        Text(value, style: _cardBodyStyle()),
+        Text(value, style: _cardBodyStyle(et)),
       ],
     );
   }
@@ -529,21 +476,16 @@ class _StatusInfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
     final color = _agencyStatusColor(status);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'STATUS DA SOLICITAÇÃO',
-          style: _cardLabelStyle(),
-        ),
+        Text('STATUS DA SOLICITAÇÃO', style: _cardLabelStyle(et)),
         const SizedBox(height: AppSpacing.xs),
         Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 10,
-            vertical: 6,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(8),
@@ -551,11 +493,7 @@ class _StatusInfoRow extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                _agencyStatusIcon(status),
-                size: 14,
-                color: color,
-              ),
+              Icon(_agencyStatusIcon(status), size: 14, color: color),
               const SizedBox(width: 6),
               Text(
                 _agencyStatusLabel(status),
@@ -587,6 +525,10 @@ class _AppBarLoadingIndicator extends StatelessWidget {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 class _StatusDescriptor {
   const _StatusDescriptor({
@@ -623,116 +565,73 @@ class _StatusDescriptor {
   }
 }
 
-Color _agencyStatusColor(AgencyDocumentStatus status) {
-  switch (status) {
-    case AgencyDocumentStatus.approved:
-      return AppColors.success;
-    case AgencyDocumentStatus.pending:
-      return AppColors.warning;
-    case AgencyDocumentStatus.rejected:
-      return AppColors.error;
-  }
-}
+Color _agencyStatusColor(AgencyDocumentStatus status) => switch (status) {
+      AgencyDocumentStatus.approved => AppColors.success,
+      AgencyDocumentStatus.pending => AppColors.warning,
+      AgencyDocumentStatus.rejected => AppColors.error,
+    };
 
-IconData _agencyStatusIcon(AgencyDocumentStatus status) {
-  switch (status) {
-    case AgencyDocumentStatus.approved:
-      return Icons.check_circle;
-    case AgencyDocumentStatus.pending:
-      return Icons.hourglass_bottom;
-    case AgencyDocumentStatus.rejected:
-      return Icons.cancel;
-  }
-}
+IconData _agencyStatusIcon(AgencyDocumentStatus status) => switch (status) {
+      AgencyDocumentStatus.approved => Icons.check_circle,
+      AgencyDocumentStatus.pending => Icons.hourglass_bottom,
+      AgencyDocumentStatus.rejected => Icons.cancel,
+    };
 
-String _agencyStatusLabel(AgencyDocumentStatus status) {
-  switch (status) {
-    case AgencyDocumentStatus.approved:
-      return 'Aprovada';
-    case AgencyDocumentStatus.pending:
-      return 'Aguardando';
-    case AgencyDocumentStatus.rejected:
-      return 'Rejeitada';
-  }
-}
+String _agencyStatusLabel(AgencyDocumentStatus status) => switch (status) {
+      AgencyDocumentStatus.approved => 'Aprovada',
+      AgencyDocumentStatus.pending => 'Aguardando',
+      AgencyDocumentStatus.rejected => 'Rejeitada',
+    };
 
-Color _ctaColor(AgencyDocumentStatus status) {
-  switch (status) {
-    case AgencyDocumentStatus.approved:
-      return AppColors.success;
-    case AgencyDocumentStatus.rejected:
-      return AppColors.error;
-    case AgencyDocumentStatus.pending:
-      return AppColors.secondaryText.withValues(alpha: 0.3);
-  }
-}
+Color _ctaColor(AgencyDocumentStatus status, EanTrackTheme et) => switch (status) {
+      AgencyDocumentStatus.approved => AppColors.success,
+      AgencyDocumentStatus.rejected => AppColors.error,
+      AgencyDocumentStatus.pending => et.secondaryText.withValues(alpha: 0.3),
+    };
 
 String _documentTitle(String documentType) {
   final normalized = documentType.trim();
   return normalized.isEmpty ? 'Documento' : normalized;
 }
 
-String _documentStatusText(AgencyDocumentStatus status) {
-  switch (status) {
-    case AgencyDocumentStatus.approved:
-      return 'Aprovado';
-    case AgencyDocumentStatus.rejected:
-      return 'Rejeitado';
-    case AgencyDocumentStatus.pending:
-      return 'Aguardando';
-  }
-}
+String _documentStatusText(AgencyDocumentStatus status) => switch (status) {
+      AgencyDocumentStatus.approved => 'Aprovado',
+      AgencyDocumentStatus.rejected => 'Rejeitado',
+      AgencyDocumentStatus.pending => 'Aguardando',
+    };
 
-String _nextStepsText(AgencyDocumentStatus status) {
-  switch (status) {
-    case AgencyDocumentStatus.approved:
-      return 'Seu documento foi aprovado com sucesso. Sua agência está liberada para continuar.';
-    case AgencyDocumentStatus.rejected:
-      return 'Seu documento foi rejeitado. Você precisa enviar uma nova versão com foto legível para continuar o processo de aprovação.';
-    case AgencyDocumentStatus.pending:
-      return 'Recebemos seu documento e ele está em análise. Assim que a verificação for concluída, você será notificado.';
-  }
-}
+String _nextStepsText(AgencyDocumentStatus status) => switch (status) {
+      AgencyDocumentStatus.approved =>
+        'Seu documento foi aprovado com sucesso. Sua agência está liberada para continuar.',
+      AgencyDocumentStatus.rejected =>
+        'Seu documento foi rejeitado. Você precisa enviar uma nova versão com foto legível para continuar o processo de aprovação.',
+      AgencyDocumentStatus.pending =>
+        'Recebemos seu documento e ele está em análise. Assim que a verificação for concluída, você será notificado.',
+    };
 
 String _formatDateTime(DateTime value) {
   final local = value.toLocal();
-  final day = local.day.toString().padLeft(2, '0');
-  final month = local.month.toString().padLeft(2, '0');
-  final year = local.year.toString();
-  final hour = local.hour.toString().padLeft(2, '0');
-  final minute = local.minute.toString().padLeft(2, '0');
-  return '$day/$month/$year $hour:$minute';
+  final d = local.day.toString().padLeft(2, '0');
+  final m = local.month.toString().padLeft(2, '0');
+  final h = local.hour.toString().padLeft(2, '0');
+  final min = local.minute.toString().padLeft(2, '0');
+  return '$d/$m/${local.year} $h:$min';
 }
 
-TextStyle _cardLabelStyle() {
-  return AppTextStyles.labelSmall.copyWith(color: AppColors.tertiary);
-}
+TextStyle _cardLabelStyle(EanTrackTheme et) =>
+    AppTextStyles.labelSmall.copyWith(color: et.secondaryText);
 
-TextStyle _cardTitleStyle() {
-  return AppTextStyles.bodyMedium.copyWith(
-    color: AppColors.secondaryBackground,
-    fontWeight: FontWeight.w600,
-  );
-}
+TextStyle _cardTitleStyle(EanTrackTheme et) =>
+    AppTextStyles.bodyMedium.copyWith(color: et.primaryText, fontWeight: FontWeight.w600);
 
-TextStyle _cardBodyLargeStyle() {
-  return AppTextStyles.bodyMedium.copyWith(color: AppColors.secondaryBackground);
-}
+TextStyle _cardBodyLargeStyle(EanTrackTheme et) =>
+    AppTextStyles.bodyMedium.copyWith(color: et.primaryText);
 
-TextStyle _cardBodyStyle() {
-  return AppTextStyles.bodyMedium.copyWith(
-    color: AppColors.secondaryBackground,
-  );
-}
+TextStyle _cardBodyStyle(EanTrackTheme et) =>
+    AppTextStyles.bodyMedium.copyWith(color: et.primaryText);
 
-TextStyle _cardMutedStyle() {
-  return AppTextStyles.bodyMedium.copyWith(
-    color: AppColors.tertiary,
-  );
-}
+TextStyle _cardMutedStyle(EanTrackTheme et) =>
+    AppTextStyles.bodyMedium.copyWith(color: et.secondaryText);
 
-TextStyle _supportTextStyle() {
-  return AppTextStyles.bodySmall.copyWith(
-    color: AppColors.secondaryBackground,
-  );
-}
+TextStyle _supportTextStyle(EanTrackTheme et) =>
+    AppTextStyles.bodySmall.copyWith(color: et.primaryText);

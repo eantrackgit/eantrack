@@ -41,6 +41,24 @@ class ActionFailure<T> extends AsyncAction<T> {
   final String message;
 }
 
+/// Executa [action] com retry exponencial.
+/// Lança a última exceção se todas as tentativas falharem.
+Future<T> withRetry<T>(
+  Future<T> Function() action, {
+  int maxAttempts = 3,
+  Duration delay = const Duration(milliseconds: 500),
+}) async {
+  for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await action();
+    } catch (_) {
+      if (attempt == maxAttempts) rethrow;
+      await Future.delayed(delay * attempt);
+    }
+  }
+  throw StateError('unreachable');
+}
+
 extension AsyncActionX<T> on AsyncAction<T> {
   bool get isIdle => this is ActionIdle<T>;
   bool get isLoading => this is ActionLoading<T>;

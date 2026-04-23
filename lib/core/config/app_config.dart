@@ -37,6 +37,13 @@ class AppConfig {
     defaultValue: '',
   );
 
+  /// DSN do Sentry para monitoramento de erros em produção.
+  /// Opcional — sem DSN o Sentry é desabilitado silenciosamente.
+  static const sentryDsn = String.fromEnvironment(
+    'SENTRY_DSN',
+    defaultValue: '',
+  );
+
   static bool get isLocalhost {
     final host = Uri.base.host.toLowerCase();
     return host == 'localhost' || host == '127.0.0.1';

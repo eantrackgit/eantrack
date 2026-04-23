@@ -55,6 +55,9 @@ dependencies:
   shared_preferences: ^2.5.3
   path_provider: ^2.1.4
 
+  # Observability
+  sentry_flutter: ^8.14.2
+
   # Utilities
   internet_connection_checker_plus: ^2.0.0
   intl: ^0.20.2
