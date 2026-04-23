@@ -81,6 +81,25 @@
 
 ---
 
+#### `get_user_onboarding_route`
+- **Retorno:** `text` (nullable)
+- **Parâmetros:** nenhum — opera sobre o `auth.uid()` da sessão atual
+- **Valores possíveis de retorno:**
+
+  | Valor | Destino no app |
+  |-------|---------------|
+  | `'hub'` | `AppRoutes.hub` |
+  | `'onboarding/agency/status'` | `AppRoutes.onboardingAgencyStatus` |
+  | `'onboarding/agency/representative'` | `AppRoutes.onboardingAgencyRepresentative` |
+  | `'onboarding/agency/cnpj'` | `AppRoutes.onboardingAgencyCnpj` |
+  | `'onboarding/individual/profile'` | `AppRoutes.onboardingIndividualProfile` |
+  | `null` / outro | `AppRoutes.onboarding` (fallback) |
+
+- **Consumido por:** `SplashNotifier._resolveRoute()` — ver DEC-021
+- **Nota:** session null ou exception no cliente → redireciona para `/login` sem chamar a RPC
+
+---
+
 #### `email_code_exists`
 - **Retorno:** `boolean`
 - **Parâmetros:**
@@ -574,7 +593,8 @@
 | Tabelas | 24 |
 | Views | 5 |
 | Triggers | 17 |
-| Funções (RPCs) | 41 |
+| Funções (RPCs) | 42 |
 | — com ordinal_position confirmado (dump 2) | 20 |
 | — com params apenas do dump 1 | 13 |
 | — sem params em nenhum dump | 8 |
+| — adicionadas pós-dump (`get_user_onboarding_route`) | 1 |

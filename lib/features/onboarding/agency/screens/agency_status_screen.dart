@@ -210,7 +210,7 @@ class _AgencyInfoCard extends StatelessWidget {
         children: [
           Text(
             data.agencyLegalName,
-            style: _cardBodyLargeStyle(context),
+            style: _cardBodyLargeStyle(),
           ),
           const SizedBox(height: AppSpacing.md),
           _InfoRow(
@@ -246,14 +246,14 @@ class _DocumentStatusCard extends StatelessWidget {
               children: [
                 Text(
                   _documentTitle(data.documentType),
-                  style: _cardTitleStyle(context),
+                  style: _cardTitleStyle(),
                 ),
                 const SizedBox(height: AppSpacing.xs),
-                Text(data.representativeName, style: _cardBodyStyle(context)),
+                Text(data.representativeName, style: _cardBodyStyle()),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   data.representativeEmail,
-                  style: _cardMutedStyle(context),
+                  style: _cardMutedStyle(),
                 ),
               ],
             ),
@@ -279,7 +279,7 @@ class _DocumentStatusCard extends StatelessWidget {
                 const SizedBox(width: AppSpacing.xs),
                 Text(
                   _documentStatusText(data.consolidatedDocumentStatus),
-                  style: _cardBodyStyle(context).copyWith(
+                  style: _cardBodyStyle().copyWith(
                     color: descriptor.color,
                   ),
                 ),
@@ -325,13 +325,13 @@ class _BalloonCard extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: _supportTextStyle(context).copyWith(
+                  style: _supportTextStyle().copyWith(
                     color: AppColors.balloonTitle,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
-                Text(body, style: _supportTextStyle(context)),
+                Text(body, style: _supportTextStyle()),
               ],
             ),
           ),
@@ -400,31 +400,28 @@ class _ActionButton extends ConsumerWidget {
       ctaAction = null;
     }
 
-    return Container(
-      color: Colors.transparent,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _StatusCtaButton(
-            label: ctaLabel,
-            onPressed: ctaAction,
-            backgroundColor: _ctaColor(status),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _StatusCtaButton(
+          label: ctaLabel,
+          onPressed: ctaAction,
+          backgroundColor: _ctaColor(status),
+        ),
+        const SizedBox(height: 8),
+        ColorFiltered(
+          colorFilter: const ColorFilter.mode(
+            Colors.white,
+            BlendMode.srcIn,
           ),
-          const SizedBox(height: 8),
-          ColorFiltered(
-            colorFilter: const ColorFilter.mode(
-              Colors.white,
-              BlendMode.srcIn,
-            ),
-            child: AppButton.secondary(
-              'Atualizar status da solicitação',
-              onPressed: () =>
-                  ref.read(agencyStatusProvider(debugStatus).notifier).load(),
-              leadingIcon: const Icon(Icons.sync),
-            ),
+          child: AppButton.secondary(
+            'Atualizar status da solicitação',
+            onPressed: () =>
+                ref.read(agencyStatusProvider(debugStatus).notifier).load(),
+            leadingIcon: const Icon(Icons.sync),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -450,8 +447,8 @@ class _StatusCtaButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
           disabledBackgroundColor: backgroundColor,
-          foregroundColor: Colors.white,
-          disabledForegroundColor: Colors.white,
+          foregroundColor: AppColors.secondaryBackground,
+          disabledForegroundColor: AppColors.secondaryBackground,
           elevation: 0,
           shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: AppRadius.smAll),
@@ -460,7 +457,9 @@ class _StatusCtaButton extends StatelessWidget {
           label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: AppTextStyles.titleSmall.copyWith(color: Colors.white),
+          style: AppTextStyles.titleSmall.copyWith(
+            color: AppColors.secondaryBackground,
+          ),
         ),
       ),
     );
@@ -491,7 +490,7 @@ class _StatusSectionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (title != null) ...[
-            Text(title!, style: _cardLabelStyle(context)),
+            Text(title!, style: _cardLabelStyle()),
             const SizedBox(height: AppSpacing.sm),
           ],
           child,
@@ -515,9 +514,9 @@ class _InfoRow extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: _cardLabelStyle(context)),
+        Text(label, style: _cardLabelStyle()),
         const SizedBox(height: AppSpacing.xs),
-        Text(value, style: _cardBodyStyle(context)),
+        Text(value, style: _cardBodyStyle()),
       ],
     );
   }
@@ -537,7 +536,7 @@ class _StatusInfoRow extends StatelessWidget {
       children: [
         Text(
           'STATUS DA SOLICITAÇÃO',
-          style: _cardLabelStyle(context),
+          style: _cardLabelStyle(),
         ),
         const SizedBox(height: AppSpacing.xs),
         Container(
@@ -705,34 +704,34 @@ String _formatDateTime(DateTime value) {
   return '$day/$month/$year $hour:$minute';
 }
 
-TextStyle _cardLabelStyle(BuildContext context) {
+TextStyle _cardLabelStyle() {
   return AppTextStyles.labelSmall.copyWith(color: AppColors.tertiary);
 }
 
-TextStyle _cardTitleStyle(BuildContext context) {
+TextStyle _cardTitleStyle() {
   return AppTextStyles.bodyMedium.copyWith(
     color: AppColors.secondaryBackground,
     fontWeight: FontWeight.w600,
   );
 }
 
-TextStyle _cardBodyLargeStyle(BuildContext context) {
+TextStyle _cardBodyLargeStyle() {
   return AppTextStyles.bodyMedium.copyWith(color: AppColors.secondaryBackground);
 }
 
-TextStyle _cardBodyStyle(BuildContext context) {
+TextStyle _cardBodyStyle() {
   return AppTextStyles.bodyMedium.copyWith(
     color: AppColors.secondaryBackground,
   );
 }
 
-TextStyle _cardMutedStyle(BuildContext context) {
+TextStyle _cardMutedStyle() {
   return AppTextStyles.bodyMedium.copyWith(
     color: AppColors.tertiary,
   );
 }
 
-TextStyle _supportTextStyle(BuildContext context) {
+TextStyle _supportTextStyle() {
   return AppTextStyles.bodySmall.copyWith(
     color: AppColors.secondaryBackground,
   );

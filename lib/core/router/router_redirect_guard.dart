@@ -48,7 +48,8 @@ class RouterRedirectGuard extends ChangeNotifier {
         path == AppRoutes.onboardingLegalRep ||
         path == AppRoutes.onboardingAgencyCnpj ||
         path == AppRoutes.onboardingAgencyConfirm ||
-        path == AppRoutes.onboardingAgencyRepresentative;
+        path == AppRoutes.onboardingAgencyRepresentative ||
+        path == AppRoutes.onboardingAgencyStatus;
     final isAppRoute = AppRoutes.protectedRoutes.contains(path);
 
     // /email-verification is only valid while the notifier is in AuthEmailUnconfirmed.

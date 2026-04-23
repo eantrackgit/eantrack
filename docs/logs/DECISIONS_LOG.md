@@ -41,6 +41,28 @@ Barrel shared/shared.dart — import sempre via barrel
 
 ---
 
+## DEC-021 — Splash routing delegado ao Supabase via RPC
+
+**Data:** 2026-04-22
+**Contexto:** A tela de splash precisa decidir para onde navegar após a animação: hub, alguma etapa do onboarding de agência, ou onboarding individual. Opções: (A) lógica client-side baseando-se em `UserFlowState`, (B) RPC no Supabase que retorna a rota correta.
+**Decisão:** `SplashNotifier._resolveRoute()` chama `get_user_onboarding_route` via RPC e navega para a rota retornada. Lógica de decisão é 100% server-side.
+**Motivo:** Escalabilidade e flexibilidade operacional. Com 10k+ usuários em diferentes estágios de onboarding, a lógica de roteamento pode ser alterada no servidor sem deploy de app. Elimina também a necessidade de sincronizar `UserFlowState` no cliente — a fonte de verdade é o backend.
+**Impacto:** `SplashNotifier` não precisa mais conhecer os estados de onboarding. Novos caminhos de onboarding são adicionados no backend e no `switch` do notifier. Fallback sempre é `/login` — nunca deixa o usuário preso.
+**Rotas suportadas:** `hub` | `onboarding/agency/status` | `onboarding/agency/representative` | `onboarding/agency/cnpj` | `onboarding/individual/profile` | `null` → `/onboarding`
+
+---
+
+## DEC-022 — AgencyStatusNotifier consulta view diretamente (sem RPC intermediário)
+
+**Data:** 2026-04-22
+**Contexto:** `AgencyStatusScreen` precisa de dados ricos: status da agência, dados do representante legal, status do documento. Opções: (A) RPC dedicada, (B) query direta na view `v_user_agency_onboarding_context`.
+**Decisão:** Query direta na view (`supabase.from('v_user_agency_onboarding_context').select().eq('user_id', userId).single()`).
+**Motivo:** A view já existe e consolida os joins necessários. Criar uma RPC wrapper seria overhead sem benefício neste momento. RLS da view garante que o usuário só vê seus próprios dados.
+**Impacto:** `AgencyStatusData.fromJson` tem parser defensivo com fallback camelCase para absorver inconsistências na resposta da view. Se a view evoluir (novos campos), apenas o `fromJson` e o model precisam ser atualizados — sem alteração de contrato de RPC.
+**Regra:** se a view `v_user_agency_onboarding_context` for alterada no Supabase, revisar `AgencyStatusData.fromJson` antes de qualquer deploy.
+
+---
+
 ## DEC-001 — Flutter Code-First (abandonar FlutterFlow)
 
 **Data:** 2026-03-25

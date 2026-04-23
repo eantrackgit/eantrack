@@ -1,5 +1,50 @@
 # EANTrack - Build Log
 
+## 2026-04-20 a 2026-04-23 — Agency Status + Splash RPC + Auditoria
+
+### Contexto
+Seis commits após o ciclo de qualidade 9.7 (fecb39f). Objetivo: completar o fluxo de agência com tela de status e reenvio de documento, implementar roteamento inteligente na splash, e corrigir defeitos de qualidade encontrados em auditoria.
+
+### Implementado — Agency Status Screen
+
+**`lib/features/onboarding/agency/controllers/agency_status_notifier.dart`** (NOVO)
+- `AgencyDocumentStatus` — enum: `pending | approved | rejected`
+- `AgencyStatusData` — model com `fromJson` defensivo: lê snake_case e camelCase (`_toCamelCase`), `copyWith` com sentinel para campos nullable
+- `AgencyStatusState` — enum `AgencyStatusLoading` + `copyWith` com sentinel
+- `AgencyStatusNotifier` — consulta view `v_user_agency_onboarding_context` diretamente; suporte a `mockStatus` via parâmetro de construtor para override de debug
+- `agencyStatusProvider` — `StateNotifierProvider.autoDispose.family<..., AgencyDocumentStatus?>` (family para debug override)
+
+**`lib/features/onboarding/agency/screens/agency_status_screen.dart`** (NOVO)
+- CTA dinâmico por `consolidatedDocumentStatus`: approved → `/hub`; rejected → reenvio para `AgencyRepresentativeScreen` com `AgencyStatusData` como `state.extra`; pending → botão desabilitado
+- Refresh manual via AppBar + botão inline
+- Load disparado via `addPostFrameCallback` no estado idle
+- ⚠️ Dark mode pendente (usa `AppColors.*` direto)
+
+**`lib/features/onboarding/agency/screens/agency_representative_screen.dart`** (ATUALIZADO)
+- Aceita `prefillData: AgencyStatusData?` além de `payload: AgencyConfirmPayload?`
+- Permite reenvio de documento a partir da tela de status
+
+### Implementado — Splash Routing
+
+**`lib/features/splash/presentation/splash_notifier.dart`** (ATUALIZADO)
+- `_resolveRoute()` substitui lógica client-side por chamada `supabase.rpc('get_user_onboarding_route')`
+- Mapeamento de resultado: `'hub'` → hub; `'onboarding/agency/status'` → status; `'onboarding/agency/representative'` → rep; `'onboarding/agency/cnpj'` → cnpj; `'onboarding/individual/profile'` → perfil; null/default → onboarding
+- Fallback: session null → `/login`; exception → `/login` com `debugPrint`
+
+### Corrigido — Auditoria (ca892e1)
+- Mojibake em strings de agência — arquivos re-salvos em UTF-8
+- `catch` genérico sem tratamento — substituído por `on Exception catch (e)` + `debugPrint`
+- Imports diretos de `app_colors.dart` / `app_text_styles.dart` fora do barrel — migrados para `shared/shared.dart`
+
+### Testes Adicionados (8cc880c)
+- `test/features/onboarding/agency/` — cobertura do fluxo completo de agência: CNPJ, confirmação, representante legal, status
+
+### Pendente
+- [ ] Dark mode: `agency_status_screen.dart`, `hub_screen.dart`, `region_list_screen.dart`, `flow_screen.dart`
+- [ ] Smoke tests: `agency_status_screen`
+
+---
+
 ## 2026-04-13 - Sessão 10: Fechamento Dark Mode — Correções e Documentação
 
 ### Contexto

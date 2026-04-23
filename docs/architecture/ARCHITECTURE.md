@@ -148,6 +148,79 @@ lib/
 
 ---
 
+## Divergência de Padrão entre Módulos
+
+O projeto tem dois padrões estruturais coexistentes. Conhecê-los evita confusão ao navegar pelo código.
+
+### Padrão A — Auth (`features/auth/`)
+
+Segue a divisão clássica `data / domain / presentation`:
+
+```
+auth/
+├── data/
+│   ├── auth_repository.dart          # fachada; delega para 3 services
+│   ├── auth_signing_service.dart     # sign in / sign up / OAuth
+│   ├── auth_email_service.dart       # verificação e reenvio
+│   └── auth_password_service.dart    # reset e update de senha
+├── domain/
+│   ├── auth_state.dart               # sealed AuthState (6 subclasses)
+│   ├── auth_flow_state.dart          # enum AuthFlowState (4 valores)
+│   └── user_flow_state.dart
+└── presentation/
+    ├── providers/auth_provider.dart  # AuthNotifier + providers de infra
+    └── screens/
+```
+
+Fluxo: `Screen → AuthNotifier → AuthRepository → AuthSigningService → Supabase`
+
+### Padrão B — Agency (`features/onboarding/agency/`)
+
+Usa `controllers/` para os notifiers e `services/` para acesso direto ao Supabase/APIs, **sem** camada `Repository`:
+
+```
+agency/
+├── controllers/
+│   ├── agency_cnpj_controller.dart        # AgencyCnpjNotifier (StateNotifier)
+│   ├── agency_confirm_controller.dart
+│   ├── agency_representative_controller.dart
+│   └── agency_status_notifier.dart
+├── services/
+│   ├── cnpj_service.dart                  # HTTP ReceitaWS + Supabase
+│   ├── cep_service.dart
+│   ├── agency_confirm_service.dart
+│   └── agency_representative_service.dart
+├── models/
+└── screens/
+```
+
+Fluxo: `Screen → AgencyCnpjNotifier → CnpjService → Supabase/HTTP`
+
+> **Regra de convivência:** ao criar novos módulos, seguir o template da seção
+> "Template de Módulo" (Padrão A). O Padrão B é legado do agency e não deve
+> ser replicado.
+
+### Padrão de Estado — Agency usa enum + copyWith
+
+Enquanto Auth e Onboarding usam sealed classes, Agency usa enum de status + `copyWith`:
+
+```dart
+enum AgencyCnpjStatus { idle, loading, invalid, notFound, inactive, duplicate, genericError, success }
+
+class AgencyCnpjState {
+  final AgencyCnpjStatus status;
+  final String cnpj;
+  final bool isLoading;
+  final String? error;
+  final CnpjModel? cnpjData;
+  AgencyCnpjState copyWith({...}) { ... }
+}
+```
+
+Sealed classes permitem pattern matching exhaustivo no switch — preferir para novos módulos.
+
+---
+
 ## State Management
 
 ### Tipos de Provider Usados

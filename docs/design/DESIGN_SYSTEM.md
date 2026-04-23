@@ -139,7 +139,6 @@ AppSpacing.sm  =  8px   // gap label-input, badge padding
 AppSpacing.md  = 16px   // gap entre campos, padding padrão
 AppSpacing.lg  = 24px   // gap entre seções do form
 AppSpacing.xl  = 32px   // padding card auth
-AppSpacing.xxl = 48px   // margem top logo
 ```
 
 ---
@@ -147,21 +146,25 @@ AppSpacing.xxl = 48px   // margem top logo
 ## 4. BORDER RADIUS
 
 ```dart
-AppRadius.sm   =  8px   // inputs, badges, chips, botões
-AppRadius.md   = 12px   // botões (alternativo)
-AppRadius.lg   = 16px   // cards auth
-AppRadius.xl   = 24px   // modais, bottom sheets
-AppRadius.full = 999px  // avatar circular
+// app_spacing.dart — AppRadius
+AppRadius.sm   =  8px    // inputs, botões, chips  → AppRadius.smAll (BorderRadius.circular(8))
+AppRadius.md   = 16px    // cards secundários      → AppRadius.mdAll
+AppRadius.lg   = 24px    // modais, bottom sheets  → AppRadius.lgAll
+AppRadius.full = 9999px  // pílulas, avatares circulares
 ```
+
+> `AppRadius.smAll / mdAll / lgAll` retornam `BorderRadius.circular(valor)` prontos para uso em `BoxDecoration` e `RoundedRectangleBorder`.
 
 ---
 
 ## 5. SOMBRAS
 
 ```dart
-AppShadows.card      → 0 4px 24px rgba(0,0,0,0.12)   // card auth desktop
-AppShadows.elevated  → 0 8px 32px rgba(0,0,0,0.20)   // modais, dialogs
-// mobile: sem sombra
+// app_spacing.dart — AppShadows  (todas usam preto 10%)
+AppShadows.sm  → blur  3px, offset (0,  1)   // elevação sutil (inputs, chips)
+AppShadows.md  → blur  6px, offset (0,  3)   // cards normais
+AppShadows.lg  → blur 15px, offset (0,  8)   // cards em destaque
+AppShadows.xl  → blur 25px, offset (0, 16)   // modais e overlays
 ```
 
 ---

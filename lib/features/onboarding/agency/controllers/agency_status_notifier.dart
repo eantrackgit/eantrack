@@ -217,7 +217,8 @@ class AgencyStatusNotifier extends StateNotifier<AgencyStatusState> {
         data: data,
         error: null,
       );
-    } on Exception {
+    } on Exception catch (e) {
+      debugPrint('[AgencyStatus] Erro ao carregar status: $e');
       state = state.copyWith(
         status: AgencyStatusLoading.error,
         error: _kLoadErrorMsg,

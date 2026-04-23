@@ -113,7 +113,8 @@ Future<PickedProfilePhoto?> confirmCrop({
       bytes: renderedBytes,
       contentType: 'image/png',
     );
-  } catch (_) {
+  } catch (e) {
+    debugPrint('[ImageProcessor] Erro ao renderizar imagem: $e');
     return null;
   }
 }

@@ -86,9 +86,29 @@
 - `lib/features/onboarding/presentation/screens/company_data_screen.dart` ✅ — UI criada
 - `lib/features/onboarding/presentation/screens/legal_representative_screen.dart` ✅ — UI criada
 
+### Onboarding — Agency Status
+- `lib/features/onboarding/agency/controllers/agency_status_notifier.dart` ✅
+  - `AgencyDocumentStatus` — enum: `pending | approved | rejected`
+  - `AgencyStatusData` — model rico com `fromJson` defensivo (snake_case + camelCase fallback via `_toCamelCase`), `copyWith`
+  - `AgencyStatusState` — `AgencyStatusLoading` enum + `data` + `error`, `copyWith` com sentinel para nullable
+  - `AgencyStatusNotifier` — consulta view `v_user_agency_onboarding_context`; suporte a `mockStatus` para debug
+  - `agencyStatusProvider` — `StateNotifierProvider.autoDispose.family<..., AgencyDocumentStatus?>` (parâmetro para override de debug)
+- `lib/features/onboarding/agency/screens/agency_status_screen.dart` ✅
+  - Exibe status da agência + status consolidado do documento
+  - CTA dinâmico por status: approved → hub / rejected → reenvio de documento / pending → desabilitado
+  - Reenvio: navega para `AgencyRepresentativeScreen` passando `AgencyStatusData` como `prefillData` (via `state.extra`)
+  - **⚠️ Usa `AppColors.*` direto — sem dark mode (mesmo padrão de hub/regiões — pendente)**
+- `lib/features/onboarding/agency/screens/agency_representative_screen.dart` ✅ — atualizado para aceitar `prefillData: AgencyStatusData?` além de `payload: AgencyConfirmPayload?` (fluxo de reenvio)
+
+### Splash
+- `lib/features/splash/presentation/splash_notifier.dart` ✅ — orquestrador; delega animação para `SplashAnimationController` e conectividade para `SplashConnectivityHandler`
+- `lib/features/splash/presentation/splash_animation_controller.dart` ✅
+- `lib/features/splash/presentation/splash_connectivity_handler.dart` ✅
+- **Roteamento inteligente via RPC:** após animação + conexão OK, chama `get_user_onboarding_route` no Supabase. Resultado mapeia para rota direta sem lógica client-side. Fallback: `/login` em session null ou exception. (DEC-021)
+
 ### Hub
 - `lib/features/hub/presentation/screens/hub_screen.dart` ✅ — layout responsive (sidebar desktop / bottom nav mobile). **⚠️ Usa `AppColors.*` direto — sem dark mode.**
-- `lib/features/flow/presentation/screens/flow_page.dart` ✅ — tela de decisão de fluxo. **⚠️ Cor hardcoded.**
+- `lib/features/flow/presentation/screens/flow_screen.dart` ✅ — tela de decisão de fluxo. **⚠️ Cor hardcoded.**
 
 ### Regiões
 - `lib/features/regions/domain/region_model.dart` ✅
@@ -115,16 +135,18 @@
 | `test/shared/mixins/form_state_mixin_test.dart` | Unit | validação form |
 | `test/shared/utils/password_validator_test.dart` | Unit | regras de senha |
 
-**Sem testes:** `choose_mode_screen`, `cnpj_screen`, `company_data_screen`, `legal_rep_screen`, `hub_screen`, `region_list_screen`.
+| `test/features/onboarding/agency/` | Widget + Unit | Fluxo de agência: CNPJ, confirmação, representante legal, status |
+
+**Sem testes:** `choose_mode_screen`, `cnpj_screen`, `company_data_screen`, `legal_rep_screen`, `hub_screen`, `region_list_screen`, `agency_status_screen`.
 
 ---
 
 ## Pendências reais (próximas ações)
 
 ### Dívida técnica imediata
-1. **Dark mode interno:** `hub_screen.dart`, `region_list_screen.dart`, `flow_page.dart` precisam migrar para `EanTrackTheme.of(context)`
+1. **Dark mode interno:** `hub_screen.dart`, `region_list_screen.dart`, `flow_screen.dart`, `agency_status_screen.dart` precisam migrar para `EanTrackTheme.of(context)`
 2. **Decomposição de screens longas:** `onboarding_profile_screen.dart` (911 linhas), `register_screen.dart` (579 linhas) violam o limite de 200 linhas
-3. **Testes:** smoke tests para as 4 telas de onboarding restantes + hub + regiões
+3. **Testes:** smoke tests para `agency_status_screen`, 4 telas de onboarding restantes, hub, regiões
 
 ### Próximas features (por prioridade)
 - Integração Supabase completa do fluxo de onboarding (perfil → mode → CNPJ → dados empresa)
@@ -161,6 +183,7 @@
 **Pós-correções dark mode (2026-04-13): ~8.9**
 **Pós-auditoria final (2026-04-14): 9.35 — nível enterprise confirmado**
 **Pós-ciclo de qualidade global (2026-04-20): 9.7 / 10 — meta atingida** *(EVAL-FINAL-009)*
+**Pós-agency-status + splash RPC (2026-04-22): não reavaliado** — novo código segue os mesmos padrões; dark mode da status screen é dívida conhecida.
 
 | Critério | Nota | Observação |
 |----------|------|-----------|
@@ -188,6 +211,7 @@ Itens não bloqueadores — registrados para tratamento futuro:
 | `AppTheme.dark().elevatedButtonTheme.backgroundColor = AppColors.secondary` | Baixo | Inativo: `AppButton.primary` sobrescreve com `Ink decoration` |
 | `register_screen` sem `_ThemeToggleButton` | Baixo | UX minor — usuário só alterna tema via login screen |
 | `_PasswordModal` usa `TextField` raw | Baixo | Exceção documentada; bordas alinhadas ao padrão |
+| `agency_status_screen.dart` usa `AppColors.*` direto | Médio | Mesmo padrão de hub/regiões — tratar junto na sprint de dark mode interno |
 
 ---
 
