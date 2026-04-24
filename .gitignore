@@ -68,3 +68,6 @@ desktop.ini
 # Coverage / Test outputs
 coverage/
 *.lcov
+
+# Local task notes
+docs/tasks/

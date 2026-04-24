@@ -1,9 +1,12 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../shared/shared.dart';
 import '../controllers/agency_cnpj_controller.dart';
 import '../presentation/widgets/cnpj_not_found_dialog.dart';
@@ -104,7 +107,189 @@ class AgencyCnpjScreen extends ConsumerWidget {
               Expanded(
                 child: AppButton.secondary(
                   'Voltar',
-                  onPressed: () => context.pop(),
+                  onPressed: () async {
+                    final shouldLeave = await showDialog<bool>(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (dialogContext) {
+                        return Material(
+                          color: Colors.transparent,
+                          child: Stack(
+                            children: [
+                              Positioned.fill(
+                                child: ClipRect(
+                                  child: BackdropFilter(
+                                    filter: ImageFilter.blur(
+                                      sigmaX: 12,
+                                      sigmaY: 12,
+                                    ),
+                                    child: Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        ColoredBox(
+                                          color: AppColors.modalOverlayBase
+                                              .withValues(alpha: 0.52),
+                                        ),
+                                        DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                              colors: [
+                                                AppColors.modalOverlayMid
+                                                    .withValues(alpha: 0.92),
+                                                AppColors.modalOverlayBase
+                                                    .withValues(alpha: 0.84),
+                                                AppColors.modalOverlayGlow
+                                                    .withValues(alpha: 0.18),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              SafeArea(
+                                child: Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.lg,
+                                      vertical: AppSpacing.xl,
+                                    ),
+                                    child: ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        maxWidth: 420,
+                                      ),
+                                      child: Builder(
+                                        builder: (ctx) {
+                                          final det = EanTrackTheme.of(ctx);
+                                          return Container(
+                                            padding: const EdgeInsets.all(
+                                              AppSpacing.lg,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: det.cardSurface,
+                                              borderRadius:
+                                                  BorderRadius.circular(24),
+                                              border: Border.all(
+                                                color: AppColors.warning
+                                                    .withValues(alpha: 0.16),
+                                              ),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: AppColors
+                                                      .modalOverlayBase
+                                                      .withValues(alpha: 0.28),
+                                                  blurRadius: 32,
+                                                  offset: const Offset(0, 18),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.stretch,
+                                              children: [
+                                                Center(
+                                                  child: Container(
+                                                    width: 72,
+                                                    height: 72,
+                                                    decoration: BoxDecoration(
+                                                      shape: BoxShape.circle,
+                                                      color: AppColors.warning
+                                                          .withValues(
+                                                            alpha: 0.10,
+                                                          ),
+                                                    ),
+                                                    child: const Icon(
+                                                      Icons
+                                                          .warning_amber_rounded,
+                                                      size: 34,
+                                                      color:
+                                                          AppColors.warning,
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(
+                                                  height: AppSpacing.md,
+                                                ),
+                                                Text(
+                                                  'Voltar agora?',
+                                                  textAlign: TextAlign.center,
+                                                  style: AppTextStyles
+                                                      .headlineSmall
+                                                      .copyWith(
+                                                        color: det.primaryText,
+                                                      ),
+                                                ),
+                                                const SizedBox(
+                                                  height: AppSpacing.sm,
+                                                ),
+                                                Text(
+                                                  'Recomendamos selecionar um modo antes de voltar.',
+                                                  textAlign: TextAlign.center,
+                                                  style: AppTextStyles.bodyMedium
+                                                      .copyWith(
+                                                        color:
+                                                            det.secondaryText,
+                                                        height: 1.45,
+                                                      ),
+                                                ),
+                                                const SizedBox(
+                                                  height: AppSpacing.sm,
+                                                ),
+                                                Text(
+                                                  'Se voce voltar agora, ira para o login e depois precisara fazer essa selecao novamente.',
+                                                  textAlign: TextAlign.center,
+                                                  style: AppTextStyles.bodyMedium
+                                                      .copyWith(
+                                                        color:
+                                                            det.secondaryText,
+                                                        height: 1.45,
+                                                      ),
+                                                ),
+                                                const SizedBox(
+                                                  height: AppSpacing.lg,
+                                                ),
+                                                AppButton.secondary(
+                                                  'Continuar nesta tela',
+                                                  onPressed: () =>
+                                                      Navigator.of(
+                                                        dialogContext,
+                                                      ).pop(false),
+                                                ),
+                                                const SizedBox(
+                                                  height: AppSpacing.sm,
+                                                ),
+                                                AppButton.primary(
+                                                  'Voltar para login',
+                                                  onPressed: () =>
+                                                      Navigator.of(
+                                                        dialogContext,
+                                                      ).pop(true),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                    if (shouldLeave == true && context.mounted) {
+                      await ref.read(authNotifierProvider.notifier).signOut();
+                      if (!context.mounted) return;
+                      context.go(AppRoutes.login);
+                    }
+                  },
                 ),
               ),
               const SizedBox(width: AppSpacing.md),

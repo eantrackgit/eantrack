@@ -1,5 +1,53 @@
 # EANTrack - Build Log
 
+## 2026-04-23 — Infra: Sentry, withRetry, dark mode agency_status, CI pipeline (3f7e99b)
+
+### Contexto
+Commit de infraestrutura após ciclo de agency onboarding. Objetivo: observabilidade em produção, resiliência de rede, dívida de dark mode e automação de build.
+
+### Implementado
+
+**`lib/main.dart`** (atualizado)
+- `SentryFlutter.init` envolve o `runApp`; DSN lido de `AppConfig.sentryDsn`
+- Sem DSN → Sentry inicializa silenciosamente sem capturar (seguro em dev local)
+
+**`lib/core/config/app_config.dart`** (atualizado)
+- `static const sentryDsn = String.fromEnvironment('SENTRY_DSN')`
+
+**`lib/shared/utils/async_action.dart`** (atualizado)
+- `withRetry<T>()` — função top-level com backoff multiplicativo: `delay × attempt`
+- Padrões: `maxAttempts: 3`, `delay: 500ms`; relança última exceção após esgotar tentativas
+
+**`lib/features/onboarding/agency/screens/agency_status_screen.dart`** (atualizado)
+- Migrado para `EanTrackTheme.of(context)` — dívida de dark mode quitada
+- `AppColors.*` hardcoded eliminado
+
+**`lib/features/onboarding/agency/controllers/agency_status_notifier.dart`** (atualizado)
+- Import `foundation.dart` corrigido (fix do `debugPrint` sem import)
+
+**`lib/features/onboarding/presentation/screens/onboarding_profile_screen.dart`** (atualizado)
+- `_ProfileHeader` extraído como widget privado
+- `_IdentifierSuggestions` extraído como widget privado
+- Screen principal reduzida; estrutura mais legível
+
+**`.github/workflows/build.yml`** (novo)
+- Job `build-apk`: `flutter build apk --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=... --dart-define=SENTRY_DSN=...` via secrets
+- Job `build-web`: `flutter build web --release` com mesmos defines
+- Secrets esperados: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SENTRY_DSN`
+
+**`pubspec.yaml` / `pubspec.lock`** (atualizado)
+- `sentry_flutter` adicionado como dependência
+
+### Dívida técnica resolvida
+- ✅ `agency_status_screen.dart` dark mode
+- ✅ `onboarding_profile_screen.dart` decomposição parcial
+
+### Dívida técnica restante
+- [ ] Dark mode: `hub_screen.dart`, `region_list_screen.dart`, `flow_screen.dart`
+- [ ] Decomposição: `register_screen.dart` (579 linhas)
+
+---
+
 ## 2026-04-20 a 2026-04-23 — Agency Status + Splash RPC + Auditoria
 
 ### Contexto

@@ -8,7 +8,6 @@ import '../../../../core/connectivity/presentation/connection_status_icon.dart';
 import '../../../../core/error/app_exception.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../shared/shared.dart';
-import '../../../onboarding/agency/controllers/agency_status_notifier.dart';
 import '../../domain/auth_state.dart';
 import '../providers/auth_provider.dart';
 
@@ -37,7 +36,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   final _passwordFocus = FocusNode();
   AsyncAction<void> _action = const ActionIdle();
   AsyncAction<void> _googleAction = const ActionIdle();
-  AgencyDocumentStatus _debugStatus = AgencyDocumentStatus.pending;
 
   @override
   void initState() {
@@ -340,67 +338,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             ),
             const SizedBox(height: AppSpacing.xs),
             Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: DropdownButton<AgencyDocumentStatus>(
-                      value: _debugStatus,
-                      isExpanded: true,
-                      dropdownColor: et.surface,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: et.secondaryText,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      underline: const SizedBox.shrink(),
-                      onChanged: isBusy
-                          ? null
-                          : (value) {
-                              if (value == null) return;
-                              setState(() => _debugStatus = value);
-                            },
-                      items: AgencyDocumentStatus.values.map((status) {
-                        return DropdownMenuItem<AgencyDocumentStatus>(
-                          value: status,
-                          child: Text(_debugStatusLabel(status)),
-                        );
-                      }).toList(),
-                    ),
+              child: TextButton(
+                onPressed: () => context.push(AppRoutes.validity),
+                style: TextButton.styleFrom(
+                  foregroundColor: et.secondaryText,
+                  textStyle: AppTextStyles.bodySmall.copyWith(
+                    fontWeight: FontWeight.w500,
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  TextButton(
-                    onPressed: isBusy
-                        ? null
-                        : () => context.push(
-                              AppRoutes.onboardingAgencyStatus,
-                              extra: _debugStatus,
-                            ),
-                    style: TextButton.styleFrom(
-                      foregroundColor: et.secondaryText,
-                      textStyle: AppTextStyles.bodySmall.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    child: const Text('Testar foto de perfil'),
-                  ),
-                ],
+                ),
+                child: const Text('Testar Validade'),
               ),
             ),
           ],
         ),
       ),
     );
-  }
-}
-
-String _debugStatusLabel(AgencyDocumentStatus status) {
-  switch (status) {
-    case AgencyDocumentStatus.pending:
-      return 'Aguardando';
-    case AgencyDocumentStatus.approved:
-      return 'Aprovado';
-    case AgencyDocumentStatus.rejected:
-      return 'Rejeitado';
   }
 }
 

@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../shared/shared.dart';
 
-class LegalRepresentativeScreen extends StatefulWidget {
+class LegalRepresentativeScreen extends ConsumerStatefulWidget {
   const LegalRepresentativeScreen({super.key});
 
   @override
-  State<LegalRepresentativeScreen> createState() =>
+  ConsumerState<LegalRepresentativeScreen> createState() =>
       _LegalRepresentativeScreenState();
 }
 
 class _LegalRepresentativeScreenState
-    extends State<LegalRepresentativeScreen>
+    extends ConsumerState<LegalRepresentativeScreen>
     with FormStateMixin<LegalRepresentativeScreen> {
   final _cpfCtrl = TextEditingController();
   final _rgCtrl = TextEditingController();
@@ -95,7 +97,11 @@ class _LegalRepresentativeScreenState
                 Expanded(
                   child: AppButton.secondary(
                     'Voltar',
-                    onPressed: () => context.go(AppRoutes.onboardingAgency),
+                    onPressed: () async {
+                      await ref.read(authNotifierProvider.notifier).signOut();
+                      if (!context.mounted) return;
+                      context.go(AppRoutes.login);
+                    },
                   ),
                 ),
                 const SizedBox(width: AppSpacing.md),

@@ -39,6 +39,7 @@ abstract final class AppRoutes {
   static const hub = '/hub';
 
   // --- Hub modules ---
+  static const validity = '/hub/validity';
   static const regions = '/hub/regions';
   static const cities = '/hub/regions/cities';
   static const pdvs = '/hub/pdvs';

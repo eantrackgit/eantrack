@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/router/app_routes.dart';
 import '../../../../features/auth/domain/auth_flow_state.dart';
@@ -37,11 +38,45 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
         context.go(AppRoutes.updatePassword);
         return;
       case AuthFlowState.onboardingRequired:
-        context.go(AppRoutes.onboarding);
+        _resolveOnboardingRoute(context);
         return;
       case AuthFlowState.authenticated:
         context.go(AppRoutes.hub);
         return;
+    }
+  }
+
+  Future<void> _resolveOnboardingRoute(BuildContext context) async {
+    try {
+      final route = await Supabase.instance.client.rpc(
+        'get_user_onboarding_route',
+      ) as String?;
+
+      if (!context.mounted) return;
+
+      switch (route) {
+        case 'hub':
+          context.go(AppRoutes.hub);
+          return;
+        case 'onboarding/agency/status':
+          context.go(AppRoutes.onboardingAgencyStatus);
+          return;
+        case 'onboarding/agency/representative':
+          context.go(AppRoutes.onboardingAgencyRepresentative);
+          return;
+        case 'onboarding/agency/cnpj':
+          context.go(AppRoutes.onboardingAgencyCnpj);
+          return;
+        case 'onboarding/individual/profile':
+          context.go(AppRoutes.onboardingIndividualProfile);
+          return;
+        default:
+          context.go(AppRoutes.onboarding);
+          return;
+      }
+    } on Exception catch (e) {
+      debugPrint('[FlowScreen] Erro ao resolver rota: $e');
+      if (context.mounted) context.go(AppRoutes.onboarding);
     }
   }
 

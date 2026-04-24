@@ -23,6 +23,7 @@ import '../../features/onboarding/presentation/screens/legal_representative_scre
 import '../../features/onboarding/presentation/screens/onboarding_profile_screen.dart';
 import '../../features/onboarding/presentation/screens/photo_profile_screen.dart';
 import '../../features/regions/presentation/screens/region_list_screen.dart';
+import '../../features/validity/presentation/screens/validity_list_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 import 'app_routes.dart';
 import '../../features/onboarding/agency/controllers/agency_status_notifier.dart';
@@ -121,7 +122,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (_, __) => _fade(const ChooseModeScreen()),
       ),
       GoRoute(
+        path: AppRoutes.onboardingOperationalStyle,
+        pageBuilder: (_, __) => _fade(const ChooseModeScreen()),
+      ),
+      GoRoute(
         path: AppRoutes.onboardingIndividual,
+        pageBuilder: (_, state) => _fade(
+          OnboardingProfileScreen(
+            mode: state.uri.queryParameters['mode'] ?? 'individual',
+          ),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.onboardingIndividualProfile,
         pageBuilder: (_, state) => _fade(
           OnboardingProfileScreen(
             mode: state.uri.queryParameters['mode'] ?? 'individual',
@@ -138,6 +151,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.onboardingCnpj,
+        pageBuilder: (_, __) => _fade(const AgencyCnpjScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.onboardingAgencyCnpj,
         pageBuilder: (_, __) => _fade(const AgencyCnpjScreen()),
       ),
       GoRoute(
@@ -168,10 +185,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final payload = extra is AgencyConfirmPayload ? extra : null;
           final prefillData = extra is AgencyStatusData ? extra : null;
 
-          if (payload == null && prefillData == null) {
-            return _fade(const AgencyCnpjScreen());
-          }
-
           return _fade(
             AgencyRepresentativeScreen(
               key: ValueKey(payload?.agencyId ?? prefillData?.agencyLegalName),
@@ -192,6 +205,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             AgencyStatusScreen(debugStatus: debugStatus),
           );
         },
+      ),
+      GoRoute(
+        path: AppRoutes.validity,
+        pageBuilder: (_, __) => _fade(const ValidityListScreen()),
       ),
       GoRoute(
         path: AppRoutes.regions,

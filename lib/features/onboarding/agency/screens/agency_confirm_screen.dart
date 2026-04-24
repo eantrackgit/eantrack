@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../shared/shared.dart';
 import '../controllers/agency_confirm_controller.dart';
+import '../controllers/agency_onboarding_notifier.dart';
 import '../models/cnpj_model.dart';
 
 /// Tela de confirmação e complementação dos dados da agência.
@@ -34,9 +37,194 @@ class AgencyConfirmScreen extends ConsumerWidget {
     );
   }
 
+  Future<void> _handleBack(
+    BuildContext context,
+    WidgetRef ref,
+    AgencyConfirmState state,
+  ) async {
+    final agencyId = state.savedAgencyId?.trim();
+    if (agencyId == null || agencyId.isEmpty) {
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go(AppRoutes.onboardingAgencyCnpj);
+      }
+      return;
+    }
+
+    final shouldReset = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) {
+            return Material(
+              color: Colors.transparent,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: ClipRect(
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            ColoredBox(
+                              color: AppColors.modalOverlayBase.withValues(
+                                alpha: 0.52,
+                              ),
+                            ),
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    AppColors.modalOverlayMid.withValues(
+                                      alpha: 0.92,
+                                    ),
+                                    AppColors.modalOverlayBase.withValues(
+                                      alpha: 0.84,
+                                    ),
+                                    AppColors.modalOverlayGlow.withValues(
+                                      alpha: 0.18,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  SafeArea(
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                          vertical: AppSpacing.xl,
+                        ),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 420),
+                          child: Builder(
+                            builder: (ctx) {
+                              final det = EanTrackTheme.of(ctx);
+                              return Container(
+                                padding: const EdgeInsets.all(AppSpacing.lg),
+                                decoration: BoxDecoration(
+                                  color: det.cardSurface,
+                                  borderRadius: BorderRadius.circular(24),
+                                  border: Border.all(
+                                    color: AppColors.warning.withValues(
+                                      alpha: 0.16,
+                                    ),
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.modalOverlayBase
+                                          .withValues(alpha: 0.28),
+                                      blurRadius: 32,
+                                      offset: const Offset(0, 18),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Center(
+                                      child: Container(
+                                        width: 72,
+                                        height: 72,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: AppColors.warning.withValues(
+                                            alpha: 0.10,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.warning_amber_rounded,
+                                          size: 34,
+                                          color: AppColors.warning,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: AppSpacing.md),
+                                    Text(
+                                      'Reiniciar cadastro?',
+                                      textAlign: TextAlign.center,
+                                      style:
+                                          AppTextStyles.headlineSmall.copyWith(
+                                        color: det.primaryText,
+                                      ),
+                                    ),
+                                    const SizedBox(height: AppSpacing.sm),
+                                    Text(
+                                      'Alterar o CNPJ reiniciara o cadastro da agencia. Os dados ja preenchidos serao descartados.',
+                                      textAlign: TextAlign.center,
+                                      style: AppTextStyles.bodyMedium.copyWith(
+                                        color: det.secondaryText,
+                                        height: 1.45,
+                                      ),
+                                    ),
+                                    const SizedBox(height: AppSpacing.lg),
+                                    AppButton.secondary(
+                                      'Cancelar',
+                                      onPressed: () => Navigator.of(
+                                        dialogContext,
+                                      ).pop(false),
+                                    ),
+                                    const SizedBox(height: AppSpacing.sm),
+                                    AppButton.primary(
+                                      'Reiniciar cadastro',
+                                      onPressed: () => Navigator.of(
+                                        dialogContext,
+                                      ).pop(true),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ) ??
+        false;
+
+    if (!shouldReset || !context.mounted) return;
+
+    final ok = await ref
+        .read(agencyOnboardingNotifierProvider.notifier)
+        .resetAgencyOnboarding(agencyId);
+
+    if (!context.mounted) return;
+
+    if (!ok) {
+      final message = ref.read(agencyOnboardingNotifierProvider).error ??
+          'Nao foi possivel reiniciar o cadastro da agencia.';
+      await AppFeedback.showError(
+        context,
+        title: 'Falha ao reiniciar',
+        message: message,
+      );
+      return;
+    }
+
+    ref.invalidate(agencyConfirmProvider(cnpjModel));
+    ref.read(agencyOnboardingNotifierProvider.notifier).clearState();
+    context.go(AppRoutes.onboardingAgencyCnpj);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(agencyConfirmProvider(cnpjModel));
+    final resetState = ref.watch(agencyOnboardingNotifierProvider);
     final notifier = ref.read(agencyConfirmProvider(cnpjModel).notifier);
     final et = EanTrackTheme.of(context);
     final isActive = cnpjModel.situacaoCadastral.trim().toUpperCase() == 'ATIVA';
@@ -341,7 +529,9 @@ class AgencyConfirmScreen extends ConsumerWidget {
                   Expanded(
                     child: AppButton.secondary(
                       'Voltar',
-                      onPressed: state.isSubmitting ? null : () => context.pop(),
+                      onPressed: (state.isSubmitting || resetState.isLoading)
+                          ? null
+                          : () => _handleBack(context, ref, state),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),

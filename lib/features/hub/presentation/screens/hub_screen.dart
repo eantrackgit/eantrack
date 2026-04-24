@@ -20,6 +20,12 @@ class _HubScreenState extends State<HubScreen> {
 
   static const _modules = [
     _ModuleCard(
+      icon: Icons.event_available_outlined,
+      label: 'Validade',
+      description: 'Lançamentos e vencimentos',
+      route: AppRoutes.validity,
+    ),
+    _ModuleCard(
       icon: Icons.map_outlined,
       label: 'Regiões',
       description: 'Gerencie territórios e cidades',

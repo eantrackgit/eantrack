@@ -2,7 +2,7 @@
 
 > **Leia este arquivo primeiro ao retomar o projeto.**
 > Atualizar a cada sessão que avança o código.
-> Última atualização: 2026-04-20 (ciclo de qualidade global 6.4 → 9.7; agency onboarding concluído e auditado)
+> Última atualização: 2026-04-23 (infra: Sentry, withRetry, dark mode agency_status, CI pipeline, extração de widgets)
 
 ---
 
@@ -20,10 +20,11 @@
 ## O que está implementado
 
 ### Fundação
-- `lib/main.dart` ✅
+- `lib/main.dart` ✅ — Sentry inicializado via `SentryFlutter.init`, DSN via `--dart-define=SENTRY_DSN`
 - `lib/app/app.dart` ✅ — MaterialApp.router com light/dark theme e `themeModeProvider`
-- `lib/core/config/app_config.dart` ✅
+- `lib/core/config/app_config.dart` ✅ — expõe `sentryDsn` via `String.fromEnvironment`
 - `lib/core/config/app_version.dart` ✅
+- `.github/workflows/build.yml` ✅ — CI pipeline com jobs APK (Android) e Web via secrets do repositório
 - `lib/core/error/app_exception.dart` ✅ — sealed hierarchy
 - `lib/core/router/app_routes.dart` ✅
 - `lib/core/router/app_router.dart` ✅ — GoRouter + RouterRedirectGuard
@@ -54,7 +55,7 @@
 
 ### Shared Utils / Mixins
 - `lib/shared/mixins/form_state_mixin.dart` ✅ — `formKey`, `submitted`, `validateAndSubmit()`, validators, password strength tracking
-- `lib/shared/utils/async_action.dart` ✅ — `ActionIdle / ActionLoading / ActionSuccess / ActionFailure` + `when()` helper
+- `lib/shared/utils/async_action.dart` ✅ — `ActionIdle / ActionLoading / ActionSuccess / ActionFailure` + `when()` helper + `withRetry<T>()` (backoff exponencial, 3 tentativas, delay 500ms × attempt)
 - `lib/shared/utils/async_value.dart` ✅ — `DataIdle / DataLoading / DataSuccess / DataEmpty / DataFailure`
 - `lib/shared/utils/password_validator.dart` ✅
 
@@ -81,7 +82,7 @@
 - `lib/features/onboarding/presentation/providers/onboarding_provider.dart` ✅
 - `lib/features/onboarding/presentation/controllers/identifier_controller.dart` ✅ — controller extraído da screen; `IdentifierStatus` (7 estados), debounce 350ms, `_requestId` para cancelamento de consultas stale, `normalize()` static, geração de sugestões name-driven + identifier-driven (max 5, todas normalizadas)
 - `lib/features/onboarding/presentation/screens/choose_mode_screen.dart` ✅ — dark mode
-- `lib/features/onboarding/presentation/screens/onboarding_profile_screen.dart` ✅ — dark mode, identifier com sugestões determinísticas (Instagram/Microsoft style), validação em tempo real. **Exceção intencional:** usa `TextFormField` raw por border dinâmico de status + `maxLines`/`buildCounter` customizado — documentado no código e em ARCHITECTURE.md.
+- `lib/features/onboarding/presentation/screens/onboarding_profile_screen.dart` ✅ — dark mode, identifier com sugestões determinísticas (Instagram/Microsoft style), validação em tempo real. Widgets `_ProfileHeader` e `_IdentifierSuggestions` extraídos. **Exceção intencional:** usa `TextFormField` raw por border dinâmico de status + `maxLines`/`buildCounter` customizado — documentado no código e em ARCHITECTURE.md.
 - `lib/features/onboarding/presentation/screens/cnpj_screen.dart` ✅ — UI criada
 - `lib/features/onboarding/presentation/screens/company_data_screen.dart` ✅ — UI criada
 - `lib/features/onboarding/presentation/screens/legal_representative_screen.dart` ✅ — UI criada
@@ -97,7 +98,7 @@
   - Exibe status da agência + status consolidado do documento
   - CTA dinâmico por status: approved → hub / rejected → reenvio de documento / pending → desabilitado
   - Reenvio: navega para `AgencyRepresentativeScreen` passando `AgencyStatusData` como `prefillData` (via `state.extra`)
-  - **⚠️ Usa `AppColors.*` direto — sem dark mode (mesmo padrão de hub/regiões — pendente)**
+  - Dark mode completo via `EanTrackTheme` (migrado em 2026-04-23)
 - `lib/features/onboarding/agency/screens/agency_representative_screen.dart` ✅ — atualizado para aceitar `prefillData: AgencyStatusData?` além de `payload: AgencyConfirmPayload?` (fluxo de reenvio)
 
 ### Splash
@@ -144,8 +145,8 @@
 ## Pendências reais (próximas ações)
 
 ### Dívida técnica imediata
-1. **Dark mode interno:** `hub_screen.dart`, `region_list_screen.dart`, `flow_screen.dart`, `agency_status_screen.dart` precisam migrar para `EanTrackTheme.of(context)`
-2. **Decomposição de screens longas:** `onboarding_profile_screen.dart` (911 linhas), `register_screen.dart` (579 linhas) violam o limite de 200 linhas
+1. **Dark mode interno:** `hub_screen.dart`, `region_list_screen.dart`, `flow_screen.dart` precisam migrar para `EanTrackTheme.of(context)` — `agency_status_screen.dart` resolvida em 2026-04-23
+2. **Decomposição de screens longas:** `register_screen.dart` (579 linhas) viola o limite de 200 linhas — `onboarding_profile_screen.dart` parcialmente resolvida com extração de `_ProfileHeader` e `_IdentifierSuggestions`
 3. **Testes:** smoke tests para `agency_status_screen`, 4 telas de onboarding restantes, hub, regiões
 
 ### Próximas features (por prioridade)
@@ -183,7 +184,8 @@
 **Pós-correções dark mode (2026-04-13): ~8.9**
 **Pós-auditoria final (2026-04-14): 9.35 — nível enterprise confirmado**
 **Pós-ciclo de qualidade global (2026-04-20): 9.7 / 10 — meta atingida** *(EVAL-FINAL-009)*
-**Pós-agency-status + splash RPC (2026-04-22): não reavaliado** — novo código segue os mesmos padrões; dark mode da status screen é dívida conhecida.
+**Pós-agency-status + splash RPC (2026-04-22): não reavaliado** — novo código segue os mesmos padrões.
+**Pós-infra (2026-04-23): não reavaliado** — Sentry, withRetry, dark mode agency_status resolvido, CI pipeline adicionado.
 
 | Critério | Nota | Observação |
 |----------|------|-----------|
@@ -211,7 +213,7 @@ Itens não bloqueadores — registrados para tratamento futuro:
 | `AppTheme.dark().elevatedButtonTheme.backgroundColor = AppColors.secondary` | Baixo | Inativo: `AppButton.primary` sobrescreve com `Ink decoration` |
 | `register_screen` sem `_ThemeToggleButton` | Baixo | UX minor — usuário só alterna tema via login screen |
 | `_PasswordModal` usa `TextField` raw | Baixo | Exceção documentada; bordas alinhadas ao padrão |
-| `agency_status_screen.dart` usa `AppColors.*` direto | Médio | Mesmo padrão de hub/regiões — tratar junto na sprint de dark mode interno |
+| `hub_screen.dart` e `region_list_screen.dart` usam `AppColors.*` direto | Médio | Tratar junto na sprint de dark mode interno |
 
 ---
 

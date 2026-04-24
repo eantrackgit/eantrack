@@ -4,8 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
+import '../../../auth/domain/auth_state.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../shared/shared.dart';
+import '../controllers/agency_confirm_controller.dart';
 import '../controllers/agency_representative_controller.dart';
+import '../services/agency_confirm_service.dart';
 import '../models/agency_confirm_payload.dart';
 import '../models/agency_representative_model.dart';
 import '../controllers/agency_status_notifier.dart';
@@ -55,6 +59,63 @@ class AgencyRepresentativeScreen extends ConsumerWidget {
 
     if (!shouldChange || !context.mounted) return;
     notifier.selectDocumentType(type);
+  }
+
+  Future<void> _handleBack(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+
+    final payloadAgencyId = payload?.agencyId.trim();
+    var agencyId = payloadAgencyId == null || payloadAgencyId.isEmpty
+        ? null
+        : payloadAgencyId;
+
+    if (agencyId == null) {
+      final authState = ref.read(authNotifierProvider);
+      if (authState is AuthAuthenticated) {
+        final flowAgencyId = authState.flowState?.agencyId?.trim();
+        if (flowAgencyId != null && flowAgencyId.isNotEmpty) {
+          agencyId = flowAgencyId;
+        }
+      }
+    }
+
+    if (agencyId == null || agencyId.isEmpty) {
+      context.go(AppRoutes.onboardingAgencyCnpj);
+      return;
+    }
+
+    try {
+      final recoveryData = await AgencyConfirmService().fetchAgencyForEdit(
+        agencyId,
+      );
+      if (!context.mounted) return;
+
+      AgencyConfirmNotifier.seedRecovery(recoveryData);
+      context.go(
+        AppRoutes.onboardingAgencyConfirm,
+        extra: recoveryData.cnpjModel,
+      );
+    } on AgencyConfirmServiceException catch (e) {
+      if (!context.mounted) return;
+      await AppFeedback.showError(
+        context,
+        title: 'Falha ao voltar',
+        message: e.message,
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      await AppFeedback.showError(
+        context,
+        title: 'Falha ao voltar',
+        message: 'Nao foi possivel carregar os dados da agencia.',
+      );
+    }
   }
 
   @override
@@ -221,7 +282,9 @@ class AgencyRepresentativeScreen extends ConsumerWidget {
               Expanded(
                 child: AppButton.secondary(
                   'Voltar',
-                  onPressed: state.isSubmitting ? null : () => context.pop(),
+                  onPressed: state.isSubmitting
+                      ? null
+                      : () => _handleBack(context, ref),
                 ),
               ),
               const SizedBox(width: AppSpacing.md),

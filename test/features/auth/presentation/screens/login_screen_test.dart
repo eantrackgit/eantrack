@@ -2,34 +2,15 @@ import 'package:eantrack/core/router/app_routes.dart';
 import 'package:eantrack/features/auth/domain/auth_state.dart';
 import 'package:eantrack/features/auth/presentation/providers/auth_provider.dart';
 import 'package:eantrack/features/auth/presentation/screens/login_screen.dart';
-import 'package:eantrack/features/onboarding/data/profile_photo_service.dart';
-import 'package:eantrack/features/onboarding/presentation/providers/photo_profile_provider.dart';
-import 'package:eantrack/features/onboarding/presentation/screens/photo_profile_screen.dart';
 import 'package:eantrack/shared/providers/theme_provider.dart';
 import 'package:eantrack/shared/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'auth_test_helpers.dart';
-
-class _FakeProfilePhotoService implements ProfilePhotoService {
-  @override
-  Future<String?> loadImageUrl() async => null;
-
-  @override
-  Future<PickedProfilePhoto?> pickImage(ImageSource source) async => null;
-
-  @override
-  Future<void> removeProfilePhoto() async {}
-
-  @override
-  Future<String> uploadProfilePhoto(PickedProfilePhoto photo) async =>
-      'https://example.com/original.jpg';
-}
 
 void main() {
   Future<void> _pumpUi(WidgetTester tester) async {
@@ -55,7 +36,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Smart Tracking'), findsOneWidget);
-    expect(find.text('Testar foto de perfil'), findsOneWidget);
+    expect(find.text('Testar Validade'), findsOneWidget);
     verifyNever(() => repo.signIn(
         email: any(named: 'email'), password: any(named: 'password')));
   });
@@ -120,10 +101,9 @@ void main() {
     expect(find.textContaining('Enviamos o link de recupera'), findsNothing);
   });
 
-  testWidgets('botao de teste navega para a tela de foto', (tester) async {
+  testWidgets('botao de teste navega para a tela de validade', (tester) async {
     final repo = MockAuthRepository();
     final notifier = TestAuthNotifier(repo, const AuthUnauthenticated());
-    final photoService = _FakeProfilePhotoService();
     final router = GoRouter(
       initialLocation: AppRoutes.login,
       routes: [
@@ -132,8 +112,10 @@ void main() {
           builder: (_, __) => const LoginScreen(),
         ),
         GoRoute(
-          path: AppRoutes.photoProfile,
-          builder: (_, __) => const PagPhotoProfile(),
+          path: AppRoutes.validity,
+          builder: (_, __) => const Scaffold(
+            body: Center(child: Text('Tela de validade')),
+          ),
         ),
       ],
     );
@@ -151,7 +133,6 @@ void main() {
         overrides: [
           authRepositoryProvider.overrideWithValue(repo),
           authNotifierProvider.overrideWith((ref) => notifier),
-          profilePhotoServiceProvider.overrideWithValue(photoService),
         ],
         child: Consumer(
           builder: (context, ref, _) {
@@ -171,16 +152,9 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.text('Testar foto de perfil'));
+    await tester.tap(find.text('Testar Validade'));
     await _pumpUi(tester);
 
-    expect(
-      find.textContaining('Testar foto de perfil', findRichText: true),
-      findsOneWidget,
-    );
-    expect(
-      find.textContaining('Testar foto de perfil', findRichText: true),
-      findsOneWidget,
-    );
+    expect(find.text('Tela de validade'), findsOneWidget);
   });
 }

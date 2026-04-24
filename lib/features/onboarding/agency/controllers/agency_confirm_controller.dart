@@ -98,6 +98,12 @@ final agencyConfirmProvider = StateNotifierProvider.autoDispose.family<
 );
 
 class AgencyConfirmNotifier extends StateNotifier<AgencyConfirmState> {
+  static AgencyEditRecoveryData? _pendingRecoveryData;
+
+  static void seedRecovery(AgencyEditRecoveryData data) {
+    _pendingRecoveryData = data;
+  }
+
   AgencyConfirmNotifier({
     required this.cnpjModel,
     CepService? cepService,
@@ -116,6 +122,11 @@ class AgencyConfirmNotifier extends StateNotifier<AgencyConfirmState> {
     municipioController.text = cnpjModel.municipio;
     ufController.text = cnpjModel.uf;
 
+    final pendingRecovery = _consumeRecoveryData(cnpjModel);
+    if (pendingRecovery != null) {
+      initFromRecovery(pendingRecovery.agencyId, pendingRecovery);
+    }
+
     _syncFormState();
   }
 
@@ -132,6 +143,35 @@ class AgencyConfirmNotifier extends StateNotifier<AgencyConfirmState> {
   final TextEditingController bairroController = TextEditingController();
   final TextEditingController municipioController = TextEditingController();
   final TextEditingController ufController = TextEditingController();
+
+  void initFromRecovery(String agencyId, AgencyEditRecoveryData data) {
+    fantasyNameController.text = data.nomeFantasia;
+    phoneController.text = data.telefoneContato;
+    emailController.text = data.email;
+    cepController.text = CnpjModel.formatCep(data.cep);
+    logradouroController.text = data.logradouro;
+    numeroController.text = data.numero;
+    bairroController.text = data.bairro;
+    municipioController.text = data.municipio;
+    ufController.text = data.uf;
+    state = state.copyWith(
+      savedAgencyId: agencyId,
+      error: null,
+      isConfirmed: false,
+    );
+  }
+
+  static AgencyEditRecoveryData? _consumeRecoveryData(CnpjModel cnpjModel) {
+    final pending = _pendingRecoveryData;
+    if (pending == null) return null;
+
+    if (onlyDigits(pending.cnpjModel.cnpj) != onlyDigits(cnpjModel.cnpj)) {
+      return null;
+    }
+
+    _pendingRecoveryData = null;
+    return pending;
+  }
 
   Future<void> searchCep() async {
     final rawCep = onlyDigits(cepController.text);
@@ -190,17 +230,38 @@ class AgencyConfirmNotifier extends StateNotifier<AgencyConfirmState> {
     );
 
     try {
-      final agencyId = await _confirmService.saveAgency(
-        cnpjModel: cnpjModel,
-        nomeFantasia: fantasyNameController.text.trim(),
-        telefoneContato: phoneController.text.trim(),
-        email: emailController.text.trim(),
-        cep: cepController.text.trim(),
-        logradouro: logradouroController.text.trim(),
-        numero: numeroController.text.trim(),
-        municipio: municipioController.text.trim(),
-        uf: ufController.text.trim(),
-      );
+      final existingId = state.savedAgencyId;
+
+      final String agencyId;
+
+      if (existingId != null && existingId.isNotEmpty) {
+        await _confirmService.updateAgency(
+          agencyId: existingId,
+          nomeFantasia: fantasyNameController.text.trim(),
+          telefoneContato: phoneController.text.trim(),
+          email: emailController.text.trim(),
+          cep: cepController.text.trim(),
+          logradouro: logradouroController.text.trim(),
+          numero: numeroController.text.trim(),
+          bairro: bairroController.text.trim(),
+          municipio: municipioController.text.trim(),
+          uf: ufController.text.trim(),
+        );
+        agencyId = existingId;
+      } else {
+        agencyId = await _confirmService.saveAgency(
+          cnpjModel: cnpjModel,
+          nomeFantasia: fantasyNameController.text.trim(),
+          telefoneContato: phoneController.text.trim(),
+          email: emailController.text.trim(),
+          cep: cepController.text.trim(),
+          logradouro: logradouroController.text.trim(),
+          numero: numeroController.text.trim(),
+          bairro: bairroController.text.trim(),
+          municipio: municipioController.text.trim(),
+          uf: ufController.text.trim(),
+        );
+      }
 
       state = state.copyWith(
         isLoading: false,

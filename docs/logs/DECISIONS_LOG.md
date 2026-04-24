@@ -41,6 +41,26 @@ Barrel shared/shared.dart — import sempre via barrel
 
 ---
 
+## DEC-023 — Sentry via dart-define, sem fallback silencioso
+
+**Data:** 2026-04-23
+**Contexto:** Monitoramento de erros em produção. Opções: (A) Sentry com DSN hardcoded, (B) DSN via `--dart-define`, (C) sem monitoramento.
+**Decisão:** `SentryFlutter.init` no `main.dart` com DSN lido de `AppConfig.sentryDsn` (`String.fromEnvironment('SENTRY_DSN')`). Se DSN estiver vazio (dev local sem `--dart-define`), Sentry inicializa sem capturar — sem crash.
+**Motivo:** DSN não deve estar no código-fonte (segurança). Flexibilidade por ambiente: dev sem Sentry, staging/prod com Sentry via secret do CI.
+**Impacto:** Pipeline `.github/workflows/build.yml` passa `SENTRY_DSN` via secret. Qualquer exceção não tratada em produção é capturada automaticamente. Não requer alteração de código para habilitar/desabilitar por ambiente.
+
+---
+
+## DEC-024 — `withRetry<T>()` como função top-level em `async_action.dart`
+
+**Data:** 2026-04-23
+**Contexto:** Operações de rede (Supabase, CEP, CNPJ) podem falhar por instabilidade transitória. Opções: (A) retry inline em cada notifier, (B) helper centralizado.
+**Decisão:** `withRetry<T>(Future<T> Function() action, {int maxAttempts = 3, Duration delay = const Duration(milliseconds: 500)})` em `async_action.dart`. Backoff multiplicativo: delay × attempt (500ms, 1000ms, 1500ms). Relança a última exceção se todas as tentativas falharem.
+**Motivo:** Centraliza o padrão evitando duplicação nos notifiers. Colocado em `async_action.dart` por coerência — mesmo arquivo das primitivas de estado assíncrono do projeto.
+**Impacto:** Disponível via barrel `shared/shared.dart`. Usar em chamadas de rede que podem falhar transitoriamente. Não usar para erros de negócio (validação, conflito de CNPJ) — esses devem falhar imediatamente.
+
+---
+
 ## DEC-021 — Splash routing delegado ao Supabase via RPC
 
 **Data:** 2026-04-22
