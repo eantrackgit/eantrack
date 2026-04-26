@@ -57,20 +57,22 @@ final authOnboardingCompleteProvider = Provider<bool>((ref) {
 
 final authFlowStateProvider = Provider<AuthFlowState>((ref) {
   final isRecovery = ref.watch(authRecoveryContextProvider);
+  final authState = ref.watch(authNotifierProvider);
   final authUser = ref.watch(authUserStreamProvider).valueOrNull;
-  final hasSession = isRecovery ||
-      authUser != null;
+  final hasSession = isRecovery || authUser != null;
 
   if (isRecovery) {
     return AuthFlowState.recovery;
   }
+  if (authState is AuthAuthenticated) {
+    return authState.flowState?.isOnboardingComplete ?? false
+        ? AuthFlowState.authenticated
+        : AuthFlowState.onboardingRequired;
+  }
   if (!hasSession) {
     return AuthFlowState.unauthenticated;
   }
-  if (!ref.watch(authOnboardingCompleteProvider)) {
-    return AuthFlowState.onboardingRequired;
-  }
-  return AuthFlowState.authenticated;
+  return AuthFlowState.onboardingRequired;
 });
 
 // ---------------------------------------------------------------------------

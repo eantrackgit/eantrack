@@ -52,19 +52,25 @@ class AuthScaffold extends StatelessWidget {
       backgroundColor: et.scaffoldOuter,
       body: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: isDark
-                ? const [
+          gradient: isDark
+              ? const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
                     AppColors.authScaffoldTop,
+                    AppColors.authScaffoldMid,
                     AppColors.authScaffoldBottom,
-                  ]
-                : [
+                  ],
+                  stops: [0.0, 0.5, 1.0],
+                )
+              : LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
                     Color.lerp(et.scaffoldOuter, Colors.white, 0.06)!,
                     Color.lerp(et.scaffoldOuter, Colors.black, 0.06)!,
                   ],
-          ),
+                ),
         ),
         child: SafeArea(
           child: Stack(

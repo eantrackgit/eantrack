@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -83,32 +82,9 @@ class AgencyRepresentativeService {
       );
     }
 
-    final uploadedPaths = <String>[];
     String? legalRepresentativeId;
 
     try {
-      try {
-        final existing = await _supabaseClient
-            .from('legal_documents')
-            .select('front_url, back_url')
-            .eq('agency_id', submission.agencyId)
-            .maybeSingle();
-
-        final pathsToDelete = <String>[];
-        if (existing?['front_url'] != null) {
-          pathsToDelete.add(_extractPath(existing!['front_url'] as String));
-        }
-        if (existing?['back_url'] != null) {
-          pathsToDelete.add(_extractPath(existing!['back_url'] as String));
-        }
-
-        if (pathsToDelete.isNotEmpty) {
-          await _supabaseClient.storage.from(_bucketName).remove(pathsToDelete);
-        }
-      } catch (e) {
-        debugPrint('Failed to clean previous legal documents: $e');
-      }
-
       final frontFile = submission.frontFileForUpload;
       if (frontFile == null) {
         throw const AgencyRepresentativeServiceException(
@@ -116,29 +92,7 @@ class AgencyRepresentativeService {
         );
       }
 
-      final frontPath = await _uploadDocument(
-        agencyId: submission.agencyId,
-        documentType: submission.documentType,
-        file: frontFile,
-        slot: AgencyRepresentativeAttachmentSlot.front,
-      );
-      uploadedPaths.add(frontPath);
-
-      String? backPath;
       final backFile = submission.backFileForUpload;
-      if (backFile != null) {
-        backPath = await _uploadDocument(
-          agencyId: submission.agencyId,
-          documentType: submission.documentType,
-          file: backFile,
-          slot: AgencyRepresentativeAttachmentSlot.back,
-        );
-        uploadedPaths.add(backPath);
-      }
-
-      final bucket = _supabaseClient.storage.from(_bucketName);
-      final frontUrl = bucket.getPublicUrl(frontPath);
-      final backUrl = backPath == null ? null : bucket.getPublicUrl(backPath);
 
       final insertedRepresentative = await _supabaseClient
           .from('legal_representatives')
@@ -161,31 +115,54 @@ class AgencyRepresentativeService {
         );
       }
 
+      final nextAttempt = await _nextAttemptNumber(submission.agencyId);
+
+      final frontPath = await _uploadDocument(
+        agencyId: submission.agencyId,
+        representativeId: legalRepresentativeId,
+        attemptNumber: nextAttempt,
+        file: frontFile,
+        slot: AgencyRepresentativeAttachmentSlot.front,
+      );
+
+      String? backPath;
+      if (backFile != null) {
+        backPath = await _uploadDocument(
+          agencyId: submission.agencyId,
+          representativeId: legalRepresentativeId,
+          attemptNumber: nextAttempt,
+          file: backFile,
+          slot: AgencyRepresentativeAttachmentSlot.back,
+        );
+      }
+
+      final bucket = _supabaseClient.storage.from(_bucketName);
+      final frontUrl = bucket.getPublicUrl(frontPath);
+      final backUrl = backPath == null ? null : bucket.getPublicUrl(backPath);
+
       await _supabaseClient.from('legal_documents').insert({
         'agency_id': submission.agencyId,
         'legal_representative_id': legalRepresentativeId,
         'document_type': submission.documentType.databaseValue,
+        'attempt_number': nextAttempt,
         'front_url': frontUrl,
         'back_url': backUrl,
       });
     } on StorageException catch (e) {
-      await _rollbackUploads(uploadedPaths);
+      await _rollbackRepresentative(legalRepresentativeId);
       throw AgencyRepresentativeServiceException(
         'Falha no upload do documento. ${e.message}',
       );
     } on PostgrestException catch (e) {
       await _rollbackRepresentative(legalRepresentativeId);
-      await _rollbackUploads(uploadedPaths);
       throw AgencyRepresentativeServiceException(
         'Não foi possível salvar o representante legal. (${e.code})',
       );
     } on AgencyRepresentativeServiceException {
       await _rollbackRepresentative(legalRepresentativeId);
-      await _rollbackUploads(uploadedPaths);
       rethrow;
     } catch (_) {
       await _rollbackRepresentative(legalRepresentativeId);
-      await _rollbackUploads(uploadedPaths);
       throw const AgencyRepresentativeServiceException(
         'Não foi possível salvar o representante legal.',
       );
@@ -194,21 +171,23 @@ class AgencyRepresentativeService {
 
   Future<String> _uploadDocument({
     required String agencyId,
-    required AgencyRepresentativeDocumentType documentType,
+    required String representativeId,
+    required int attemptNumber,
     required AgencyRepresentativePickedFile file,
     required AgencyRepresentativeAttachmentSlot slot,
   }) async {
-    final sanitizedName = _sanitizeFileName(file.fileName);
-    final storageFileName = '${slot.filePrefix}_$sanitizedName';
+    final storageFileName = slot == AgencyRepresentativeAttachmentSlot.back
+        ? 'back.webp'
+        : 'front.webp';
     final path =
-        '${agencyId.trim()}/${documentType.storageFolder}/$storageFileName';
+        '${agencyId.trim()}/${representativeId.trim()}/attempt_$attemptNumber/$storageFileName';
     final bucket = _supabaseClient.storage.from(_bucketName);
 
     await bucket.uploadBinary(
       path,
       file.bytes,
       fileOptions: FileOptions(
-        upsert: true,
+        upsert: false,
         contentType: file.contentType,
       ),
     );
@@ -216,14 +195,21 @@ class AgencyRepresentativeService {
     return path;
   }
 
-  Future<void> _rollbackUploads(List<String> uploadedPaths) async {
-    if (uploadedPaths.isEmpty) return;
+  Future<int> _nextAttemptNumber(String agencyId) async {
+    final lastDocument = await _supabaseClient
+        .from('legal_documents')
+        .select('attempt_number')
+        .eq('agency_id', agencyId)
+        .order('attempt_number', ascending: false)
+        .limit(1)
+        .maybeSingle();
 
-    try {
-      await _supabaseClient.storage.from(_bucketName).remove(uploadedPaths);
-    } catch (_) {
-      // Rollback de storage é best effort; preservamos o erro original.
-    }
+    final rawAttempt = lastDocument?['attempt_number'];
+    final lastAttempt = rawAttempt is int
+        ? rawAttempt
+        : int.tryParse(rawAttempt?.toString() ?? '') ?? 0;
+
+    return lastAttempt + 1;
   }
 
   Future<void> _rollbackRepresentative(String? legalRepresentativeId) async {
@@ -243,14 +229,6 @@ class AgencyRepresentativeService {
     } catch (_) {
       // Rollback de banco também é best effort; preservamos o erro original.
     }
-  }
-
-  String _extractPath(String publicUrl) {
-    final marker = '/$_bucketName/';
-    final markerIndex = publicUrl.indexOf(marker);
-    if (markerIndex == -1) return publicUrl;
-
-    return publicUrl.substring(markerIndex + marker.length);
   }
 
   bool _isAcceptedExtension(String extension) {
@@ -281,30 +259,6 @@ class AgencyRepresentativeService {
     }
   }
 
-  String _sanitizeFileName(String value) {
-    final trimmed = value.trim();
-    if (trimmed.isEmpty) {
-      return 'documento';
-    }
-
-    final dotIndex = trimmed.lastIndexOf('.');
-    final hasExtension = dotIndex > 0 && dotIndex < trimmed.length - 1;
-    final rawName = hasExtension ? trimmed.substring(0, dotIndex) : trimmed;
-    final rawExtension = hasExtension ? trimmed.substring(dotIndex + 1) : '';
-
-    final normalizedName = rawName
-        .replaceAll(RegExp(r'\s+'), '_')
-        .replaceAll(RegExp(r'[^A-Za-z0-9_]'), '')
-        .replaceAll(RegExp(r'_+'), '_')
-        .replaceAll(RegExp(r'^_+|_+$'), '');
-
-    final safeName = normalizedName.isEmpty ? 'documento' : normalizedName;
-    if (rawExtension.isEmpty) {
-      return safeName;
-    }
-
-    return '$safeName.$rawExtension';
-  }
 }
 
 /// Exceção base usada pelo fluxo de representante legal.

@@ -216,8 +216,6 @@ class AgencyConfirmScreen extends ConsumerWidget {
       return;
     }
 
-    ref.invalidate(agencyConfirmProvider(cnpjModel));
-    ref.read(agencyOnboardingNotifierProvider.notifier).clearState();
     context.go(AppRoutes.onboardingAgencyCnpj);
   }
 

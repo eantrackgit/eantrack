@@ -42,7 +42,10 @@ class RouterRedirectGuard extends ChangeNotifier {
         path == AppRoutes.register ||
         path == AppRoutes.recoverPassword;
     final isOnboardingRoute = path == AppRoutes.onboarding ||
+        path == AppRoutes.onboardingOperationalStyle ||
         path == AppRoutes.onboardingIndividual ||
+        path == AppRoutes.onboardingIndividualProfile ||
+        path == AppRoutes.photoProfile ||
         path == AppRoutes.onboardingCnpj ||
         path == AppRoutes.onboardingAgency ||
         path == AppRoutes.onboardingLegalRep ||
@@ -74,6 +77,13 @@ class RouterRedirectGuard extends ChangeNotifier {
     }
 
     if (isAppRoute && authFlowState != AuthFlowState.authenticated) {
+      // Agency users with pending/rejected status must land on status screen,
+      // not on the generic /flow — prevents the "empty shell" regression bug.
+      final authState = _ref.read(authNotifierProvider);
+      if (authState is AuthAuthenticated &&
+          authState.flowState?.normalizedUserMode == 'agency') {
+        return AppRoutes.onboardingAgencyStatus;
+      }
       return AppRoutes.flow;
     }
 

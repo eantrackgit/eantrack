@@ -2,18 +2,18 @@
 
 > **Leia este arquivo primeiro ao retomar o projeto.**
 > Atualizar a cada sessão que avança o código.
-> Última atualização: 2026-04-23 (infra: Sentry, withRetry, dark mode agency_status, CI pipeline, extração de widgets)
+> Última atualização: 2026-04-25 (agency status web shell, documentos versionados, sidebar desktop, router guard, FlowScreen safety)
 
 ---
 
 ## Fase Atual
 
 **Fase 1 — Auth** ✅ Completo (telas + dark mode + testes)
-**Fase 2 — Onboarding** ✅ Core completo — IdentifierController extraído e testado; agency onboarding (CNPJ → confirmação → representante legal) **concluído e auditado (9.7)**
-**Fase 3 — Hub + Regiões** 🔄 Funcional (layout + navegação + agencyId guard), sem dark mode, sem testes de UI
+**Fase 2 — Onboarding** ✅ Core completo — agency onboarding completo (CNPJ → confirmação → representante → status); documentos versionados com rollback; sidebar desktop; router guard corrigido; pending/rejected permanecem na tela de status; approved exige ação explícita para entrar no hub/configuração
+**Fase 3 — Hub + Regiões** 🔄 Funcional (layout + navegação + agencyId guard), sem dark mode, sem testes de UI. **⚠️ HubScreen com dados hardcoded no sidebar — ver Bugs Conhecidos.**
 **Fase 4 — Testes** ✅ Auth, Onboarding controller e widget cobertos; Hub/Regiões sem testes de UI
 
-**Próximo objetivo:** Módulo de Validade (modo individual)
+**Próximo objetivo:** Polimento UX (dados reais no sidebar, refinamento visual light/dark, estados loading/error, hierarquia tipográfica, botão voltar status screen) → depois Módulo de Validade
 
 ---
 
@@ -87,19 +87,51 @@
 - `lib/features/onboarding/presentation/screens/company_data_screen.dart` ✅ — UI criada
 - `lib/features/onboarding/presentation/screens/legal_representative_screen.dart` ✅ — UI criada
 
-### Onboarding — Agency Status
+### Onboarding — Agency Status + Documentos Versionados
+
+**Modelo de documentos:** insert-only, não-destrutivo, `attempt_number` incremental. Documentação completa: [docs/architecture/LEGAL_DOCUMENTS_VERSIONING.md](../architecture/LEGAL_DOCUMENTS_VERSIONING.md)
+
+**Fluxo atual do web shell/status:**
+- `pending` e `rejected` mantêm o usuário em `/onboarding/agency/status`, inclusive após F5/reload ou regressão de status.
+- `approved` também permanece na tela de status após reload; não há redirecionamento automático para dashboard.
+- Entrada no hub/configuração é explícita: CTA "Iniciar configuração da agência" ou clique em item liberado do MenuHubSidebar.
+- Botão "Atualizar status da solicitação" chama `agencyStatusProvider(...).refresh()` e refaz query real nas views; mudança no Supabase reflete na UI sem F5.
+- Enquanto status ainda está indefinido/carregando, o router não empurra o usuário para `/flow` vazio.
+- Mobile preserva o comportamento de status sem sidebar; sidebar aparece apenas em desktop.
+
 - `lib/features/onboarding/agency/controllers/agency_status_notifier.dart` ✅
   - `AgencyDocumentStatus` — enum: `pending | approved | rejected`
   - `AgencyStatusData` — model rico com `fromJson` defensivo (snake_case + camelCase fallback via `_toCamelCase`), `copyWith`
   - `AgencyStatusState` — `AgencyStatusLoading` enum + `data` + `error`, `copyWith` com sentinel para nullable
-  - `AgencyStatusNotifier` — consulta view `v_user_agency_onboarding_context`; suporte a `mockStatus` para debug
+  - `AgencyStatusNotifier` — consulta `v_user_agency_onboarding_context` (contexto) + `v_agency_latest_document_status` (status consolidado da última tentativa); suporte a `mockStatus` para debug
   - `agencyStatusProvider` — `StateNotifierProvider.autoDispose.family<..., AgencyDocumentStatus?>` (parâmetro para override de debug)
+  - **⚠️ Design gap:** `statusAgency` e `consolidatedDocumentStatus` são populados com o mesmo valor em `fromJson`. `statusAgency` deveria refletir `agencies.status_agency`, mas lê apenas o campo de documento. Ver Bugs Conhecidos.
+- `lib/features/onboarding/agency/services/agency_representative_service.dart` ✅
+  - `submit()` — INSERT em `legal_representatives` + upload Storage + INSERT em `legal_documents`
+  - `_nextAttemptNumber()` — calcula `MAX(attempt_number) + 1` para a agência
+  - Storage path: `{agencyId}/{representativeId}/attempt_{n}/front.webp` [+ `back.webp`]
+  - Rollback automático em falha parcial (delete apenas do registro recém-criado)
 - `lib/features/onboarding/agency/screens/agency_status_screen.dart` ✅
-  - Exibe status da agência + status consolidado do documento
-  - CTA dinâmico por status: approved → hub / rejected → reenvio de documento / pending → desabilitado
-  - Reenvio: navega para `AgencyRepresentativeScreen` passando `AgencyStatusData` como `prefillData` (via `state.extra`)
-  - Dark mode completo via `EanTrackTheme` (migrado em 2026-04-23)
-- `lib/features/onboarding/agency/screens/agency_representative_screen.dart` ✅ — atualizado para aceitar `prefillData: AgencyStatusData?` além de `payload: AgencyConfirmPayload?` (fluxo de reenvio)
+  - Exibe status consolidado da última tentativa (via `v_agency_latest_document_status`)
+  - CTA dinâmico por status: approved → "Iniciar configuração da agência" / rejected → reenvio / pending → desabilitado
+  - Approved não redireciona automaticamente para dashboard após reload; entrada no hub depende de ação explícita
+  - Botão "Atualizar status da solicitação" refaz consulta real via notifier e exibe loading no padrão existente
+  - `rejection_reason` exibido apenas quando última tentativa = rejected
+  - Reenvio: navega para `AgencyRepresentativeScreen` com `AgencyStatusData` como `prefillData`
+  - Dark mode completo via `EanTrackTheme`
+  - **⚠️ Mobile:** botão voltar (leading) faz signout sem aviso — UX confuso para usuário em pending
+- `lib/features/onboarding/agency/screens/agency_representative_screen.dart` ✅ — aceita `prefillData: AgencyStatusData?` (fluxo de reenvio) além de `payload: AgencyConfirmPayload?` (fluxo inicial)
+
+### Hub — MenuHub Sidebar Desktop
+
+- `lib/features/hub/presentation/widgets/menu_hub_sidebar.dart` ✅
+  - Sidebar 280px, dark mode completo, seções: Identidade, Estrutura, Operacional, Planos, Conta
+  - `_isBlocked` → `agencyStatus != approved` → itens com `Opacity(0.45)` + `enabled: false`
+  - Pending/rejected bloqueiam navegação interna; approved libera os itens previstos
+  - Rodapé "Sair da conta" sempre visível
+  - Web/desktop: MenuHub vira sidebar em `Breakpoints.isDesktop(context)` no HubScreen e na AgencyStatusScreen
+  - Mobile: MenuHub continua como página/experiência mobile; AgencyStatusScreen não exibe sidebar
+  - **⚠️ HubScreen passa dados hardcoded** (userName, agencyName, agencyStatus) — ver Bugs Conhecidos
 
 ### Splash
 - `lib/features/splash/presentation/splash_notifier.dart` ✅ — orquestrador; delega animação para `SplashAnimationController` e conectividade para `SplashConnectivityHandler`
@@ -109,7 +141,7 @@
 
 ### Hub
 - `lib/features/hub/presentation/screens/hub_screen.dart` ✅ — layout responsive (sidebar desktop / bottom nav mobile). **⚠️ Usa `AppColors.*` direto — sem dark mode.**
-- `lib/features/flow/presentation/screens/flow_screen.dart` ✅ — tela de decisão de fluxo. **⚠️ Cor hardcoded.**
+- `lib/features/flow/presentation/screens/flow_screen.dart` ✅ — tela de decisão de fluxo com proteção contra estado preso: reset pós-redirect para `/flow`, `finally` resiliente em `_resolveOnboardingRouteFromState()` e safety timer de 8s com fallback para login. **⚠️ Cor hardcoded.**
 
 ### Regiões
 - `lib/features/regions/domain/region_model.dart` ✅
@@ -142,12 +174,27 @@
 
 ---
 
+## Bugs Conhecidos (pré-commit)
+
+| ID | Arquivo | Descrição | Severidade |
+|----|---------|-----------|-----------|
+| BUG-01 | `hub_screen.dart:78-83` | Sidebar no hub com dados hardcoded (userName, agencyName, agencyHandle, agencyStatus: approved) | Alta — UX quebrada para qualquer usuário real |
+| BUG-02 | `agency_status_notifier.dart:86,104` | `statusAgency` e `consolidatedDocumentStatus` populados com o mesmo valor em `fromJson`; `statusAgency` não reflete `agencies.status_agency` | Média — UI exibe dois campos idênticos, inconsistência quando banco divergir |
+| BUG-03 | `user_flow_state.dart:49` vs `app_router.dart` | `isOnboardingComplete` ainda usa `agencies.status_agency`, enquanto o web shell protege acesso pelo status documental consolidado quando disponível. | Média — comportamento funcional, mas a fonte de verdade deve ser unificada/documentada antes de escalar |
+| BUG-04 | `agency_status_screen.dart:80-85` | Botão voltar no mobile faz signout sem aviso. Usuário em pending que pressiona voltar é deslogado. | Baixa — confuso mas não causa perda de dados |
+
+---
+
 ## Pendências reais (próximas ações)
 
-### Dívida técnica imediata
-1. **Dark mode interno:** `hub_screen.dart`, `region_list_screen.dart`, `flow_screen.dart` precisam migrar para `EanTrackTheme.of(context)` — `agency_status_screen.dart` resolvida em 2026-04-23
-2. **Decomposição de screens longas:** `register_screen.dart` (579 linhas) viola o limite de 200 linhas — `onboarding_profile_screen.dart` parcialmente resolvida com extração de `_ProfileHeader` e `_IdentifierSuggestions`
-3. **Testes:** smoke tests para `agency_status_screen`, 4 telas de onboarding restantes, hub, regiões
+### Dívida técnica imediata — Fase de Polimento
+1. **BUG-01 (HubScreen sidebar hardcoded):** Integrar dados reais do auth state (nome, agência, role) no sidebar. Injetar `agencyStatus` real via provider.
+2. **BUG-02 (statusAgency = consolidatedDocumentStatus):** Separar os dois campos no `fromJson` — `statusAgency` deve ler `agencies.status_agency` da view `v_user_agency_onboarding_context`, `consolidatedDocumentStatus` continua lendo da view de documentos.
+3. **BUG-03 (duas fontes de verdade):** Alinhar `isOnboardingComplete` à mesma fonte usada pelo router para liberação de acesso: documentação aprovada via `v_agency_latest_document_status`.
+4. **BUG-04 (botão voltar = signout):** Substituir por navegação ou remover leading no mobile da AgencyStatusScreen quando chegou via onboarding (sem rota para pop).
+5. **Dark mode interno:** `hub_screen.dart`, `region_list_screen.dart`, `flow_screen.dart` precisam migrar para `EanTrackTheme.of(context)`
+6. **Decomposição de screens longas:** `register_screen.dart` (579 linhas) viola o limite de 200 linhas
+7. **Testes:** smoke tests para `agency_status_screen`, hub, sidebar
 
 ### Próximas features (por prioridade)
 - Integração Supabase completa do fluxo de onboarding (perfil → mode → CNPJ → dados empresa)
@@ -221,6 +268,9 @@ Itens não bloqueadores — registrados para tratamento futuro:
 
 | Risco | Nível | Mitigação |
 |-------|-------|-----------|
+| `agencyStatusProvider(null)` autoDispose pode estar sem dados no primeiro redirect | Médio | Router evita `/flow` vazio e direciona onboarding autenticado para status; ainda vale considerar provider eager se o shell crescer |
+| Duas fontes de verdade para "agência liberada" (`status_agency` operacional vs `consolidated_document_status` documental) | Médio | Tratar como conceitos separados: acesso ao app depende do status documental aprovado; status operacional futuro deve ter semântica própria |
+| `admin_review_legal_documents` RPC recebe `p_agency_id` (não `p_document_id`) — pode alterar múltiplas tentativas no banco | Médio | Verificar implementação da RPC no Supabase Dashboard; confirmar que ela altera apenas a última tentativa |
 | Arquivos FlutterFlow legados causam erros de análise | Médio | Deletar na Fase Hardening; ignorar até lá |
 | Dark mode quebrado em telas internas (hub, regiões) | Médio | Migrar para EanTrackTheme nas próximas sessões |
 | Screens longas (911, 579 linhas) dificultam manutenção | Médio | Decompor em widgets privados quando tocar no arquivo |

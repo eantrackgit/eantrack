@@ -3,10 +3,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
 import '../../../../shared/shared.dart';
+import '../../../onboarding/agency/controllers/agency_status_notifier.dart';
+import '../widgets/menu_hub_sidebar.dart';
 
 /// Tela principal do app pós-login.
 ///
-/// Desktop: AppSidebar fixa à esquerda + conteúdo à direita.
+/// Desktop: MenuHubSidebar fixa à esquerda + conteúdo à direita.
 /// Mobile: conteúdo no topo + AppBottomNav na parte inferior.
 class HubScreen extends StatefulWidget {
   const HubScreen({super.key});
@@ -71,11 +73,13 @@ class _HubScreenState extends State<HubScreen> {
       return Scaffold(
         body: Row(
           children: [
-            AppSidebar(
+            MenuHubSidebar(
               userName: 'Usuário',
-              userRole: 'Agência',
-              selectedIndex: _selectedIndex,
-              onItemTap: (i) => setState(() => _selectedIndex = i),
+              userRole: 'Administrador',
+              agencyName: 'Minha Agência',
+              agencyHandle: 'minhaagencia',
+              agencyStatus: AgencyDocumentStatus.approved,
+              onSignOut: () => context.go(AppRoutes.login),
             ),
             Expanded(child: _Content(modules: _modules)),
           ],

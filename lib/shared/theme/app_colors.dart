@@ -28,17 +28,18 @@ abstract final class AppColors {
   static const modalOverlayGlow = Color(0xFF1A56DB);
 
   // Gradients
-  static const gradientStart = Color(0xFF080B1A);
-  static const gradientMid = Color(0xFF0E1631);
-  static const gradientEnd = Color(0xFF111B3A);
+  static const gradientStart = Color(0xFF0B1020);
+  static const gradientMid = Color(0xFF10182B);
+  static const gradientEnd = Color(0xFF121A2F);
 
   // Splash
   static const splashGlow = Color(0xFF4D72F5);
   static const splashSubtitle = Color(0xB8E4EAF6);
 
   // Auth scaffold
-  static const authScaffoldTop = Color(0xFF0F1829);
-  static const authScaffoldBottom = Color(0xFF080D16);
+  static const authScaffoldTop = Color(0xFF0B1020);
+  static const authScaffoldMid = Color(0xFF10182B);
+  static const authScaffoldBottom = Color(0xFF121A2F);
 
   // Action
   static const actionBlue =
@@ -49,7 +50,7 @@ abstract final class AppColors {
   static const versionText = Color(0xFF8E8D8D);
 
   // Theme tokens
-  static const scaffoldOuter = Color(0xFF0D1117);
+  static const scaffoldOuter = Color(0xFF0B1020);
   static const cardSurface = Color(0xFF161D2F);
   static const inputFill = Color(0xFF1C2537);
   static const inputFillDisabled = Color(0xFF141C2B);

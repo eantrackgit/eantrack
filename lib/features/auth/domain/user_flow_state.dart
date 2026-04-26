@@ -34,11 +34,22 @@ class UserFlowState {
     );
   }
 
+  String? get normalizedUserMode {
+    final normalized = userMode?.trim().toLowerCase();
+    if (normalized == null || normalized.isEmpty) return null;
+    if (normalized == 'agencia') return 'agency';
+    return normalized;
+  }
+
   /// True when the user has completed the full onboarding flow.
   bool get isOnboardingComplete {
-    if (userMode == null) return false;
-    if (userMode == 'agency') {
-      return agencyId != null && agencyStatus == 'aprovada';
+    final mode = normalizedUserMode;
+    if (mode == null) return false;
+    if (mode == 'agency') {
+      final normalizedAgencyStatus = agencyStatus?.trim().toLowerCase();
+      return agencyId != null &&
+          (normalizedAgencyStatus == 'aprovada' ||
+              normalizedAgencyStatus == 'approved');
     }
     return hasProfile;
   }

@@ -83,6 +83,74 @@ Barrel shared/shared.dart — import sempre via barrel
 
 ---
 
+## DEC-025 — Modelo não-destrutivo para documentos legais (insert-only)
+
+**Data:** 2026-04-24
+**Contexto:** Documentos do representante legal precisam ser revisados por um admin. O processo pode exigir múltiplos envios (rejeição → correção → novo envio). Opções: (A) overwrite do documento existente a cada reenvio, (B) insert-only com versionamento por `attempt_number`.
+**Decisão:** Insert-only. Cada envio cria novos registros em `legal_representatives` e `legal_documents`. Nenhum documento é apagado ou sobrescrito pelo app. `attempt_number` é incremental por agência. Status consolidado é calculado via views (`v_agency_latest_document_status`), nunca no frontend.
+**Motivo:** Auditoria e rastreabilidade — cada tentativa é evidência imutável. Consistência — a lógica de consolidação de status fica em um único lugar (view), válida para todas as versões do app e todos os consumidores (Flutter, admin panel, RPCs). Segurança — o app não pode alterar ou remover histórico de documentos.
+**Impacto:** `AgencyRepresentativeService.submit()` executa sempre INSERT (nunca UPDATE). `AgencyStatusNotifier` lê apenas views. `AgencyStatusScreen` exibe `rejection_reason` somente quando a última tentativa está `rejected`. Documentação completa em [docs/architecture/LEGAL_DOCUMENTS_VERSIONING.md](../architecture/LEGAL_DOCUMENTS_VERSIONING.md).
+
+---
+
+## DEC-026 — Status documental controla liberação de acesso da agência
+
+**Data:** 2026-04-25
+**Contexto:** O fluxo de agência tem dois conceitos que pareciam sobrepostos: `status_agency` da agência e status dos documentos legais enviados pelo representante. Também há múltiplas tentativas de documento após rejeição.
+**Decisão:** `status_agency` e `consolidated_document_status` são conceitos separados. A liberação de acesso ao hub/configuração depende da documentação estar `approved` via `v_agency_latest_document_status`. `pending` e `rejected` mantêm o usuário em `/onboarding/agency/status` e bloqueiam navegação interna.
+**Motivo:** A aprovação documental é o gate de confiança para entrada na operação. O status operacional da agência pode existir no futuro com outro significado, sem apagar o histórico documental nem misturar regras.
+**Impacto:** Router e web shell tratam `approved` como único estado liberado. `AgencyStatusScreen` continua sendo a superfície principal para pending/rejected e também a tela pós-reload de approved, com CTA explícito "Iniciar configuração da agência".
+
+---
+
+## DEC-027 — Views de documentos são a fonte de leitura do app
+
+**Data:** 2026-04-25
+**Contexto:** O app precisa mostrar o detalhe dos documentos e o status consolidado da última tentativa sem consultar tabela bruta nem reimplementar regra de versionamento no Flutter.
+**Decisão:** A tela de status lê views, não `legal_documents` diretamente. `v_latest_legal_documents` representa o detalhe por documento/tentativa mais recente. `v_agency_latest_document_status` representa o status consolidado da agência para liberação de acesso.
+**Motivo:** Mantém versionamento e consolidação no backend, reduz divergência entre app, admin panel e futuras RPCs, e evita que o cliente dependa de regras internas da tabela bruta.
+**Impacto:** `AgencyStatusNotifier` refaz query nas views em refresh. Rejeições antigas não aparecem quando existe tentativa posterior. Documentos rejeitados não são apagados nem sobrescritos.
+
+---
+
+## DEC-028 — MenuHub web como sidebar; mobile preservado como experiência própria
+
+**Data:** 2026-04-25
+**Contexto:** O web shell precisa permitir navegação lateral quando a agência está aprovada, mas a experiência mobile já usa outro padrão de navegação.
+**Decisão:** Em desktop/web, o MenuHub é exibido como `MenuHubSidebar`. Em mobile, o MenuHub permanece como página/experiência mobile e a `AgencyStatusScreen` não exibe sidebar.
+**Motivo:** Desktop exige navegação persistente e escaneável; mobile precisa preservar espaço e o padrão já existente. O mesmo status documental alimenta o bloqueio/liberação dos itens.
+**Impacto:** `pending/rejected` bloqueiam navegação interna no sidebar. `approved` libera itens previstos e permite navegação normal. A entrada automática no dashboard após reload foi removida; o usuário entra via CTA ou clique em item liberado.
+
+---
+
+## [2026-04-25] Auditoria Global pré-commit — Features: agency status, sidebar, router guard
+
+> Sessão de auditoria (TASK-CLAUDE-AUDIT-001). Não houve refactor — apenas diagnóstico e documentação.
+
+### Aprovado sem ressalvas:
+- Fluxo pending/rejected → tela de status (correto via `isOnboardingComplete` + FlowScreen)
+- CTA dinâmico na AgencyStatusScreen (approved/rejected/pending)
+- Botão "Atualizar status" → query real nas views
+- Submit de representante legal → sempre INSERT, rollback granular
+- `_nextAttemptNumber` correto e documentado
+- `MenuHubSidebar` dark mode, `_isBlocked`, aparece apenas em desktop
+
+### Itens com ressalva (não bloqueadores):
+- Router guard duplo (`_redirect` + `RouterRedirectGuard`) — funcional mas confuso; documentar que `RouterRedirectGuard` serve apenas como `refreshListenable`
+- `agencyStatusProvider(null)` autoDispose no `_redirect` — race condition teórica se provider descartado entre navegações
+- Botão voltar no mobile da AgencyStatusScreen faz signout — UX confusa
+
+### Bugs identificados (registrados como BUG-01 a BUG-04 no CURRENT_STATE.md):
+- **BUG-01:** HubScreen sidebar com dados hardcoded — corrigir antes do primeiro usuário real
+- **BUG-02:** `AgencyStatusData.statusAgency` e `consolidatedDocumentStatus` populados com o mesmo valor — separar as duas fontes no `fromJson`
+- **BUG-03:** Duas fontes de verdade para "agência liberada" — `user_flow_state.dart` usa `status_agency`, router usa `consolidated_document_status`. Decisão pendente sobre fonte única.
+- **BUG-04:** Botão voltar mobile = signout sem aviso
+
+### Decisão registrada:
+DEC-026 definiu que status operacional da agência e status documental são conceitos separados. A liberação de acesso ao hub/configuração depende do status documental consolidado (`v_agency_latest_document_status`) estar `approved`.
+
+---
+
 ## DEC-001 — Flutter Code-First (abandonar FlutterFlow)
 
 **Data:** 2026-03-25

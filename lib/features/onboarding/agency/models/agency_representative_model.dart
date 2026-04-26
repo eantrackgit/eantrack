@@ -15,7 +15,7 @@ enum AgencyRepresentativeDocumentType {
   contract(
     label: 'C. Social',
     storageFolder: 'CONTRATO_SOCIAL',
-    databaseValue: 'CONTRATO_SOCIAL',
+    databaseValue: 'CONTRATO SOCIAL',
   );
 
   const AgencyRepresentativeDocumentType({

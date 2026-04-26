@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/domain/auth_flow_state.dart';
+import '../../features/auth/domain/auth_state.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/auth/presentation/screens/email_verification_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
@@ -24,6 +26,8 @@ import '../../features/onboarding/presentation/screens/onboarding_profile_screen
 import '../../features/onboarding/presentation/screens/photo_profile_screen.dart';
 import '../../features/regions/presentation/screens/region_list_screen.dart';
 import '../../features/validity/presentation/screens/validity_list_screen.dart';
+import '../../features/legal/presentation/screens/privacy_policy_screen.dart';
+import '../../features/legal/presentation/screens/terms_of_use_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 import 'app_routes.dart';
 import '../../features/onboarding/agency/controllers/agency_status_notifier.dart';
@@ -42,6 +46,94 @@ Page<void> _fade(Widget child) => CustomTransitionPage<void>(
       },
     );
 
+String? _redirect(Ref ref, BuildContext context, GoRouterState state) {
+  final authFlowState = ref.read(authFlowStateProvider);
+  final authState = ref.read(authNotifierProvider);
+  final path = state.matchedLocation;
+
+  if (RecoveryLinkParser.hasExpiredParams(state.uri) ||
+      RecoveryLinkParser.hasExpiredParams(Uri.base)) {
+    return path == AppRoutes.passwordRecoveryLinkExpired
+        ? null
+        : AppRoutes.passwordRecoveryLinkExpired;
+  }
+
+  if (path == AppRoutes.splash) return null;
+  if (path == AppRoutes.flow) return null;
+  if (path == AppRoutes.passwordRecoveryLinkExpired) return null;
+
+  final isGuestRoute = path == AppRoutes.login ||
+      path == AppRoutes.register ||
+      path == AppRoutes.recoverPassword;
+  final isAgencyStatusRoute = path == AppRoutes.onboardingAgencyStatus;
+  final isOnboardingRoute = path == AppRoutes.onboarding ||
+      path == AppRoutes.onboardingOperationalStyle ||
+      path == AppRoutes.onboardingIndividual ||
+      path == AppRoutes.onboardingIndividualProfile ||
+      path == AppRoutes.photoProfile ||
+      path == AppRoutes.onboardingCnpj ||
+      path == AppRoutes.onboardingAgency ||
+      path == AppRoutes.onboardingLegalRep ||
+      path == AppRoutes.onboardingAgencyCnpj ||
+      path == AppRoutes.onboardingAgencyConfirm ||
+      path == AppRoutes.onboardingAgencyRepresentative ||
+      isAgencyStatusRoute;
+  final isAppRoute = AppRoutes.protectedRoutes.contains(path);
+  final agencyStatus = ref
+      .read(agencyStatusProvider(null))
+      .data
+      ?.consolidatedDocumentStatus;
+
+  if (path == AppRoutes.emailVerification) {
+    if (authState is AuthEmailUnconfirmed) return null;
+    return AppRoutes.flow;
+  }
+
+  if (path == AppRoutes.updatePassword &&
+      authFlowState != AuthFlowState.recovery) {
+    return AppRoutes.flow;
+  }
+
+  if (isGuestRoute && authFlowState != AuthFlowState.unauthenticated) {
+    return AppRoutes.flow;
+  }
+
+  if (isAgencyStatusRoute &&
+      (authFlowState == AuthFlowState.onboardingRequired ||
+          authFlowState == AuthFlowState.authenticated)) {
+    return null;
+  }
+
+  if (isOnboardingRoute &&
+      authFlowState != AuthFlowState.onboardingRequired) {
+    return AppRoutes.flow;
+  }
+
+  if (isAppRoute && authFlowState != AuthFlowState.authenticated) {
+    if (agencyStatus != null) {
+      return agencyStatus == AgencyDocumentStatus.approved
+          ? null
+          : AppRoutes.onboardingAgencyStatus;
+    }
+
+    if (authFlowState == AuthFlowState.onboardingRequired) {
+      return authState is AuthAuthenticated
+          ? AppRoutes.onboardingAgencyStatus
+          : null;
+    }
+
+    return AppRoutes.flow;
+  }
+
+  if (isAppRoute &&
+      agencyStatus != null &&
+      agencyStatus != AgencyDocumentStatus.approved) {
+    return AppRoutes.onboardingAgencyStatus;
+  }
+
+  return null;
+}
+
 final appRouterProvider = Provider<GoRouter>((ref) {
   final guard = RouterRedirectGuard(ref);
   ref.read(authRecoveryContextProvider);
@@ -50,7 +142,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     debugLogDiagnostics: false,
     refreshListenable: guard,
-    redirect: guard.redirect,
+    redirect: (context, state) => _redirect(ref, context, state),
     initialLocation: recoveryErrorLocation ?? AppRoutes.splash,
     overridePlatformDefaultLocation: recoveryErrorLocation != null,
     onException: (_, state, router) {
@@ -216,28 +308,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.termsOfUse,
-        pageBuilder: (_, __) =>
-            _fade(const _PlaceholderScreen(title: 'Termos de Uso')),
+        pageBuilder: (_, __) => _fade(const TermsOfUseScreen()),
       ),
       GoRoute(
         path: AppRoutes.privacyPolicy,
-        pageBuilder: (_, __) =>
-            _fade(const _PlaceholderScreen(title: 'Politica de Privacidade')),
+        pageBuilder: (_, __) => _fade(const PrivacyPolicyScreen()),
       ),
     ],
   );
 });
-
-class _PlaceholderScreen extends StatelessWidget {
-  const _PlaceholderScreen({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(child: Text('$title - em construcao')),
-    );
-  }
-}

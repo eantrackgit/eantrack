@@ -221,6 +221,7 @@ class AgencyRepresentativeNotifier
 
   final AgencyConfirmPayload? _payload;
   final AgencyRepresentativeService _service;
+  String? _prefillAgencyId;
 
   final TextEditingController fullNameController = TextEditingController();
   final TextEditingController cpfController = TextEditingController();
@@ -228,7 +229,10 @@ class AgencyRepresentativeNotifier
   final TextEditingController emailController = TextEditingController();
   final FocusNode cpfFocusNode = FocusNode();
 
-  String get agencyId => _payload?.agencyId ?? '';
+  String get agencyId =>
+      _payload?.agencyId.isNotEmpty == true
+          ? _payload!.agencyId
+          : (_prefillAgencyId ?? '');
 
   void onCpfEditingComplete() {
     onCpfBlur();
@@ -246,16 +250,22 @@ class AgencyRepresentativeNotifier
   }
 
   void prefill(AgencyStatusData data) {
+    _prefillAgencyId = data.agencyId;
+
     final nextFullName = data.representativeName;
     final nextEmail = data.representativeEmail;
     final nextPhone = data.representativePhone;
     final nextCpf = data.representativeCpf;
+    final nextRole = _mapRole(data.representativeRole ?? '');
     final nextDocumentType = _documentTypeFromStatusData(data.documentType);
+    final formattedPhone =
+        nextPhone != null ? _formatPhoneForPrefill(nextPhone) : null;
 
     final hasSameValues = state.fullNameText == nextFullName &&
         state.emailText == nextEmail &&
-        (nextPhone == null || state.phoneText == nextPhone) &&
+        (formattedPhone == null || state.phoneText == formattedPhone) &&
         (nextCpf == null || state.cpfText == nextCpf) &&
+        (nextRole == null || state.selectedRole == nextRole) &&
         (nextDocumentType == null ||
             state.selectedDocumentType == nextDocumentType);
 
@@ -263,17 +273,22 @@ class AgencyRepresentativeNotifier
 
     fullNameController.text = nextFullName;
     emailController.text = nextEmail;
-    if (nextPhone != null) phoneController.text = nextPhone;
+    if (formattedPhone != null) phoneController.text = formattedPhone;
     if (nextCpf != null) cpfController.text = nextCpf;
 
     state = state.copyWith(
       fullNameText: nextFullName,
       emailText: nextEmail,
-      phoneText: nextPhone,
+      phoneText: formattedPhone,
       cpfText: nextCpf,
+      selectedRole: nextRole ?? state.selectedRole,
       selectedDocumentType: nextDocumentType ?? state.selectedDocumentType,
       error: null,
     );
+
+    if (cpfController.text.trim().isNotEmpty) {
+      onCpfBlur();
+    }
   }
 
   AgencyRepresentativeDocumentType? _documentTypeFromStatusData(String value) {
@@ -289,6 +304,39 @@ class AgencyRepresentativeNotifier
     }
 
     return null;
+  }
+
+  String _formatPhoneForPrefill(String value) {
+    final digits = onlyDigits(value);
+    final buffer = StringBuffer();
+    for (var i = 0; i < digits.length && i < 11; i++) {
+      if (i == 0) buffer.write('(');
+      if (i == 2) buffer.write(') ');
+      if (i == 3) buffer.write(' ');
+      if (i == 7) buffer.write('-');
+      buffer.write(digits[i]);
+    }
+    return buffer.toString();
+  }
+
+  String? _mapRole(String value) {
+    final normalized = value.trim();
+    if (normalized.isEmpty) return null;
+    if (roles.contains(normalized)) return normalized;
+    final lower = normalized.toLowerCase();
+    for (final r in roles) {
+      if (r.toLowerCase() == lower) return r;
+    }
+    switch (lower) {
+      case 'owner':
+      case 'proprietario':
+      case 'proprietário':
+        return 'Sócio';
+      case 'admin':
+        return 'Administrador';
+      default:
+        return 'Outro';
+    }
   }
 
   void selectDocumentType(AgencyRepresentativeDocumentType type) {
@@ -373,6 +421,14 @@ class AgencyRepresentativeNotifier
       return false;
     }
 
+    final currentAgencyId = agencyId.trim();
+    if (currentAgencyId.isEmpty) {
+      state = state.copyWith(
+        error: 'Nao foi possivel identificar a agencia para reenviar os documentos.',
+      );
+      return false;
+    }
+
     state = state.copyWith(
       isLoading: true,
       error: null,
@@ -381,7 +437,7 @@ class AgencyRepresentativeNotifier
     try {
       await _service.submit(
         AgencyRepresentativeSubmission(
-          agencyId: agencyId,
+          agencyId: currentAgencyId,
           name: _normalizedName,
           cpf: _rawCpf,
           role: state.selectedRole!,

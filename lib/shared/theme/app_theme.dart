@@ -17,6 +17,7 @@ class EanTrackTheme extends ThemeExtension<EanTrackTheme> {
   const EanTrackTheme({
     required this.scaffoldOuter,
     required this.cardSurface,
+    required this.sidebarSurface,
     required this.inputFill,
     required this.inputFillDisabled,
     required this.inputBorder,
@@ -40,6 +41,9 @@ class EanTrackTheme extends ThemeExtension<EanTrackTheme> {
 
   /// Fundo do card/container principal.
   final Color cardSurface;
+
+  /// Fundo da sidebar lateral — diferenciado de cardSurface para criar profundidade.
+  final Color sidebarSurface;
 
   /// Fill de campos de entrada (estado habilitado).
   final Color inputFill;
@@ -103,10 +107,11 @@ class EanTrackTheme extends ThemeExtension<EanTrackTheme> {
   static const EanTrackTheme light = EanTrackTheme(
     scaffoldOuter: AppColors.secondary,
     cardSurface: AppColors.secondaryBackground,
+    sidebarSurface: AppColors.primaryBackground,
     inputFill: AppColors.secondaryBackground,
     inputFillDisabled: AppColors.primaryBackground,
     inputBorder: AppColors.alternate,
-    inputBorderFocused: AppColors.secondary,
+    inputBorderFocused: AppColors.actionBlue,
     primaryText: AppColors.primaryText,
     secondaryText: AppColors.secondaryText,
     divider: AppColors.accent1,
@@ -124,10 +129,11 @@ class EanTrackTheme extends ThemeExtension<EanTrackTheme> {
   static const EanTrackTheme dark = EanTrackTheme(
       scaffoldOuter: AppColors.scaffoldOuter,
       cardSurface: AppColors.cardSurface,
+      sidebarSurface: AppColors.scaffoldOuter,
       inputFill: AppColors.inputFill,
       inputFillDisabled: AppColors.inputFillDisabled,
       inputBorder: AppColors.inputBorder,
-      inputBorderFocused: AppColors.primary,
+      inputBorderFocused: AppColors.inputBorderFocused,
       primaryText: AppColors.primaryTextLight,
       secondaryText: AppColors.secondaryTextMuted,
       divider: AppColors.divider,
@@ -150,6 +156,7 @@ class EanTrackTheme extends ThemeExtension<EanTrackTheme> {
   EanTrackTheme copyWith({
     Color? scaffoldOuter,
     Color? cardSurface,
+    Color? sidebarSurface,
     Color? inputFill,
     Color? inputFillDisabled,
     Color? inputBorder,
@@ -170,6 +177,7 @@ class EanTrackTheme extends ThemeExtension<EanTrackTheme> {
     return EanTrackTheme(
       scaffoldOuter: scaffoldOuter ?? this.scaffoldOuter,
       cardSurface: cardSurface ?? this.cardSurface,
+      sidebarSurface: sidebarSurface ?? this.sidebarSurface,
       inputFill: inputFill ?? this.inputFill,
       inputFillDisabled: inputFillDisabled ?? this.inputFillDisabled,
       inputBorder: inputBorder ?? this.inputBorder,
@@ -195,6 +203,7 @@ class EanTrackTheme extends ThemeExtension<EanTrackTheme> {
     return EanTrackTheme(
       scaffoldOuter: Color.lerp(scaffoldOuter, other.scaffoldOuter, t)!,
       cardSurface: Color.lerp(cardSurface, other.cardSurface, t)!,
+      sidebarSurface: Color.lerp(sidebarSurface, other.sidebarSurface, t)!,
       inputFill: Color.lerp(inputFill, other.inputFill, t)!,
       inputFillDisabled:
           Color.lerp(inputFillDisabled, other.inputFillDisabled, t)!,
@@ -273,7 +282,7 @@ abstract final class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: AppRadius.smAll,
-          borderSide: const BorderSide(color: AppColors.secondary, width: 2),
+          borderSide: const BorderSide(color: AppColors.actionBlue, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: AppRadius.smAll,
@@ -281,7 +290,7 @@ abstract final class AppTheme {
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: AppRadius.smAll,
-          borderSide: const BorderSide(color: AppColors.error, width: 2),
+          borderSide: const BorderSide(color: AppColors.error, width: 1.5),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -354,7 +363,7 @@ abstract final class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: AppRadius.smAll,
-          borderSide: BorderSide(color: et.inputBorderFocused, width: 2),
+          borderSide: BorderSide(color: et.inputBorderFocused, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: AppRadius.smAll,
@@ -362,7 +371,7 @@ abstract final class AppTheme {
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: AppRadius.smAll,
-          borderSide: const BorderSide(color: AppColors.error, width: 2),
+          borderSide: const BorderSide(color: AppColors.error, width: 1.5),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(

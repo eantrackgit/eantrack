@@ -34,6 +34,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _passwordFocus = FocusNode();
+  ProviderSubscription<AuthState>? _authStateSubscription;
   AsyncAction<void> _action = const ActionIdle();
   AsyncAction<void> _googleAction = const ActionIdle();
 
@@ -41,6 +42,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   void initState() {
     super.initState();
     _emailController.addListener(_onEmailChanged);
+    _authStateSubscription = ref.listenManual<AuthState>(
+      authNotifierProvider,
+      (_, next) => _handleAuthStateChange(next),
+    );
 
     if (widget.consumeRecoveryQueryParam) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -63,6 +68,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
   @override
   void dispose() {
+    _authStateSubscription?.close();
     _emailController.removeListener(_onEmailChanged);
     _emailController.dispose();
     _passwordController.dispose();
@@ -80,6 +86,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     final normalized = email?.trim().toLowerCase();
     if (normalized == null || normalized.isEmpty) return null;
     return normalized;
+  }
+
+  void _navigateAfterFrame(String route) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.go(route);
+    });
+  }
+
+  Future<void> _handleAuthStateChange(AuthState next) async {
+    if (!mounted) return;
+
+    switch (next) {
+      case AuthAuthenticated():
+        setState(() {
+          _action = const ActionSuccess(null);
+          _googleAction = const ActionSuccess(null);
+        });
+        _navigateAfterFrame(AppRoutes.flow);
+        return;
+      case AuthEmailUnconfirmed():
+        setState(() {
+          _action = const ActionSuccess(null);
+          _googleAction = const ActionSuccess(null);
+        });
+        _navigateAfterFrame(AppRoutes.emailVerification);
+        return;
+      case AuthError(:final message):
+        await _showActionErrorDialog(
+          title: _googleAction.isLoading
+              ? 'Falha no login com Google'
+              : 'Falha no login',
+          message: message,
+          isGoogleFlow: _googleAction.isLoading,
+        );
+        return;
+      default:
+        return;
+    }
   }
 
   Future<void> _signInWithGoogle() async {
@@ -142,34 +187,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   @override
   Widget build(BuildContext context) {
     final et = EanTrackTheme.of(context);
-
-    ref.listen<AuthState>(authNotifierProvider, (_, next) async {
-      if (!mounted) return;
-      switch (next) {
-        case AuthAuthenticated():
-          setState(() {
-            _action = const ActionSuccess(null);
-            _googleAction = const ActionSuccess(null);
-          });
-          context.go(AppRoutes.flow);
-        case AuthEmailUnconfirmed():
-          setState(() {
-            _action = const ActionSuccess(null);
-            _googleAction = const ActionSuccess(null);
-          });
-          context.go(AppRoutes.emailVerification);
-        case AuthError(:final message):
-          await _showActionErrorDialog(
-            title: _googleAction.isLoading
-                ? 'Falha no login com Google'
-                : 'Falha no login',
-            message: message,
-            isGoogleFlow: _googleAction.isLoading,
-          );
-        default:
-          break;
-      }
-    });
 
     final isBusy = _action.isLoading || _googleAction.isLoading;
     final recoveryEmail = _normalizeEmail(

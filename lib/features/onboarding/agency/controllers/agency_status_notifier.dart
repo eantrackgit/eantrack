@@ -9,6 +9,7 @@ enum AgencyDocumentStatus { pending, approved, rejected }
 
 class AgencyStatusData {
   const AgencyStatusData({
+    required this.agencyId,
     required this.agencyLegalName,
     required this.statusAgency,
     required this.agencyUpdatedAt,
@@ -16,6 +17,7 @@ class AgencyStatusData {
     required this.representativeEmail,
     this.representativePhone,
     this.representativeCpf,
+    this.representativeRole,
     this.documentFrontUrl,
     this.documentBackUrl,
     required this.documentType,
@@ -23,6 +25,7 @@ class AgencyStatusData {
     this.rejectionReason,
   });
 
+  final String agencyId;
   final String agencyLegalName;
   final AgencyDocumentStatus statusAgency;
   final DateTime agencyUpdatedAt;
@@ -30,6 +33,7 @@ class AgencyStatusData {
   final String representativeEmail;
   final String? representativePhone;
   final String? representativeCpf;
+  final String? representativeRole;
   final String? documentFrontUrl;
   final String? documentBackUrl;
   final String documentType;
@@ -37,6 +41,7 @@ class AgencyStatusData {
   final String? rejectionReason;
 
   AgencyStatusData copyWith({
+    String? agencyId,
     String? agencyLegalName,
     DateTime? agencyUpdatedAt,
     AgencyDocumentStatus? statusAgency,
@@ -45,12 +50,14 @@ class AgencyStatusData {
     String? representativeEmail,
     String? representativePhone,
     String? representativeCpf,
+    String? representativeRole,
     String? documentFrontUrl,
     String? documentBackUrl,
     AgencyDocumentStatus? consolidatedDocumentStatus,
     String? rejectionReason,
   }) {
     return AgencyStatusData(
+      agencyId: agencyId ?? this.agencyId,
       agencyLegalName: agencyLegalName ?? this.agencyLegalName,
       agencyUpdatedAt: agencyUpdatedAt ?? this.agencyUpdatedAt,
       statusAgency: statusAgency ?? this.statusAgency,
@@ -59,6 +66,7 @@ class AgencyStatusData {
       representativeEmail: representativeEmail ?? this.representativeEmail,
       representativePhone: representativePhone ?? this.representativePhone,
       representativeCpf: representativeCpf ?? this.representativeCpf,
+      representativeRole: representativeRole ?? this.representativeRole,
       documentFrontUrl: documentFrontUrl ?? this.documentFrontUrl,
       documentBackUrl: documentBackUrl ?? this.documentBackUrl,
       consolidatedDocumentStatus:
@@ -68,20 +76,35 @@ class AgencyStatusData {
   }
 
   factory AgencyStatusData.fromJson(Map<String, dynamic> json) {
+    final latestStatus = _readStatusFromAny(json, const [
+      'consolidated_document_status',
+      'document_status',
+      'status_document',
+      'status',
+    ]);
+
     return AgencyStatusData(
+      agencyId: _readString(json, 'agency_id'),
       representativePhone: json['representative_phone'] as String?,
       representativeCpf: json['representative_cpf'] as String?,
+      representativeRole: _readNullableString(json, 'representative_role'),
       documentFrontUrl: json['document_front_url'] as String?,
       documentBackUrl: json['document_back_url'] as String?,
       agencyLegalName: _readString(json, 'agency_legal_name'),
-      statusAgency: _readStatus(json, 'status_agency'),
-      agencyUpdatedAt: _readDate(json, 'agency_updated_at'),
+      statusAgency: latestStatus,
+      agencyUpdatedAt: _readDateFromAny(json, const [
+        'agency_updated_at',
+        'document_updated_at',
+        'latest_document_updated_at',
+        'updated_at',
+      ]),
       representativeName: _readString(json, 'representative_name'),
       representativeEmail: _readString(json, 'representative_email'),
       documentType: _readString(json, 'document_type'),
-      consolidatedDocumentStatus:
-          _readStatus(json, 'consolidated_document_status'),
-      rejectionReason: _readNullableString(json, 'rejection_reason'),
+      consolidatedDocumentStatus: latestStatus,
+      rejectionReason: latestStatus == AgencyDocumentStatus.rejected
+          ? _readNullableString(json, 'rejection_reason')
+          : null,
     );
   }
 
@@ -119,12 +142,37 @@ class AgencyStatusData {
     }
   }
 
+  static AgencyDocumentStatus _readStatusFromAny(
+    Map<String, dynamic> json,
+    List<String> keys,
+  ) {
+    for (final key in keys) {
+      final value = json[key] ?? json[_toCamelCase(key)];
+      if (value == null) continue;
+
+      return _readStatus(<String, dynamic>{key: value}, key);
+    }
+
+    return AgencyDocumentStatus.pending;
+  }
+
   static DateTime _readDate(Map<String, dynamic> json, String key) {
     final value = json[key] ?? json[_toCamelCase(key)];
     if (value is DateTime) return value.toLocal();
     if (value == null) return DateTime.now();
 
     return DateTime.tryParse(value.toString())?.toLocal() ?? DateTime.now();
+  }
+
+  static DateTime _readDateFromAny(Map<String, dynamic> json, List<String> keys) {
+    for (final key in keys) {
+      final value = json[key] ?? json[_toCamelCase(key)];
+      if (value == null) continue;
+
+      return _readDate(<String, dynamic>{key: value}, key);
+    }
+
+    return DateTime.now();
   }
 
   static String _toCamelCase(String value) {
@@ -176,8 +224,10 @@ class AgencyStatusNotifier extends StateNotifier<AgencyStatusState> {
 
   final SupabaseClient _supabase;
   final AgencyDocumentStatus _mockStatus;
+  int _loadRequestId = 0;
 
   Future<void> load() async {
+    final requestId = ++_loadRequestId;
     state = state.copyWith(
       status: AgencyStatusLoading.loading,
       error: null,
@@ -186,13 +236,15 @@ class AgencyStatusNotifier extends StateNotifier<AgencyStatusState> {
     try {
       final userId = _supabase.auth.currentUser?.id;
       if (userId == null) {
+        if (requestId != _loadRequestId) return;
         state = state.copyWith(
           status: AgencyStatusLoading.success,
-            data: AgencyStatusData(
-              representativePhone: null,
-              representativeCpf: null,
-              documentFrontUrl: null,
-              documentBackUrl: null,
+          data: AgencyStatusData(
+            agencyId: '',
+            representativePhone: null,
+            representativeCpf: null,
+            documentFrontUrl: null,
+            documentBackUrl: null,
             agencyLegalName: 'Agência não vinculada',
             statusAgency: _mockStatus,
             agencyUpdatedAt: DateTime.now(),
@@ -211,8 +263,26 @@ class AgencyStatusNotifier extends StateNotifier<AgencyStatusState> {
           .select()
           .eq('user_id', userId)
           .single();
-      final data = AgencyStatusData.fromJson(response);
+      final agencyId = AgencyStatusData._readString(response, 'agency_id');
+      if (agencyId.isEmpty) {
+        throw StateError('AgencyStatusData sem agency_id.');
+      }
 
+      final latestDocumentStatus = await _supabase
+          .from('v_agency_latest_document_status')
+          .select()
+          .eq('agency_id', agencyId)
+          .maybeSingle();
+      final data = AgencyStatusData.fromJson({
+        ...response,
+        ...(latestDocumentStatus ??
+            const <String, dynamic>{
+              'consolidated_document_status': 'pending',
+              'rejection_reason': null,
+            }),
+      });
+
+      if (requestId != _loadRequestId) return;
       state = state.copyWith(
         status: AgencyStatusLoading.success,
         data: data,
@@ -220,6 +290,7 @@ class AgencyStatusNotifier extends StateNotifier<AgencyStatusState> {
       );
     } on Exception catch (e) {
       debugPrint('[AgencyStatus] Erro ao carregar status: $e');
+      if (requestId != _loadRequestId) return;
       state = state.copyWith(
         status: AgencyStatusLoading.error,
         error: _kLoadErrorMsg,
@@ -227,7 +298,9 @@ class AgencyStatusNotifier extends StateNotifier<AgencyStatusState> {
     }
   }
 
-  Future<void> refresh() => load();
+  Future<void> refresh() async {
+    await load();
+  }
 }
 
 final agencyStatusProvider =

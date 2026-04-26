@@ -5,6 +5,38 @@
 
 ---
 
+## PRÓXIMOS POLIMENTOS — WEB SHELL / AGENCY STATUS
+
+### POLISH-001 — Refinamento visual do MenuHubSidebar light/dark
+- Ajustar contraste, superfícies, bordas e estados hover/disabled no sidebar.
+- Garantir consistência com `EanTrackTheme` e evitar hardcoded colors.
+
+### POLISH-002 — Integração definitiva da AgencyStatusScreen ao web shell
+- Consolidar dados reais de usuário/agência no sidebar.
+- Confirmar comportamento desktop com sidebar e mobile sem sidebar.
+
+### POLISH-003 — Melhorar estados loading/error
+- Revisar loading do refresh de status, erro de consulta e fallback de rota.
+- Evitar telas vazias durante status indefinido/carregando.
+
+### POLISH-004 — Auditoria de hardcoded colors
+- Revisar `HubScreen`, `RegionListScreen`, `FlowScreen`, `MenuHubSidebar` e status cards.
+- Migrar cores restantes para tokens semânticos quando aplicável.
+
+### POLISH-005 — Polimento de hierarquia tipográfica
+- Ajustar escala de títulos, labels e textos auxiliares em status/sidebar/hub.
+- Garantir leitura confortável em desktop e mobile.
+
+### POLISH-006 — Validação UX do fluxo approved/rejected/pending
+- Confirmar pending → status, rejected → status + correção, approved → status pós-reload + CTA.
+- Validar regressão approved → rejected após refresh/reload.
+
+### POLISH-007 — Status operacional futuro separado de status documental
+- Avaliar se `status_agency` terá significado operacional próprio.
+- Manter liberação de acesso baseada em documentação aprovada via view consolidada.
+
+---
+
 ## PRIORIDADE 1 — ONBOARDING (INICIAR AGORA)
 
 ---

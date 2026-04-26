@@ -232,6 +232,7 @@ void main() {
 
     notifier.prefill(
       AgencyStatusData(
+        agencyId: 'agency-1',
         agencyLegalName: 'Empresa Teste LTDA',
         statusAgency: AgencyDocumentStatus.pending,
         agencyUpdatedAt: DateTime(2026, 4, 22),
@@ -247,11 +248,11 @@ void main() {
     final state = _readState(container);
     expect(notifier.fullNameController.text, 'Joao Legal');
     expect(notifier.emailController.text, 'joao@empresa.com.br');
-    expect(notifier.phoneController.text, '11911112222');
+    expect(notifier.phoneController.text, '(11) 9 1111-2222');
     expect(notifier.cpfController.text, '52998224725');
     expect(state.fullNameText, 'Joao Legal');
     expect(state.emailText, 'joao@empresa.com.br');
-    expect(state.phoneText, '11911112222');
+    expect(state.phoneText, '(11) 9 1111-2222');
     expect(state.cpfText, '52998224725');
     expect(state.selectedDocumentType, AgencyRepresentativeDocumentType.cnh);
     expect(state.error, isNull);

@@ -76,6 +76,7 @@ class AttachmentDropArea extends StatelessWidget {
       builder: (context, candidateData, rejectedData) {
         final isDragActive = candidateData.isNotEmpty;
         final hasFile = file != null;
+        final et = EanTrackTheme.of(context);
 
         return Material(
           color: Colors.transparent,
@@ -90,7 +91,7 @@ class AttachmentDropArea extends StatelessWidget {
                     ? AppColors.success.withValues(alpha: 0.08)
                     : isDragActive
                         ? AppColors.actionBlue.withValues(alpha: 0.06)
-                        : AppColors.secondaryBackground,
+                        : et.inputFill,
                 borderRadius: AppRadius.smAll,
                 border: hasFile
                     ? Border.all(
@@ -104,7 +105,7 @@ class AttachmentDropArea extends StatelessWidget {
                     : DashedBorderPainter(
                         color: isDragActive
                             ? AppColors.actionBlue
-                            : AppColors.tertiary,
+                            : et.inputBorder,
                         radius: AppRadius.sm,
                       ),
                 child: hasFile

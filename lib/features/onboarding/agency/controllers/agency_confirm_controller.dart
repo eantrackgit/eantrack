@@ -146,7 +146,7 @@ class AgencyConfirmNotifier extends StateNotifier<AgencyConfirmState> {
 
   void initFromRecovery(String agencyId, AgencyEditRecoveryData data) {
     fantasyNameController.text = data.nomeFantasia;
-    phoneController.text = data.telefoneContato;
+    phoneController.text = _formatPhoneForDisplay(data.telefoneContato);
     emailController.text = data.email;
     cepController.text = CnpjModel.formatCep(data.cep);
     logradouroController.text = data.logradouro;
@@ -337,6 +337,21 @@ class AgencyConfirmNotifier extends StateNotifier<AgencyConfirmState> {
     bairroController.text = '';
     municipioController.text = '';
     ufController.text = '';
+  }
+
+  String _formatPhoneForDisplay(String value) {
+    final digits = onlyDigits(value);
+    final buffer = StringBuffer();
+
+    for (var i = 0; i < digits.length && i < 11; i++) {
+      if (i == 0) buffer.write('(');
+      if (i == 2) buffer.write(') ');
+      if (i == 3) buffer.write(' ');
+      if (i == 7) buffer.write('-');
+      buffer.write(digits[i]);
+    }
+
+    return buffer.toString();
   }
 
   @override

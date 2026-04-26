@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,7 +7,9 @@ import 'package:lottie/lottie.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/router/app_routes.dart';
+import '../../../../features/auth/domain/auth_state.dart';
 import '../../../../features/auth/domain/auth_flow_state.dart';
+import '../../../../features/auth/domain/user_flow_state.dart';
 import '../../../../features/auth/presentation/providers/auth_provider.dart';
 import '../../../../shared/shared.dart';
 
@@ -19,73 +23,148 @@ class FlowScreen extends ConsumerStatefulWidget {
 }
 
 class _FlowScreenState extends ConsumerState<FlowScreen> {
+  ProviderSubscription<AuthFlowState>? _authFlowSubscription;
+  Timer? _safetyTimer;
+  static const Duration _safetyTimeout = Duration(seconds: 8);
+
+  bool _isNavigating = false;
+  bool _isResolvingOnboardingRoute = false;
+
   @override
   void initState() {
     super.initState();
+    _authFlowSubscription = ref.listenManual<AuthFlowState>(
+      authFlowStateProvider,
+      (_, next) => _scheduleDecision(next),
+    );
+    _safetyTimer = Timer(_safetyTimeout, () {
+      if (!mounted || _isNavigating) return;
+      _isNavigating = true;
+      context.go(AppRoutes.login);
+    });
+    _scheduleDecision(ref.read(authFlowStateProvider));
+  }
+
+  @override
+  void dispose() {
+    _safetyTimer?.cancel();
+    _authFlowSubscription?.close();
+    super.dispose();
+  }
+
+  void _scheduleDecision(AuthFlowState flowState) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _decide(ref.read(authFlowStateProvider));
+      if (!mounted) return;
+      _decide(flowState);
+    });
+  }
+
+  void _go(String route) {
+    if (!mounted || _isNavigating) return;
+    _isNavigating = true;
+    context.go(route);
+    // Se o router redirecionar de volta para /flow, a instância permanece
+    // montada. Nesse caso, resetar e re-tentar com o estado atual.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _isNavigating = false;
+      _isResolvingOnboardingRoute = false;
+      _scheduleDecision(ref.read(authFlowStateProvider));
     });
   }
 
   void _decide(AuthFlowState flowState) {
-    if (!mounted) return;
+    if (!mounted || _isNavigating) return;
 
     switch (flowState) {
       case AuthFlowState.unauthenticated:
-        context.go(AppRoutes.login);
+        _go(AppRoutes.login);
         return;
       case AuthFlowState.recovery:
-        context.go(AppRoutes.updatePassword);
+        _go(AppRoutes.updatePassword);
         return;
       case AuthFlowState.onboardingRequired:
-        _resolveOnboardingRoute(context);
+        _resolveOnboardingRouteFromState();
         return;
       case AuthFlowState.authenticated:
-        context.go(AppRoutes.hub);
+        _go(AppRoutes.hub);
         return;
     }
   }
 
-  Future<void> _resolveOnboardingRoute(BuildContext context) async {
+  String _routeFromUserFlowState(UserFlowState? flowState) {
+    if (flowState == null) return AppRoutes.onboarding;
+
+    if (flowState.isOnboardingComplete) {
+      return AppRoutes.hub;
+    }
+
+    switch (flowState.normalizedUserMode) {
+      case null:
+        return AppRoutes.onboarding;
+      case 'individual':
+        return flowState.hasProfile
+            ? AppRoutes.hub
+            : AppRoutes.onboardingIndividualProfile;
+      case 'agency':
+        final agencyId = flowState.agencyId?.trim();
+        if (agencyId == null || agencyId.isEmpty) {
+          return AppRoutes.onboardingAgencyCnpj;
+        }
+
+        final agencyStatus = flowState.agencyStatus?.trim().toLowerCase();
+        if (agencyStatus == 'aprovada' || agencyStatus == 'approved') {
+          return AppRoutes.hub;
+        }
+
+        if (flowState.hasLegalRepresentative == true) {
+          return AppRoutes.onboardingAgencyStatus;
+        }
+
+        return AppRoutes.onboardingAgencyRepresentative;
+      default:
+        return AppRoutes.onboarding;
+    }
+  }
+
+  Future<void> _resolveOnboardingRouteFromState() async {
+    if (_isResolvingOnboardingRoute || _isNavigating) return;
+    _isResolvingOnboardingRoute = true;
+
     try {
-      final route = await Supabase.instance.client.rpc(
-        'get_user_onboarding_route',
-      ) as String?;
-
-      if (!context.mounted) return;
-
-      switch (route) {
-        case 'hub':
-          context.go(AppRoutes.hub);
-          return;
-        case 'onboarding/agency/status':
-          context.go(AppRoutes.onboardingAgencyStatus);
-          return;
-        case 'onboarding/agency/representative':
-          context.go(AppRoutes.onboardingAgencyRepresentative);
-          return;
-        case 'onboarding/agency/cnpj':
-          context.go(AppRoutes.onboardingAgencyCnpj);
-          return;
-        case 'onboarding/individual/profile':
-          context.go(AppRoutes.onboardingIndividualProfile);
-          return;
-        default:
-          context.go(AppRoutes.onboarding);
-          return;
+      final authState = ref.read(authNotifierProvider);
+      if (authState is AuthAuthenticated) {
+        _go(_routeFromUserFlowState(authState.flowState));
+        return;
       }
+
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        _go(AppRoutes.login);
+        return;
+      }
+
+      final flowState = await ref
+          .read(authRepositoryProvider)
+          .getUserFlowState(user.id)
+          .timeout(const Duration(seconds: 8), onTimeout: () => null);
+
+      if (!mounted || _isNavigating) return;
+      _go(_routeFromUserFlowState(flowState));
     } on Exception catch (e) {
-      debugPrint('[FlowScreen] Erro ao resolver rota: $e');
-      if (context.mounted) context.go(AppRoutes.onboarding);
+      debugPrint('[FlowScreen] Erro ao resolver fluxo: $e');
+      if (mounted && !_isNavigating) {
+        _go(AppRoutes.onboarding);
+      }
+    } finally {
+      if (mounted) {
+        _isResolvingOnboardingRoute = false;
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AuthFlowState>(authFlowStateProvider, (_, next) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _decide(next));
-    });
-
     final et = EanTrackTheme.of(context);
     return Scaffold(
       backgroundColor: et.scaffoldOuter,

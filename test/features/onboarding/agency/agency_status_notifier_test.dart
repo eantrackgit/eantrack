@@ -41,6 +41,11 @@ class _FakeStatusFilterBuilder extends Fake
   PostgrestTransformBuilder<PostgrestMap> single() {
     return _FakeStatusTransformBuilder(data: _data, error: _error);
   }
+
+  @override
+  PostgrestTransformBuilder<PostgrestMap?> maybeSingle() {
+    return _FakeStatusMaybeTransformBuilder(data: _data, error: _error);
+  }
 }
 
 class _FakeStatusTransformBuilder extends Fake
@@ -69,6 +74,37 @@ class _FakeStatusTransformBuilder extends Fake
 
     return Future<PostgrestMap>.value(
       Map<String, dynamic>.from(_data ?? {}),
+    ).then<S>(onValue, onError: onError);
+  }
+}
+
+class _FakeStatusMaybeTransformBuilder extends Fake
+    implements PostgrestTransformBuilder<PostgrestMap?> {
+  _FakeStatusMaybeTransformBuilder({
+    Map<String, dynamic>? data,
+    Object? error,
+  })  : _data = data,
+        _error = error;
+
+  final Map<String, dynamic>? _data;
+  final Object? _error;
+
+  @override
+  Future<S> then<S>(
+    FutureOr<S> Function(PostgrestMap? value) onValue, {
+    Function? onError,
+  }) {
+    final error = _error;
+    if (error != null) {
+      return Future<PostgrestMap?>.error(error).then<S>(
+        onValue,
+        onError: onError,
+      );
+    }
+
+    final data = _data;
+    return Future<PostgrestMap?>.value(
+      data == null ? null : Map<String, dynamic>.from(data),
     ).then<S>(onValue, onError: onError);
   }
 }
@@ -120,6 +156,7 @@ Map<String, dynamic> _statusJson({
   String consolidatedDocumentStatus = 'pending',
 }) {
   return {
+    'agency_id': 'agency-1',
     'agency_legal_name': 'Empresa Teste LTDA',
     'status_agency': statusAgency,
     'agency_updated_at': '2026-04-22T10:30:00.000Z',
@@ -164,11 +201,20 @@ void main() {
 
   test('load bem-sucedido define estado loaded com dados da view', () async {
     when(() => auth.currentUser).thenAnswer((_) => _user('user-1'));
-    final queryBuilder = _FakeStatusQueryBuilder(
+    final onboardingQueryBuilder = _FakeStatusQueryBuilder(
       _FakeStatusFilterBuilder(data: _statusJson()),
     );
+    final latestDocumentQueryBuilder = _FakeStatusQueryBuilder(
+      _FakeStatusFilterBuilder(data: {
+        'agency_id': 'agency-1',
+        'consolidated_document_status': 'pending',
+        'rejection_reason': null,
+      }),
+    );
     when(() => client.from('v_user_agency_onboarding_context'))
-        .thenAnswer((_) => queryBuilder);
+        .thenAnswer((_) => onboardingQueryBuilder);
+    when(() => client.from('v_agency_latest_document_status'))
+        .thenAnswer((_) => latestDocumentQueryBuilder);
 
     final container = _makeContainer(client: client);
     addTearDown(container.dispose);
@@ -185,6 +231,7 @@ void main() {
     expect(state.data!.representativeCpf, '52998224725');
     expect(state.data!.documentType, 'RG');
     verify(() => client.from('v_user_agency_onboarding_context')).called(1);
+    verify(() => client.from('v_agency_latest_document_status')).called(1);
   });
 
   test('erro na query define estado error com load error message', () async {

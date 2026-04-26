@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../hub/presentation/widgets/menu_hub_sidebar.dart';
 import '../../../../shared/shared.dart';
 import '../controllers/agency_status_notifier.dart';
 
@@ -14,6 +16,7 @@ class AgencyStatusScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final et = EanTrackTheme.of(context);
+    final isDesktop = Breakpoints.isDesktop(context);
     final provider = agencyStatusProvider(debugStatus);
     final state = ref.watch(provider);
     final isLoading = state.status == AgencyStatusLoading.loading;
@@ -26,14 +29,60 @@ class AgencyStatusScreen extends ConsumerWidget {
       });
     }
 
+    final content = SafeArea(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: data == null
+              ? _InitialState(state: state, debugStatus: debugStatus)
+              : _StatusContent(
+                  data: data,
+                  debugStatus: debugStatus,
+                  isLoading: isLoading,
+                ),
+        ),
+      ),
+    );
+
+    if (isDesktop) {
+      return Scaffold(
+        backgroundColor: et.scaffoldOuter,
+        body: Row(
+          children: [
+            MenuHubSidebar(
+              userName: '',
+              userRole: '',
+              agencyName: data?.agencyLegalName ?? '',
+              agencyHandle: '',
+              agencyStatus: data?.consolidatedDocumentStatus ??
+                  AgencyDocumentStatus.pending,
+              onSignOut: () async {
+                await ref.read(authNotifierProvider.notifier).signOut();
+                if (!context.mounted) return;
+                context.go(AppRoutes.login);
+              },
+            ),
+            Expanded(child: content),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: et.scaffoldOuter,
       appBar: AppBar(
         backgroundColor: et.scaffoldOuter,
         foregroundColor: et.primaryText,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.pop(),
+          icon: const Icon(
+            Icons.arrow_back_rounded,
+            color: AppColors.secondaryBackground,
+          ),
+          onPressed: () async {
+            await ref.read(authNotifierProvider.notifier).signOut();
+            if (!context.mounted) return;
+            context.go(AppRoutes.login);
+          },
         ),
         actions: [
           Padding(
@@ -47,25 +96,21 @@ class AgencyStatusScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: data == null
-                ? _InitialState(state: state, debugStatus: debugStatus)
-                : _StatusContent(data: data, debugStatus: debugStatus),
-          ),
-        ),
-      ),
+      body: content,
     );
   }
 }
 
 class _StatusContent extends StatelessWidget {
-  const _StatusContent({required this.data, required this.debugStatus});
+  const _StatusContent({
+    required this.data,
+    required this.debugStatus,
+    required this.isLoading,
+  });
 
   final AgencyStatusData data;
   final AgencyDocumentStatus? debugStatus;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -77,20 +122,28 @@ class _StatusContent extends StatelessWidget {
         decoration: BoxDecoration(
           color: et.cardSurface,
           borderRadius: AppRadius.mdAll,
-          border: Border.all(color: et.ctaBackground.withValues(alpha: 0.18)),
+          border: Border.all(color: et.surfaceBorder),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const _Header(),
             const SizedBox(height: AppSpacing.md),
-            _AgencyInfoCard(data: data),
+            _AgencyInfoCard(data: data, isLoading: isLoading),
             const SizedBox(height: AppSpacing.md),
-            _DocumentStatusCard(data: data),
+            _DocumentStatusCard(data: data, isLoading: isLoading),
+            if (_shouldShowRejectionReason(data)) ...[
+              const SizedBox(height: AppSpacing.md),
+              _RejectionReasonCard(reason: data.rejectionReason!),
+            ],
             const SizedBox(height: AppSpacing.md),
             _NextStepsCard(status: data.consolidatedDocumentStatus),
             const SizedBox(height: AppSpacing.md),
-            _ActionButton(data: data, debugStatus: debugStatus),
+            _ActionButton(
+              data: data,
+              debugStatus: debugStatus,
+              isLoading: isLoading,
+            ),
             const SizedBox(height: AppSpacing.md),
             const _HelpCard(),
           ],
@@ -149,11 +202,11 @@ class _Header extends StatelessWidget {
           height: 56,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: et.cardSurface,
+            color: AppColors.actionBlue.withValues(alpha: 0.10),
             borderRadius: AppRadius.mdAll,
-            border: Border.all(color: et.ctaBackground.withValues(alpha: 0.18)),
+            border: Border.all(color: AppColors.actionBlue.withValues(alpha: 0.22)),
           ),
-          child: Icon(Icons.business_rounded, size: 28, color: et.primaryText),
+          child: const Icon(Icons.business_rounded, size: 28, color: AppColors.actionBlue),
         ),
         const SizedBox(width: AppSpacing.md),
         Expanded(
@@ -171,26 +224,32 @@ class _Header extends StatelessWidget {
 }
 
 class _AgencyInfoCard extends StatelessWidget {
-  const _AgencyInfoCard({required this.data});
+  const _AgencyInfoCard({required this.data, required this.isLoading});
 
   final AgencyStatusData data;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
-    final et = EanTrackTheme.of(context);
     return _StatusSectionCard(
-      title: 'AGÊNCIA',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(data.agencyLegalName, style: _cardBodyLargeStyle(et)),
+          _InfoRow(
+            label: 'AGÊNCIA',
+            value: data.agencyLegalName,
+            valueChild:
+                isLoading ? const AppSkeleton(height: 16, width: 200) : null,
+          ),
           const SizedBox(height: AppSpacing.md),
           _InfoRow(
             label: 'ÚLTIMA ATUALIZAÇÃO',
             value: _formatDateTime(data.agencyUpdatedAt),
+            valueChild:
+                isLoading ? const AppSkeleton(height: 14, width: 140) : null,
           ),
           const SizedBox(height: AppSpacing.md),
-          _StatusInfoRow(status: data.statusAgency),
+          _StatusInfoRow(status: data.statusAgency, isLoading: isLoading),
         ],
       ),
     );
@@ -198,9 +257,10 @@ class _AgencyInfoCard extends StatelessWidget {
 }
 
 class _DocumentStatusCard extends StatelessWidget {
-  const _DocumentStatusCard({required this.data});
+  const _DocumentStatusCard({required this.data, required this.isLoading});
 
   final AgencyStatusData data;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -217,33 +277,64 @@ class _DocumentStatusCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(_documentTitle(data.documentType), style: _cardTitleStyle(et)),
+                if (isLoading)
+                  const AppSkeleton(height: 22, width: 130, radius: 6)
+                else
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.actionBlue.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: AppColors.actionBlue.withValues(alpha: 0.22),
+                      ),
+                    ),
+                    child: Text(
+                      _documentTitle(data.documentType),
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: AppColors.actionBlue,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: AppSpacing.sm),
+                if (isLoading)
+                  const AppSkeleton(height: 14, width: 120)
+                else
+                  Text(
+                    data.representativeName.toUpperCase(),
+                    style: _cardBodyStyle(et).copyWith(fontWeight: FontWeight.w500),
+                  ),
                 const SizedBox(height: AppSpacing.xs),
-                Text(data.representativeName, style: _cardBodyStyle(et)),
-                const SizedBox(height: AppSpacing.xs),
-                Text(data.representativeEmail, style: _cardMutedStyle(et)),
+                if (isLoading)
+                  const AppSkeleton(height: 14, width: 160)
+                else
+                  Text(data.representativeEmail, style: _cardMutedStyle(et)),
               ],
             ),
           ),
           const SizedBox(width: AppSpacing.md),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: descriptor.color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
+          if (isLoading)
+            const AppSkeleton(height: 36, width: 110, radius: 8)
+          else
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: descriptor.color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(descriptor.icon, color: descriptor.color, size: 22),
+                  const SizedBox(width: AppSpacing.xs),
+                  Text(
+                    _documentStatusText(data.consolidatedDocumentStatus),
+                    style: _cardBodyStyle(et).copyWith(color: descriptor.color),
+                  ),
+                ],
+              ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(descriptor.icon, color: descriptor.color, size: 22),
-                const SizedBox(width: AppSpacing.xs),
-                Text(
-                  _documentStatusText(data.consolidatedDocumentStatus),
-                  style: _cardBodyStyle(et).copyWith(color: descriptor.color),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -256,12 +347,14 @@ class _BalloonCard extends StatelessWidget {
     required this.iconColor,
     required this.title,
     required this.body,
+    this.highlightedText,
   });
 
   final IconData icon;
   final Color iconColor;
   final String title;
   final String body;
+  final String? highlightedText;
 
   @override
   Widget build(BuildContext context) {
@@ -269,9 +362,9 @@ class _BalloonCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.balloonBackground,
+        color: et.surface.withValues(alpha: 0.72),
         borderRadius: AppRadius.mdAll,
-        border: Border.all(color: AppColors.balloonBorder),
+        border: Border.all(color: et.surfaceBorder),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -285,12 +378,29 @@ class _BalloonCard extends StatelessWidget {
                 Text(
                   title,
                   style: _supportTextStyle(et).copyWith(
-                    color: AppColors.balloonTitle,
+                    color: et.primaryText,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
-                Text(body, style: _supportTextStyle(et)),
+                if (highlightedText == null)
+                  Text(body, style: _supportTextStyle(et))
+                else
+                  RichText(
+                    text: TextSpan(
+                      style: _supportTextStyle(et),
+                      children: [
+                        TextSpan(text: body),
+                        TextSpan(
+                          text: highlightedText,
+                          style: _supportTextStyle(et).copyWith(
+                            color: AppColors.actionBlue,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
@@ -309,9 +419,25 @@ class _NextStepsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return _BalloonCard(
       icon: Icons.assignment_turned_in_rounded,
-      iconColor: AppColors.balloonIconAction,
+      iconColor: AppColors.actionBlue,
       title: 'O que fazer?',
       body: _nextStepsText(status),
+    );
+  }
+}
+
+class _RejectionReasonCard extends StatelessWidget {
+  const _RejectionReasonCard({required this.reason});
+
+  final String reason;
+
+  @override
+  Widget build(BuildContext context) {
+    return _BalloonCard(
+      icon: Icons.report_problem_rounded,
+      iconColor: AppColors.error,
+      title: 'Motivo da rejeição',
+      body: reason,
     );
   }
 }
@@ -323,18 +449,24 @@ class _HelpCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return const _BalloonCard(
       icon: Icons.lightbulb_rounded,
-      iconColor: AppColors.balloonIconInfo,
+      iconColor: AppColors.success,
       title: 'Dúvidas?',
-      body: 'Entre em contato conosco: suporte@eantrack.com',
+      body: 'Entre em contato conosco ',
+      highlightedText: 'suporte@eantrack.com',
     );
   }
 }
 
 class _ActionButton extends ConsumerWidget {
-  const _ActionButton({required this.data, required this.debugStatus});
+  const _ActionButton({
+    required this.data,
+    required this.debugStatus,
+    required this.isLoading,
+  });
 
   final AgencyStatusData data;
   final AgencyDocumentStatus? debugStatus;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -344,7 +476,7 @@ class _ActionButton extends ConsumerWidget {
     late final VoidCallback? ctaAction;
 
     if (status == AgencyDocumentStatus.approved) {
-      ctaLabel = 'Continuar para configuração';
+      ctaLabel = 'Iniciar configuração da agência';
       ctaAction = () => context.go(AppRoutes.hub);
     } else if (status == AgencyDocumentStatus.rejected) {
       ctaLabel = 'Corrigir documentação';
@@ -366,14 +498,15 @@ class _ActionButton extends ConsumerWidget {
           backgroundColor: _ctaColor(status, et),
         ),
         const SizedBox(height: 8),
-        ColorFiltered(
-          colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-          child: AppButton.secondary(
-            'Atualizar status da solicitação',
-            onPressed: () =>
-                ref.read(agencyStatusProvider(debugStatus).notifier).load(),
-            leadingIcon: const Icon(Icons.sync),
-          ),
+        AppButton.secondary(
+          'Atualizar status da solicitação',
+          onPressed: isLoading
+              ? null
+              : () => ref
+                  .read(agencyStatusProvider(debugStatus).notifier)
+                  .refresh(),
+          isLoading: isLoading,
+          leadingIcon: const Icon(Icons.sync),
         ),
       ],
     );
@@ -433,7 +566,7 @@ class _StatusSectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: et.cardSurface,
         borderRadius: AppRadius.mdAll,
-        border: Border.all(color: et.ctaBackground.withValues(alpha: 0.18)),
+        border: Border.all(color: et.surfaceBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -450,10 +583,15 @@ class _StatusSectionCard extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.value});
+  const _InfoRow({
+    required this.label,
+    required this.value,
+    this.valueChild,
+  });
 
   final String label;
   final String value;
+  final Widget? valueChild;
 
   @override
   Widget build(BuildContext context) {
@@ -463,16 +601,17 @@ class _InfoRow extends StatelessWidget {
       children: [
         Text(label, style: _cardLabelStyle(et)),
         const SizedBox(height: AppSpacing.xs),
-        Text(value, style: _cardBodyStyle(et)),
+        valueChild ?? Text(value, style: _cardBodyStyle(et)),
       ],
     );
   }
 }
 
 class _StatusInfoRow extends StatelessWidget {
-  const _StatusInfoRow({required this.status});
+  const _StatusInfoRow({required this.status, required this.isLoading});
 
   final AgencyDocumentStatus status;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -484,24 +623,27 @@ class _StatusInfoRow extends StatelessWidget {
       children: [
         Text('STATUS DA SOLICITAÇÃO', style: _cardLabelStyle(et)),
         const SizedBox(height: AppSpacing.xs),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(8),
+        if (isLoading)
+          const AppSkeleton(height: 28, width: 110, radius: 8)
+        else
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(_agencyStatusIcon(status), size: 14, color: color),
+                const SizedBox(width: 6),
+                Text(
+                  _agencyStatusLabel(status),
+                  style: AppTextStyles.bodySmall.copyWith(color: color),
+                ),
+              ],
+            ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(_agencyStatusIcon(status), size: 14, color: color),
-              const SizedBox(width: 6),
-              Text(
-                _agencyStatusLabel(status),
-                style: AppTextStyles.bodySmall.copyWith(color: color),
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -609,6 +751,11 @@ String _nextStepsText(AgencyDocumentStatus status) => switch (status) {
         'Recebemos seu documento e ele está em análise. Assim que a verificação for concluída, você será notificado.',
     };
 
+bool _shouldShowRejectionReason(AgencyStatusData data) {
+  return data.consolidatedDocumentStatus == AgencyDocumentStatus.rejected &&
+      data.rejectionReason?.trim().isNotEmpty == true;
+}
+
 String _formatDateTime(DateTime value) {
   final local = value.toLocal();
   final d = local.day.toString().padLeft(2, '0');
@@ -619,13 +766,10 @@ String _formatDateTime(DateTime value) {
 }
 
 TextStyle _cardLabelStyle(EanTrackTheme et) =>
-    AppTextStyles.labelSmall.copyWith(color: et.secondaryText);
-
-TextStyle _cardTitleStyle(EanTrackTheme et) =>
-    AppTextStyles.bodyMedium.copyWith(color: et.primaryText, fontWeight: FontWeight.w600);
-
-TextStyle _cardBodyLargeStyle(EanTrackTheme et) =>
-    AppTextStyles.bodyMedium.copyWith(color: et.primaryText);
+    AppTextStyles.labelSmall.copyWith(
+      color: et.secondaryText,
+      fontWeight: FontWeight.w600,
+    );
 
 TextStyle _cardBodyStyle(EanTrackTheme et) =>
     AppTextStyles.bodyMedium.copyWith(color: et.primaryText);
@@ -634,4 +778,4 @@ TextStyle _cardMutedStyle(EanTrackTheme et) =>
     AppTextStyles.bodyMedium.copyWith(color: et.secondaryText);
 
 TextStyle _supportTextStyle(EanTrackTheme et) =>
-    AppTextStyles.bodySmall.copyWith(color: et.primaryText);
+    AppTextStyles.bodySmall.copyWith(color: et.secondaryText);

@@ -41,13 +41,39 @@
 
 ## VIEWS
 
-| View |
-|------|
-| user_profile_view |
-| v_regions_full |
-| v_user_agency_onboarding_context |
-| v_user_agency_onboarding_representativelegal |
-| v_user_agency_session_v1 |
+| View | Descrição |
+|------|-----------|
+| `user_profile_view` | Perfil consolidado do usuário |
+| `v_regions_full` | Regiões com cidades e responsáveis |
+| `v_user_agency_onboarding_context` | Contexto de onboarding da agência para o usuário autenticado — consumida por `AgencyStatusNotifier` |
+| `v_user_agency_onboarding_representativelegal` | Dados do representante legal no contexto de onboarding |
+| `v_user_agency_session_v1` | Sessão consolidada agência + usuário |
+| `v_latest_legal_documents` | Última tentativa de documento por `(agency_id, document_type)` — ver [LEGAL_DOCUMENTS_VERSIONING.md](LEGAL_DOCUMENTS_VERSIONING.md) |
+| `v_agency_latest_document_status` | Status consolidado de documentos por agência — **única fonte de status para o app** — ver [LEGAL_DOCUMENTS_VERSIONING.md](LEGAL_DOCUMENTS_VERSIONING.md) |
+
+---
+
+---
+
+## Modelo de Documentos Legais Versionados
+
+As tabelas `legal_representatives` e `legal_documents` formam o núcleo do fluxo de aprovação de agências. O modelo é **não-destrutivo**: cada envio cria novos registros, nenhum documento é apagado ou sobrescrito.
+
+**Documentação completa:** [LEGAL_DOCUMENTS_VERSIONING.md](LEGAL_DOCUMENTS_VERSIONING.md)
+
+### Resumo rápido
+
+| Tabela | Papel |
+|--------|-------|
+| `legal_representatives` | Dados cadastrais do representante — novo registro por tentativa |
+| `legal_documents` | Arquivos e status — insert-only, `attempt_number` incremental |
+
+| View | Papel |
+|------|-------|
+| `v_latest_legal_documents` | Última tentativa por `(agency_id, document_type)` |
+| `v_agency_latest_document_status` | Status consolidado por agência — única fonte para o app |
+
+**Regra crítica:** o app Flutter lê status exclusivamente via `v_agency_latest_document_status`. Nunca via query direta em `legal_documents`.
 
 ---
 
@@ -591,7 +617,7 @@
 | Categoria | Quantidade |
 |-----------|-----------|
 | Tabelas | 24 |
-| Views | 5 |
+| Views | 7 |
 | Triggers | 17 |
 | Funções (RPCs) | 42 |
 | — com ordinal_position confirmado (dump 2) | 20 |
