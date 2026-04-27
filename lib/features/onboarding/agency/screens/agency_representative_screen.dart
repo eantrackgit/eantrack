@@ -461,7 +461,8 @@ class _RoleDropdown extends StatelessWidget {
     );
 
     return DropdownButtonFormField<String>(
-      initialValue: value,
+      key: ValueKey(value),
+      value: value,
       style: dropdownTextStyle,
       hint: Text(
         'Selecione o cargo',

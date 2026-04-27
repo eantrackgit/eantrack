@@ -257,4 +257,35 @@ void main() {
     expect(state.selectedDocumentType, AgencyRepresentativeDocumentType.cnh);
     expect(state.error, isNull);
   });
+
+  test('submit em modo correcao reaproveita representante existente', () async {
+    when(() => service.submit(any())).thenAnswer((_) async {});
+    final container = _makeContainer(service);
+    addTearDown(container.dispose);
+    final notifier = _readNotifier(container);
+
+    notifier.prefill(
+      AgencyStatusData(
+        agencyId: 'agency-1',
+        agencyLegalName: 'Empresa Teste LTDA',
+        statusAgency: AgencyDocumentStatus.rejected,
+        agencyUpdatedAt: DateTime(2026, 4, 22),
+        representativeName: 'Joao Legal',
+        representativeEmail: 'joao@empresa.com.br',
+        legalRepresentativeId: 'rep-1',
+        representativePhone: '11911112222',
+        representativeCpf: '52998224725',
+        documentType: 'RG',
+        consolidatedDocumentStatus: AgencyDocumentStatus.rejected,
+      ),
+    );
+    _fillValidForm(notifier);
+
+    final ok = await notifier.submit();
+    final captured = verify(() => service.submit(captureAny())).captured.single
+        as AgencyRepresentativeSubmission;
+
+    expect(ok, isTrue);
+    expect(captured.legalRepresentativeId, 'rep-1');
+  });
 }

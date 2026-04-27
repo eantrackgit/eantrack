@@ -80,4 +80,11 @@ abstract final class AppColors {
   static const warning = Color(0xFFF9CF58);
   static const error = Color(0xFFFF5963);
   static const info = Color(0xFF3B82F6);
+
+  // Light mode sidebar palette
+  static const sidebarSurfaceLight = Color(0xFFECF0F9);
+  static const cardSurfaceLight = Color(0xFFF6F8FF);
+  static const inputFillLight = Color(0xFFE8EBF7);
+  static const borderLight = Color(0xFFC8CEE5);
+  static const dividerLight = Color(0xFFD5DAF0);
 }

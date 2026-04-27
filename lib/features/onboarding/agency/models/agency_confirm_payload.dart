@@ -8,10 +8,14 @@ class AgencyConfirmPayload {
     required this.agencyId,
     required this.cnpjModel,
     required this.formData,
+    this.legalRepresentativeId,
   });
 
   /// Identificador da agência salvo antes da etapa do representante legal.
   final String agencyId;
+
+  /// Identificador do representante existente, usado em fluxos de correcao.
+  final String? legalRepresentativeId;
 
   /// Dados fiscais retornados pela consulta de CNPJ.
   final CnpjModel cnpjModel;
@@ -22,6 +26,7 @@ class AgencyConfirmPayload {
   factory AgencyConfirmPayload.fromJson(Map<String, dynamic> json) {
     return AgencyConfirmPayload(
       agencyId: json['agency_id']?.toString() ?? '',
+      legalRepresentativeId: json['legal_representative_id']?.toString(),
       cnpjModel: CnpjModel.fromJson(
         json['cnpj_model'] as Map<String, dynamic>,
       ),
@@ -34,6 +39,7 @@ class AgencyConfirmPayload {
   Map<String, dynamic> toJson() {
     return {
       'agency_id': agencyId,
+      'legal_representative_id': legalRepresentativeId,
       'cnpj_model': cnpjModel.toJson(),
       'form_data': formData.toJson(),
     };

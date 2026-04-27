@@ -222,6 +222,7 @@ class AgencyRepresentativeNotifier
   final AgencyConfirmPayload? _payload;
   final AgencyRepresentativeService _service;
   String? _prefillAgencyId;
+  String? _prefillLegalRepresentativeId;
 
   final TextEditingController fullNameController = TextEditingController();
   final TextEditingController cpfController = TextEditingController();
@@ -233,6 +234,11 @@ class AgencyRepresentativeNotifier
       _payload?.agencyId.isNotEmpty == true
           ? _payload!.agencyId
           : (_prefillAgencyId ?? '');
+
+  String? get legalRepresentativeId =>
+      _payload?.legalRepresentativeId?.trim().isNotEmpty == true
+          ? _payload!.legalRepresentativeId
+          : _prefillLegalRepresentativeId;
 
   void onCpfEditingComplete() {
     onCpfBlur();
@@ -251,6 +257,7 @@ class AgencyRepresentativeNotifier
 
   void prefill(AgencyStatusData data) {
     _prefillAgencyId = data.agencyId;
+    _prefillLegalRepresentativeId = data.legalRepresentativeId;
 
     final nextFullName = data.representativeName;
     final nextEmail = data.representativeEmail;
@@ -261,10 +268,12 @@ class AgencyRepresentativeNotifier
     final formattedPhone =
         nextPhone != null ? _formatPhoneForPrefill(nextPhone) : null;
 
+    final formattedCpf = nextCpf != null ? _formatCpf(nextCpf) : null;
+
     final hasSameValues = state.fullNameText == nextFullName &&
         state.emailText == nextEmail &&
         (formattedPhone == null || state.phoneText == formattedPhone) &&
-        (nextCpf == null || state.cpfText == nextCpf) &&
+        (formattedCpf == null || state.cpfText == formattedCpf) &&
         (nextRole == null || state.selectedRole == nextRole) &&
         (nextDocumentType == null ||
             state.selectedDocumentType == nextDocumentType);
@@ -274,13 +283,13 @@ class AgencyRepresentativeNotifier
     fullNameController.text = nextFullName;
     emailController.text = nextEmail;
     if (formattedPhone != null) phoneController.text = formattedPhone;
-    if (nextCpf != null) cpfController.text = nextCpf;
+    if (formattedCpf != null) cpfController.text = formattedCpf;
 
     state = state.copyWith(
       fullNameText: nextFullName,
       emailText: nextEmail,
       phoneText: formattedPhone,
-      cpfText: nextCpf,
+      cpfText: formattedCpf,
       selectedRole: nextRole ?? state.selectedRole,
       selectedDocumentType: nextDocumentType ?? state.selectedDocumentType,
       error: null,
@@ -314,6 +323,17 @@ class AgencyRepresentativeNotifier
       if (i == 2) buffer.write(') ');
       if (i == 3) buffer.write(' ');
       if (i == 7) buffer.write('-');
+      buffer.write(digits[i]);
+    }
+    return buffer.toString();
+  }
+
+  String _formatCpf(String value) {
+    final digits = onlyDigits(value);
+    final buffer = StringBuffer();
+    for (var i = 0; i < digits.length && i < 11; i++) {
+      if (i == 3 || i == 6) buffer.write('.');
+      if (i == 9) buffer.write('-');
       buffer.write(digits[i]);
     }
     return buffer.toString();
@@ -438,6 +458,7 @@ class AgencyRepresentativeNotifier
       await _service.submit(
         AgencyRepresentativeSubmission(
           agencyId: currentAgencyId,
+          legalRepresentativeId: legalRepresentativeId,
           name: _normalizedName,
           cpf: _rawCpf,
           role: state.selectedRole!,

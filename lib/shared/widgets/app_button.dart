@@ -174,10 +174,16 @@ class _AppButtonState extends State<AppButton> {
         child: AnimatedOpacity(
           opacity: _disabled ? 0.65 : 1.0,
           duration: const Duration(milliseconds: 150),
-          child: SizedBox(
-            width: widget.width ?? double.infinity,
-            height: 52,
-            child: _buildButton(),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final effectiveWidth = widget.width ??
+                  (constraints.hasBoundedWidth ? double.infinity : null);
+              return SizedBox(
+                width: effectiveWidth,
+                height: 52,
+                child: _buildButton(),
+              );
+            },
           ),
         ),
       ),

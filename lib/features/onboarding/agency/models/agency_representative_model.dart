@@ -91,6 +91,7 @@ class AgencyRepresentativeSubmission {
     required this.phone,
     required this.email,
     required this.documentType,
+    this.legalRepresentativeId,
     this.frontFile,
     this.backFile,
     this.attachmentFile,
@@ -98,6 +99,9 @@ class AgencyRepresentativeSubmission {
 
   /// Identificador da agência criado nas etapas anteriores do onboarding.
   final String agencyId;
+
+  /// Identificador do representante existente, usado no fluxo de correcao.
+  final String? legalRepresentativeId;
 
   /// Nome completo normalizado do representante legal.
   final String name;

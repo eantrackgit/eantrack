@@ -83,6 +83,7 @@ class AgencyRepresentativeService {
     }
 
     String? legalRepresentativeId;
+    var createdRepresentative = false;
 
     try {
       final frontFile = submission.frontFileForUpload;
@@ -94,21 +95,37 @@ class AgencyRepresentativeService {
 
       final backFile = submission.backFileForUpload;
 
-      final insertedRepresentative = await _supabaseClient
-          .from('legal_representatives')
-          .insert({
-            'agency_id': submission.agencyId,
-            'user_id': userId,
-            'full_name': submission.name.trim(),
-            'email': submission.email.trim(),
-            'phone': submission.phone,
-            'role': submission.role.trim(),
-            'cpf': submission.cpf,
-          })
-          .select('id')
-          .single();
+      final existingRepresentativeId =
+          submission.legalRepresentativeId?.trim() ?? '';
+      final representativePayload = {
+        'agency_id': submission.agencyId,
+        'user_id': userId,
+        'full_name': submission.name.trim(),
+        'email': submission.email.trim(),
+        'phone': submission.phone,
+        'role': submission.role.trim(),
+        'cpf': submission.cpf,
+      };
 
-      legalRepresentativeId = insertedRepresentative['id']?.toString();
+      final insertedRepresentative = existingRepresentativeId.isEmpty
+          ? await _supabaseClient
+              .from('legal_representatives')
+              .insert(representativePayload)
+              .select('id')
+              .single()
+          : null;
+
+      if (existingRepresentativeId.isNotEmpty) {
+        legalRepresentativeId = existingRepresentativeId;
+        await _supabaseClient
+            .from('legal_representatives')
+            .update(representativePayload)
+            .eq('id', existingRepresentativeId)
+            .eq('agency_id', submission.agencyId);
+      } else {
+        legalRepresentativeId = insertedRepresentative?['id']?.toString();
+        createdRepresentative = true;
+      }
       if (legalRepresentativeId == null || legalRepresentativeId.isEmpty) {
         throw const AgencyRepresentativeServiceException(
           'Não foi possível identificar o representante legal salvo.',
@@ -149,20 +166,28 @@ class AgencyRepresentativeService {
         'back_url': backUrl,
       });
     } on StorageException catch (e) {
-      await _rollbackRepresentative(legalRepresentativeId);
+      if (createdRepresentative) {
+        await _rollbackRepresentative(legalRepresentativeId);
+      }
       throw AgencyRepresentativeServiceException(
         'Falha no upload do documento. ${e.message}',
       );
     } on PostgrestException catch (e) {
-      await _rollbackRepresentative(legalRepresentativeId);
+      if (createdRepresentative) {
+        await _rollbackRepresentative(legalRepresentativeId);
+      }
       throw AgencyRepresentativeServiceException(
         'Não foi possível salvar o representante legal. (${e.code})',
       );
     } on AgencyRepresentativeServiceException {
-      await _rollbackRepresentative(legalRepresentativeId);
+      if (createdRepresentative) {
+        await _rollbackRepresentative(legalRepresentativeId);
+      }
       rethrow;
     } catch (_) {
-      await _rollbackRepresentative(legalRepresentativeId);
+      if (createdRepresentative) {
+        await _rollbackRepresentative(legalRepresentativeId);
+      }
       throw const AgencyRepresentativeServiceException(
         'Não foi possível salvar o representante legal.',
       );

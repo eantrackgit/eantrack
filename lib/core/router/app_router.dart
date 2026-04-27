@@ -34,7 +34,8 @@ import '../../features/onboarding/agency/controllers/agency_status_notifier.dart
 import 'recovery_link_parser.dart';
 import 'router_redirect_guard.dart';
 
-Page<void> _fade(Widget child) => CustomTransitionPage<void>(
+Page<void> _fade(GoRouterState state, Widget child) => CustomTransitionPage<void>(
+      key: state.pageKey,
       child: child,
       transitionDuration: const Duration(milliseconds: 200),
       reverseTransitionDuration: const Duration(milliseconds: 200),
@@ -45,6 +46,12 @@ Page<void> _fade(Widget child) => CustomTransitionPage<void>(
         );
       },
     );
+
+bool _hasAgencyHubAccess(AgencyStatusData data) {
+  return data.statusAgency == AgencyDocumentStatus.approved &&
+      data.consolidatedDocumentStatus == AgencyDocumentStatus.approved &&
+      data.termsAccepted;
+}
 
 String? _redirect(Ref ref, BuildContext context, GoRouterState state) {
   final authFlowState = ref.read(authFlowStateProvider);
@@ -79,10 +86,22 @@ String? _redirect(Ref ref, BuildContext context, GoRouterState state) {
       path == AppRoutes.onboardingAgencyRepresentative ||
       isAgencyStatusRoute;
   final isAppRoute = AppRoutes.protectedRoutes.contains(path);
-  final agencyStatus = ref
-      .read(agencyStatusProvider(null))
-      .data
-      ?.consolidatedDocumentStatus;
+  final agencyStatusProviderInstance = agencyStatusProvider(null);
+  final agencyData = ref.read(agencyStatusProviderInstance).data;
+  final isAgencyUser = authState is AuthAuthenticated &&
+      authState.flowState?.normalizedUserMode == 'agency';
+
+  if ((isAppRoute || isAgencyStatusRoute) &&
+      isAgencyUser &&
+      ref.read(agencyStatusProviderInstance).status ==
+          AgencyStatusLoading.idle) {
+    Future.microtask(() {
+      final status = ref.read(agencyStatusProviderInstance).status;
+      if (status == AgencyStatusLoading.idle) {
+        ref.read(agencyStatusProviderInstance.notifier).load();
+      }
+    });
+  }
 
   if (path == AppRoutes.emailVerification) {
     if (authState is AuthEmailUnconfirmed) return null;
@@ -104,14 +123,24 @@ String? _redirect(Ref ref, BuildContext context, GoRouterState state) {
     return null;
   }
 
+  // Permite que agência com documentação rejeitada acesse a tela de correção,
+  // mesmo quando authFlowState já é authenticated (após aceite de termos).
+  if (path == AppRoutes.onboardingAgencyRepresentative &&
+      isAgencyUser &&
+      agencyData?.consolidatedDocumentStatus == AgencyDocumentStatus.rejected &&
+      (authFlowState == AuthFlowState.authenticated ||
+          authFlowState == AuthFlowState.onboardingRequired)) {
+    return null;
+  }
+
   if (isOnboardingRoute &&
       authFlowState != AuthFlowState.onboardingRequired) {
     return AppRoutes.flow;
   }
 
   if (isAppRoute && authFlowState != AuthFlowState.authenticated) {
-    if (agencyStatus != null) {
-      return agencyStatus == AgencyDocumentStatus.approved
+    if (isAgencyUser && agencyData != null) {
+      return _hasAgencyHubAccess(agencyData)
           ? null
           : AppRoutes.onboardingAgencyStatus;
     }
@@ -126,8 +155,9 @@ String? _redirect(Ref ref, BuildContext context, GoRouterState state) {
   }
 
   if (isAppRoute &&
-      agencyStatus != null &&
-      agencyStatus != AgencyDocumentStatus.approved) {
+      isAgencyUser &&
+      agencyData != null &&
+      !_hasAgencyHubAccess(agencyData)) {
     return AppRoutes.onboardingAgencyStatus;
   }
 
@@ -137,6 +167,18 @@ String? _redirect(Ref ref, BuildContext context, GoRouterState state) {
 final appRouterProvider = Provider<GoRouter>((ref) {
   final guard = RouterRedirectGuard(ref);
   ref.read(authRecoveryContextProvider);
+  final agencyStatusProviderInstance = agencyStatusProvider(null);
+  ref.listen(agencyStatusProviderInstance, (_, __) => guard.notifyListeners());
+  ref.listen(authFlowStateProvider, (_, next) {
+    final authState = ref.read(authNotifierProvider);
+    final isAgencyUser = authState is AuthAuthenticated &&
+        authState.flowState?.normalizedUserMode == 'agency';
+    if (isAgencyUser &&
+        (next == AuthFlowState.authenticated ||
+            next == AuthFlowState.onboardingRequired)) {
+      ref.read(agencyStatusProviderInstance.notifier).refresh();
+    }
+  });
   final recoveryErrorLocation = RecoveryLinkParser.initialErrorLocation();
 
   return GoRouter(
@@ -160,7 +202,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: AppRoutes.splash,
-        pageBuilder: (_, __) => _fade(const SplashScreen()),
+        pageBuilder: (_, state) => _fade(state, const SplashScreen()),
       ),
       GoRoute(
         path: AppRoutes.login,
@@ -174,6 +216,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   : null;
 
           return _fade(
+            state,
             LoginScreen(
               notice: notice,
               consumeRecoveryQueryParam: recoveryFromQuery,
@@ -183,43 +226,44 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.register,
-        pageBuilder: (_, __) => _fade(const RegisterScreen()),
+        pageBuilder: (_, state) => _fade(state, const RegisterScreen()),
       ),
       GoRoute(
         path: AppRoutes.emailVerification,
-        pageBuilder: (_, __) => _fade(const EmailVerificationScreen()),
+        pageBuilder: (_, state) => _fade(state, const EmailVerificationScreen()),
       ),
       GoRoute(
         path: AppRoutes.recoverPassword,
-        pageBuilder: (_, __) => _fade(const RecoverPasswordScreen()),
+        pageBuilder: (_, state) => _fade(state, const RecoverPasswordScreen()),
       ),
       GoRoute(
         path: AppRoutes.updatePassword,
-        pageBuilder: (_, __) => _fade(const UpdatePasswordScreen()),
+        pageBuilder: (_, state) => _fade(state, const UpdatePasswordScreen()),
       ),
       GoRoute(
         path: AppRoutes.passwordRecoveryLinkExpired,
-        pageBuilder: (_, __) => _fade(const PasswordRecoveryLinkExpiredScreen()),
+        pageBuilder: (_, state) => _fade(state, const PasswordRecoveryLinkExpiredScreen()),
       ),
       GoRoute(
         path: AppRoutes.hub,
-        pageBuilder: (_, __) => _fade(const HubScreen()),
+        pageBuilder: (_, state) => _fade(state, const HubScreen()),
       ),
       GoRoute(
         path: AppRoutes.flow,
-        pageBuilder: (_, __) => _fade(const FlowScreen()),
+        pageBuilder: (_, state) => _fade(state, const FlowScreen()),
       ),
       GoRoute(
         path: AppRoutes.onboarding,
-        pageBuilder: (_, __) => _fade(const ChooseModeScreen()),
+        pageBuilder: (_, state) => _fade(state, const ChooseModeScreen()),
       ),
       GoRoute(
         path: AppRoutes.onboardingOperationalStyle,
-        pageBuilder: (_, __) => _fade(const ChooseModeScreen()),
+        pageBuilder: (_, state) => _fade(state, const ChooseModeScreen()),
       ),
       GoRoute(
         path: AppRoutes.onboardingIndividual,
         pageBuilder: (_, state) => _fade(
+          state,
           OnboardingProfileScreen(
             mode: state.uri.queryParameters['mode'] ?? 'individual',
           ),
@@ -228,6 +272,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.onboardingIndividualProfile,
         pageBuilder: (_, state) => _fade(
+          state,
           OnboardingProfileScreen(
             mode: state.uri.queryParameters['mode'] ?? 'individual',
           ),
@@ -236,6 +281,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.photoProfile,
         pageBuilder: (_, state) => _fade(
+          state,
           PagPhotoProfile(
             mode: state.uri.queryParameters['mode'] ?? 'individual',
           ),
@@ -243,29 +289,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.onboardingCnpj,
-        pageBuilder: (_, __) => _fade(const AgencyCnpjScreen()),
+        pageBuilder: (_, state) => _fade(state, const AgencyCnpjScreen()),
       ),
       GoRoute(
         path: AppRoutes.onboardingAgencyCnpj,
-        pageBuilder: (_, __) => _fade(const AgencyCnpjScreen()),
+        pageBuilder: (_, state) => _fade(state, const AgencyCnpjScreen()),
       ),
       GoRoute(
         path: AppRoutes.onboardingAgency,
-        pageBuilder: (_, __) => _fade(const CompanyDataScreen()),
+        pageBuilder: (_, state) => _fade(state, const CompanyDataScreen()),
       ),
       GoRoute(
         path: AppRoutes.onboardingLegalRep,
-        pageBuilder: (_, __) => _fade(const LegalRepresentativeScreen()),
+        pageBuilder: (_, state) => _fade(state, const LegalRepresentativeScreen()),
       ),
       GoRoute(
         path: AppRoutes.onboardingAgencyConfirm,
         pageBuilder: (_, state) {
           final cnpjModel = state.extra;
           if (cnpjModel is! CnpjModel) {
-            return _fade(const AgencyCnpjScreen());
+            return _fade(state, const AgencyCnpjScreen());
           }
 
           return _fade(
+            state,
             AgencyConfirmScreen(cnpjModel: cnpjModel),
           );
         },
@@ -278,6 +325,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final prefillData = extra is AgencyStatusData ? extra : null;
 
           return _fade(
+            state,
             AgencyRepresentativeScreen(
               key: ValueKey(payload?.agencyId ?? prefillData?.agencyLegalName),
               payload: payload,
@@ -294,25 +342,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               : null;
 
           return _fade(
+            state,
             AgencyStatusScreen(debugStatus: debugStatus),
           );
         },
       ),
       GoRoute(
         path: AppRoutes.validity,
-        pageBuilder: (_, __) => _fade(const ValidityListScreen()),
+        pageBuilder: (_, state) => _fade(state, const ValidityListScreen()),
       ),
       GoRoute(
         path: AppRoutes.regions,
-        pageBuilder: (_, __) => _fade(const RegionListScreen()),
+        pageBuilder: (_, state) => _fade(state, const RegionListScreen()),
       ),
       GoRoute(
         path: AppRoutes.termsOfUse,
-        pageBuilder: (_, __) => _fade(const TermsOfUseScreen()),
+        pageBuilder: (_, state) => _fade(state, const TermsOfUseScreen()),
       ),
       GoRoute(
         path: AppRoutes.privacyPolicy,
-        pageBuilder: (_, __) => _fade(const PrivacyPolicyScreen()),
+        pageBuilder: (_, state) => _fade(state, const PrivacyPolicyScreen()),
       ),
     ],
   );

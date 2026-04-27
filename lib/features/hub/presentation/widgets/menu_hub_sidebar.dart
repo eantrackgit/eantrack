@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
@@ -16,7 +17,7 @@ import '../../../onboarding/agency/controllers/agency_status_notifier.dart';
 ///     agencyStatus: AgencyDocumentStatus.approved,
 ///     onSignOut: () => ...,
 ///   )
-class MenuHubSidebar extends StatelessWidget {
+class MenuHubSidebar extends ConsumerWidget {
   const MenuHubSidebar({
     super.key,
     required this.userName,
@@ -54,11 +55,30 @@ class MenuHubSidebar extends StatelessWidget {
   final String planName;
   final String nextBillingText;
 
-  bool get _isBlocked => agencyStatus != AgencyDocumentStatus.approved;
+  bool _isBlocked(AgencyStatusData? data) {
+    final effectiveAgencyStatus = data?.statusAgency ?? agencyStatus;
+    final effectiveDocumentStatus =
+        data?.consolidatedDocumentStatus ?? agencyStatus;
+    final termsAccepted = data?.termsAccepted ?? false;
+
+    return effectiveAgencyStatus != AgencyDocumentStatus.approved ||
+        effectiveDocumentStatus != AgencyDocumentStatus.approved ||
+        !termsAccepted;
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final et = EanTrackTheme.of(context);
+    final provider = agencyStatusProvider(null);
+    final statusState = ref.watch(provider);
+    final isBlocked = _isBlocked(statusState.data);
+
+    if (statusState.status == AgencyStatusLoading.idle) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        ref.read(provider.notifier).load();
+      });
+    }
 
     return Container(
       width: 280,
@@ -90,7 +110,7 @@ class MenuHubSidebar extends StatelessWidget {
                           agencyName: agencyName,
                           agencyHandle: agencyHandle,
                           logoUrl: agencyLogoUrl,
-                          onEditAgency: _isBlocked ? null : onEditAgency,
+                          onEditAgency: isBlocked ? null : onEditAgency,
                         ),
                       ],
                     ),
@@ -101,51 +121,51 @@ class MenuHubSidebar extends StatelessWidget {
                         _MenuHubSectionItem(
                           icon: Icons.location_on_outlined,
                           label: 'Regiões',
-                          enabled: !_isBlocked,
-                          onTap: _isBlocked
+                          enabled: !isBlocked,
+                          onTap: isBlocked
                               ? null
                               : () => context.go(AppRoutes.regions),
                         ),
                         _MenuHubSectionItem(
                           icon: Icons.hub_outlined,
                           label: 'Redes',
-                          enabled: !_isBlocked,
+                          enabled: !isBlocked,
                           onTap: null,
                         ),
                         _MenuHubSectionItem(
                           icon: Icons.store_outlined,
                           label: 'Lojas / PDVs',
-                          enabled: !_isBlocked,
+                          enabled: !isBlocked,
                           onTap: null,
                         ),
                         _MenuHubSectionItem(
                           icon: Icons.category_outlined,
                           label: 'Categorias / Subcategorias',
-                          enabled: !_isBlocked,
+                          enabled: !isBlocked,
                           onTap: null,
                         ),
                         _MenuHubSectionItem(
                           icon: Icons.factory_outlined,
                           label: 'Indústrias / Marcas',
-                          enabled: !_isBlocked,
+                          enabled: !isBlocked,
                           onTap: null,
                         ),
                         _MenuHubSectionItem(
                           icon: Icons.groups_outlined,
                           label: 'Equipes',
-                          enabled: !_isBlocked,
+                          enabled: !isBlocked,
                           onTap: null,
                         ),
                         _MenuHubSectionItem(
                           icon: Icons.people_outline_rounded,
                           label: 'Colaboradores',
-                          enabled: !_isBlocked,
+                          enabled: !isBlocked,
                           onTap: null,
                         ),
                         _MenuHubSectionItem(
                           icon: Icons.assignment_outlined,
                           label: 'Tarefas / Pesquisas',
-                          enabled: !_isBlocked,
+                          enabled: !isBlocked,
                           onTap: null,
                         ),
                       ],
@@ -158,24 +178,24 @@ class MenuHubSidebar extends StatelessWidget {
                           icon: Icons.inventory_2_outlined,
                           label: 'Ativos',
                           count: activesCount,
-                          enabled: !_isBlocked,
+                          enabled: !isBlocked,
                           onTap: null,
                         ),
                         _MenuHubSectionItem(
                           icon: Icons.mail_outline_rounded,
                           label: 'Convites enviados',
                           count: sentInvitesCount,
-                          enabled: !_isBlocked,
+                          enabled: !isBlocked,
                           onTap: null,
                         ),
                         _MenuHubSectionItem(
                           icon: Icons.mark_email_unread_outlined,
                           label: 'Convites pendentes',
                           count: pendingInvitesCount,
-                          enabled: !_isBlocked,
+                          enabled: !isBlocked,
                           onTap: null,
                         ),
-                        if (!_isBlocked)
+                        if (!isBlocked)
                           _MenuHubActionButton(
                             label: 'Gerenciar convites',
                             onPressed: onManageInvites,
@@ -189,12 +209,12 @@ class MenuHubSidebar extends StatelessWidget {
                         _MenuHubSectionItem(
                           icon: Icons.workspace_premium_outlined,
                           label: planName,
-                          enabled: !_isBlocked,
+                          enabled: !isBlocked,
                           onTap: null,
                         ),
-                        if (nextBillingText.isNotEmpty && !_isBlocked)
+                        if (nextBillingText.isNotEmpty && !isBlocked)
                           _MenuHubBillingRow(text: nextBillingText),
-                        if (!_isBlocked)
+                        if (!isBlocked)
                           _MenuHubActionButton(
                             label: 'Gerenciar plano',
                             onPressed: onManagePlan,
@@ -208,7 +228,7 @@ class MenuHubSidebar extends StatelessWidget {
                         _MenuHubSectionItem(
                           icon: Icons.delete_outline_rounded,
                           label: 'Excluir conta',
-                          enabled: !_isBlocked,
+                          enabled: !isBlocked,
                           isDestructive: true,
                           onTap: null,
                         ),
@@ -343,8 +363,10 @@ class _MenuHubIdentityCard extends StatelessWidget {
         AppSpacing.xs,
       ),
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: et.cardSurface,
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF0E0A36)
+              : et.inputFill,
         borderRadius: AppRadius.mdAll,
         border: Border.all(color: et.surfaceBorder),
       ),
@@ -360,8 +382,8 @@ class _MenuHubIdentityCard extends StatelessWidget {
                     logoUrl != null ? NetworkImage(logoUrl!) : null,
                 child: logoUrl == null
                     ? Icon(
-                        Icons.business_rounded,
-                        size: 24,
+                        Icons.support_agent_rounded,
+                        size: 26,
                         color: et.secondaryText,
                       )
                     : null,
@@ -392,6 +414,27 @@ class _MenuHubIdentityCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
+          SizedBox(
+            height: 34,
+            child: OutlinedButton(
+              onPressed: onEditAgency,
+              style: OutlinedButton.styleFrom(
+                backgroundColor: et.inputFill,
+                foregroundColor: et.primaryText,
+                side: BorderSide(color: et.inputBorder),
+                shape: RoundedRectangleBorder(borderRadius: AppRadius.smAll),
+                padding: EdgeInsets.zero,
+              ),
+              child: Text(
+                'Editar Agência',
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: et.primaryText,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
               Text(
@@ -408,26 +451,6 @@ class _MenuHubIdentityCard extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          SizedBox(
-            height: 34,
-            child: OutlinedButton(
-              onPressed: onEditAgency,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: et.primaryText,
-                side: BorderSide(color: et.inputBorder),
-                shape: RoundedRectangleBorder(borderRadius: AppRadius.smAll),
-                padding: EdgeInsets.zero,
-              ),
-              child: Text(
-                'Editar Agência',
-                style: AppTextStyles.labelSmall.copyWith(
-                  color: et.primaryText,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
           ),
         ],
       ),
@@ -492,12 +515,12 @@ class _MenuHubSection extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(icon, size: 13, color: et.secondaryText),
+              Icon(icon, size: 13, color: et.primaryText),
               const SizedBox(width: AppSpacing.xs),
               Text(
                 title.toUpperCase(),
                 style: AppTextStyles.labelSmall.copyWith(
-                  color: et.secondaryText,
+                  color: et.primaryText,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.8,
                 ),
@@ -537,8 +560,9 @@ class _MenuHubSectionItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final et = EanTrackTheme.of(context);
 
-    final Color iconColor =
-        isDestructive ? AppColors.error : et.secondaryText;
+    final Color iconColor = isDestructive
+        ? AppColors.error
+        : et.primaryText.withValues(alpha: 0.8);
     final Color textColor =
         isDestructive ? AppColors.error : et.primaryText;
 
@@ -573,9 +597,9 @@ class _MenuHubSectionItem extends StatelessWidget {
           ),
           if (enabled)
             Icon(
-              Icons.arrow_forward_ios_rounded,
-              size: 11,
-              color: et.secondaryText.withValues(alpha: 0.45),
+              Icons.navigate_next,
+              size: 18,
+              color: et.secondaryText.withValues(alpha: 0.7),
             ),
         ],
       ),
@@ -719,6 +743,10 @@ class _MenuHubFooter extends StatelessWidget {
               ),
             ),
           ),
+        ),
+        const Padding(
+          padding: EdgeInsets.only(bottom: AppSpacing.md),
+          child: AppVersionBadge(),
         ),
       ],
     );

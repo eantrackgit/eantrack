@@ -46,7 +46,7 @@ class AgencyStatusScreen extends ConsumerWidget {
 
     if (isDesktop) {
       return Scaffold(
-        backgroundColor: et.scaffoldOuter,
+        backgroundColor: et.sidebarSurface,
         body: Row(
           children: [
             MenuHubSidebar(
@@ -62,7 +62,15 @@ class AgencyStatusScreen extends ConsumerWidget {
                 context.go(AppRoutes.login);
               },
             ),
-            Expanded(child: content),
+            Expanded(
+              child: data == null
+                  ? content
+                  : _DesktopStatusContent(
+                      data: data,
+                      debugStatus: debugStatus,
+                      isLoading: isLoading,
+                    ),
+            ),
           ],
         ),
       );
@@ -127,7 +135,7 @@ class _StatusContent extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const _Header(),
+            _Header(),
             const SizedBox(height: AppSpacing.md),
             _AgencyInfoCard(data: data, isLoading: isLoading),
             const SizedBox(height: AppSpacing.md),
@@ -147,6 +155,83 @@ class _StatusContent extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             const _HelpCard(),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DesktopStatusContent extends ConsumerWidget {
+  const _DesktopStatusContent({
+    required this.data,
+    required this.debugStatus,
+    required this.isLoading,
+  });
+
+  final AgencyStatusData data;
+  final AgencyDocumentStatus? debugStatus;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(
+          32,
+          12,
+          48,
+          20,
+        ),
+        child: Align(
+          alignment: const Alignment(-0.10, -1),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1280),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _Header(
+                  showSubtitle: true,
+                  trailing: const _ThemeToggleButton(),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: _AgencyInfoCard(data: data, isLoading: isLoading),
+                      ),
+                      const SizedBox(width: AppSpacing.lg),
+                      Expanded(
+                        flex: 2,
+                        child: _DocumentStatusCard(data: data, isLoading: isLoading),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_shouldShowRejectionReason(data)) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _RejectionReasonCard(reason: data.rejectionReason!),
+                ],
+                const SizedBox(height: AppSpacing.md),
+                _DesktopActionCard(
+                  data: data,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _ActionButton(
+                  data: data,
+                  debugStatus: debugStatus,
+                  isLoading: isLoading,
+                  isDesktop: true,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                const _HelpCard(),
+                const SizedBox(height: AppSpacing.lg),
+                const _FooterText(),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -189,7 +274,14 @@ class _InitialState extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header();
+  // ignore: prefer_const_constructors_in_immutables
+  _Header({
+    this.showSubtitle = false,
+    this.trailing,
+  });
+
+  final bool showSubtitle;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -210,14 +302,31 @@ class _Header extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.md),
         Expanded(
-          child: Text(
-            'Status da Agência',
-            style: AppTextStyles.titleLarge.copyWith(
-              color: et.primaryText,
-              fontWeight: FontWeight.w700,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Status da Agência',
+                style: AppTextStyles.titleLarge.copyWith(
+                  color: et.primaryText,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (showSubtitle) ...[
+                const SizedBox(height: 2),
+                Text(
+                  'Acompanhe o status da sua solicitação e dos documentos enviados.',
+                  style: AppTextStyles.bodySmall.copyWith(color: et.secondaryText),
+                ),
+              ],
+            ],
           ),
         ),
+        if (trailing != null) ...[
+          const SizedBox(width: AppSpacing.md),
+          trailing!,
+        ],
       ],
     );
   }
@@ -232,6 +341,8 @@ class _AgencyInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _StatusSectionCard(
+      title: 'Dados da agência',
+      titleIcon: Icons.people_alt_outlined,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -264,77 +375,172 @@ class _DocumentStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final et = EanTrackTheme.of(context);
     final descriptor = _StatusDescriptor.from(data.consolidatedDocumentStatus);
 
     return _StatusSectionCard(
       title: 'STATUS DO DOCUMENTO',
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
+      titleIcon: Icons.description_outlined,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final useHorizontalLayout = constraints.maxWidth >= 420;
+          final representativeDetails = _DocumentRepresentativeDetails(
+            data: data,
+            isLoading: isLoading,
+          );
+          final statusBadge = isLoading
+              ? const AppSkeleton(height: 36, width: 110, radius: 8)
+              : _DocumentStatusBadge(
+                  descriptor: descriptor,
+                  label: _documentStatusText(data.consolidatedDocumentStatus),
+                );
+
+          if (!useHorizontalLayout) {
+            return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (isLoading)
-                  const AppSkeleton(height: 22, width: 130, radius: 6)
-                else
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.actionBlue.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: AppColors.actionBlue.withValues(alpha: 0.22),
-                      ),
-                    ),
-                    child: Text(
-                      _documentTitle(data.documentType),
-                      style: AppTextStyles.labelSmall.copyWith(
-                        color: AppColors.actionBlue,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: AppSpacing.sm),
-                if (isLoading)
-                  const AppSkeleton(height: 14, width: 120)
-                else
-                  Text(
-                    data.representativeName.toUpperCase(),
-                    style: _cardBodyStyle(et).copyWith(fontWeight: FontWeight.w500),
-                  ),
-                const SizedBox(height: AppSpacing.xs),
-                if (isLoading)
-                  const AppSkeleton(height: 14, width: 160)
-                else
-                  Text(data.representativeEmail, style: _cardMutedStyle(et)),
+                representativeDetails,
+                const SizedBox(height: AppSpacing.md),
+                statusBadge,
               ],
+            );
+          }
+
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: representativeDetails),
+              const SizedBox(width: AppSpacing.md),
+              Align(
+                alignment: Alignment.topRight,
+                child: statusBadge,
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _DocumentRepresentativeDetails extends StatelessWidget {
+  const _DocumentRepresentativeDetails({
+    required this.data,
+    required this.isLoading,
+  });
+
+  final AgencyStatusData data;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
+    final name = data.representativeName.trim();
+    final role = data.representativeRole?.trim();
+    final email = data.representativeEmail.trim();
+    final phone = _formatRepresentativePhone(data.representativePhone);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (isLoading)
+          const AppSkeleton(height: 22, width: 130, radius: 6)
+        else
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: AppColors.actionBlue.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: AppColors.actionBlue.withValues(alpha: 0.22),
+              ),
+            ),
+            child: Text(
+              _documentTitle(data.documentType),
+              style: AppTextStyles.labelSmall.copyWith(
+                color: AppColors.actionBlue,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
-          if (isLoading)
-            const AppSkeleton(height: 36, width: 110, radius: 8)
-          else
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: descriptor.color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(descriptor.icon, color: descriptor.color, size: 22),
-                  const SizedBox(width: AppSpacing.xs),
-                  Text(
-                    _documentStatusText(data.consolidatedDocumentStatus),
-                    style: _cardBodyStyle(et).copyWith(color: descriptor.color),
-                  ),
-                ],
-              ),
+        const SizedBox(height: AppSpacing.md),
+        if (isLoading) ...[
+          const AppSkeleton(height: 16, width: 150),
+          const SizedBox(height: AppSpacing.xs),
+          const AppSkeleton(height: 13, width: 110),
+          const SizedBox(height: AppSpacing.xs),
+          const AppSkeleton(height: 13, width: 170),
+          const SizedBox(height: AppSpacing.xs),
+          const AppSkeleton(height: 13, width: 130),
+        ] else ...[
+          if (name.isNotEmpty) ...[
+            Text(
+              name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: _cardBodyStyle(et).copyWith(fontWeight: FontWeight.w600),
             ),
+            const SizedBox(height: AppSpacing.xs),
+          ],
+          if (role != null && role.isNotEmpty) ...[
+            Text(
+              role,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.bodySmall.copyWith(color: et.secondaryText),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+          ],
+          if (email.isNotEmpty) ...[
+            Text(
+              email,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: _cardMutedStyle(et),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+          ],
+          if (phone != null)
+            Text(
+              phone,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: _cardMutedStyle(et),
+            ),
+        ],
+      ],
+    );
+  }
+}
+
+class _DocumentStatusBadge extends StatelessWidget {
+  const _DocumentStatusBadge({
+    required this.descriptor,
+    required this.label,
+  });
+
+  final _StatusDescriptor descriptor;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: descriptor.color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(descriptor.icon, color: descriptor.color, size: 22),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            label,
+            style: _cardBodyStyle(et).copyWith(color: descriptor.color),
+          ),
         ],
       ),
     );
@@ -457,59 +663,364 @@ class _HelpCard extends StatelessWidget {
   }
 }
 
+class _FooterText extends StatelessWidget {
+  const _FooterText();
+
+  @override
+  Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.lock_outline_rounded, size: 13, color: et.secondaryText),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              'Seus dados estão protegidos e são utilizados apenas para validação da responsabilidade legal da agência.',
+              style: AppTextStyles.bodySmall.copyWith(color: et.secondaryText),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ActionButton extends ConsumerWidget {
   const _ActionButton({
     required this.data,
     required this.debugStatus,
     required this.isLoading,
+    this.isDesktop = false,
   });
 
   final AgencyStatusData data;
   final AgencyDocumentStatus? debugStatus;
   final bool isLoading;
+  final bool isDesktop;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final et = EanTrackTheme.of(context);
     final status = data.consolidatedDocumentStatus;
+
+    final provider = agencyStatusProvider(debugStatus);
     late final String ctaLabel;
     late final VoidCallback? ctaAction;
 
     if (status == AgencyDocumentStatus.approved) {
-      ctaLabel = 'Iniciar configuração da agência';
-      ctaAction = () => context.go(AppRoutes.hub);
+      ctaLabel = 'Aceitar termos e começar';
+      ctaAction = () {
+        if (data.termsAccepted) {
+          context.go(AppRoutes.hub);
+          return;
+        }
+        _showTermsAcceptanceDialog(context);
+      };
     } else if (status == AgencyDocumentStatus.rejected) {
       ctaLabel = 'Corrigir documentação';
       ctaAction = () => context.push(
             AppRoutes.onboardingAgencyRepresentative,
-            extra: ref.read(agencyStatusProvider(debugStatus)).data,
+            extra: ref.read(provider).data,
           );
     } else {
       ctaLabel = 'Aguardando validação dos documentos.';
       ctaAction = null;
     }
 
+    final ctaButton = _StatusCtaButton(
+      label: ctaLabel,
+      onPressed: ctaAction,
+      backgroundColor: _ctaColor(status, et),
+    );
+    final secondaryButton = AppButton.secondary(
+      'Atualizar status da solicitação',
+      onPressed: isLoading
+          ? null
+          : () => ref.read(provider.notifier).refresh(),
+      isLoading: isLoading,
+      leadingIcon: const Icon(Icons.sync),
+    );
+
+    if (isDesktop) {
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: 20,
+        ),
+        decoration: BoxDecoration(
+          color: et.cardSurface,
+          borderRadius: AppRadius.mdAll,
+          border: Border.all(color: et.surfaceBorder),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Flexible(
+              child: SizedBox(
+                width: 320,
+                child: secondaryButton,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Flexible(
+              child: SizedBox(
+                width: 360,
+                child: ctaButton,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _StatusCtaButton(
-          label: ctaLabel,
-          onPressed: ctaAction,
-          backgroundColor: _ctaColor(status, et),
-        ),
+        ctaButton,
         const SizedBox(height: 8),
-        AppButton.secondary(
-          'Atualizar status da solicitação',
-          onPressed: isLoading
-              ? null
-              : () => ref
-                  .read(agencyStatusProvider(debugStatus).notifier)
-                  .refresh(),
-          isLoading: isLoading,
-          leadingIcon: const Icon(Icons.sync),
-        ),
+        secondaryButton,
       ],
     );
+  }
+
+  Future<void> _showTermsAcceptanceDialog(
+    BuildContext context,
+  ) async {
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return _TermsAcceptanceDialog(debugStatus: debugStatus);
+      },
+    );
+
+    if (accepted == true && context.mounted) {
+      context.go(AppRoutes.hub);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Desktop action card — "O que fazer?"
+// ---------------------------------------------------------------------------
+
+class _DesktopActionCard extends StatelessWidget {
+  const _DesktopActionCard({
+    required this.data,
+  });
+
+  final AgencyStatusData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
+    final status = data.consolidatedDocumentStatus;
+
+    return _StatusSectionCard(
+      title: 'O que fazer?',
+      titleIcon: Icons.assignment_turned_in_rounded,
+      child: Text(
+        _nextStepsText(status),
+        style: AppTextStyles.bodySmall.copyWith(color: et.secondaryText),
+      ),
+    );
+  }
+}
+
+class _TermsAcceptanceDialog extends ConsumerStatefulWidget {
+  const _TermsAcceptanceDialog({required this.debugStatus});
+
+  final AgencyDocumentStatus? debugStatus;
+
+  @override
+  ConsumerState<_TermsAcceptanceDialog> createState() =>
+      _TermsAcceptanceDialogState();
+}
+
+class _TermsAcceptanceDialogState extends ConsumerState<_TermsAcceptanceDialog> {
+  bool _accepted = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
+    final size = MediaQuery.sizeOf(context);
+    final isDesktop = Breakpoints.isDesktop(context);
+    final dialogMaxWidth = isDesktop ? 640.0 : size.width - AppSpacing.xl;
+    final termsHeight = isDesktop ? 280.0 : 220.0;
+    final provider = agencyStatusProvider(widget.debugStatus);
+    final isSaving = ref.watch(
+      provider.select((state) => state.isAcceptingTerms),
+    );
+    final error = ref.watch(provider.select((state) => state.error));
+
+    return Dialog(
+      backgroundColor: et.cardSurface,
+      insetPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.lg,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: dialogMaxWidth,
+          maxHeight: size.height - (AppSpacing.lg * 2),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Aceite dos termos',
+                style: AppTextStyles.titleLarge.copyWith(
+                  color: et.primaryText,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Para configurar a agência, é necessário aceitar os Termos de Uso e a Política de Privacidade.',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: et.secondaryText,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Container(
+                height: termsHeight,
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: et.surface,
+                  borderRadius: AppRadius.smAll,
+                  border: Border.all(color: et.surfaceBorder),
+                ),
+                child: Scrollbar(
+                  child: SingleChildScrollView(
+                    child: Text(
+                      'Ao continuar, declaro que li e aceito os Termos de Uso '
+                      'e a Política de Privacidade do EANTrack.\n\n'
+                      'Confirmo que sou responsável pelas informações da '
+                      'agência, representante legal e documentos enviados, '
+                      'autorizando o EANTrack a utilizar esses dados para '
+                      'validação, segurança, operação da conta e cumprimento '
+                      'das obrigações da plataforma.\n\n'
+                      'Estou ciente de que, após a liberação da agência e '
+                      'início da configuração/uso do ambiente, poderão ser '
+                      'aplicadas cobranças conforme o plano contratado, '
+                      'condições comerciais vigentes e recursos habilitados '
+                      'na conta.\n\n'
+                      'Também entendo que o uso da plataforma está sujeito '
+                      'às regras operacionais, políticas de acesso, '
+                      'suspensão, cancelamento e tratamento de dados '
+                      'descritas nos documentos legais do EANTrack.',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: et.primaryText,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: et.surface,
+                  borderRadius: AppRadius.smAll,
+                  border: Border.all(color: et.surfaceBorder),
+                ),
+                child: CheckboxListTile(
+                  value: _accepted,
+                  activeColor: AppColors.success,
+                  checkColor: et.ctaForeground,
+                  onChanged: isSaving
+                      ? null
+                      : (value) {
+                          setState(() => _accepted = value ?? false);
+                        },
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                  ),
+                  title: Text(
+                    'Li e aceito os Termos de Uso e a Política de Privacidade',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: et.primaryText,
+                    ),
+                  ),
+                ),
+              ),
+              if (error != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  error,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+              ],
+              const SizedBox(height: AppSpacing.lg),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final stackButtons = constraints.maxWidth < 420;
+                  final cancelButton = AppButton.secondary(
+                    'Cancelar',
+                    onPressed: isSaving
+                        ? null
+                        : () => Navigator.of(context).pop(false),
+                  );
+                  final acceptButton = AppButton.primary(
+                    'Aceitar e continuar',
+                    onPressed: _accepted && !isSaving
+                        ? () => _acceptAndContinue(context)
+                        : null,
+                    isLoading: isSaving,
+                  );
+
+                  if (stackButtons) {
+                    return Column(
+                      children: [
+                        acceptButton,
+                        const SizedBox(height: AppSpacing.sm),
+                        cancelButton,
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      Expanded(child: cancelButton),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(child: acceptButton),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _acceptAndContinue(
+    BuildContext context,
+  ) async {
+    final provider = agencyStatusProvider(widget.debugStatus);
+    final ok = await ref.read(provider.notifier).acceptTermsAndContinue();
+    if (!context.mounted) return;
+
+    if (ok) {
+      Navigator.of(context).pop(true);
+      return;
+    }
+
+    final message = ref.read(provider).error ??
+        'Não foi possível registrar o aceite dos termos.';
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -553,10 +1064,11 @@ class _StatusCtaButton extends StatelessWidget {
 }
 
 class _StatusSectionCard extends StatelessWidget {
-  const _StatusSectionCard({required this.child, this.title});
+  const _StatusSectionCard({required this.child, this.title, this.titleIcon});
 
   final Widget child;
   final String? title;
+  final IconData? titleIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -572,8 +1084,22 @@ class _StatusSectionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (title != null) ...[
-            Text(title!, style: _cardLabelStyle(et)),
-            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: [
+                if (titleIcon != null) ...[
+                  Icon(titleIcon, size: 18, color: AppColors.actionBlue),
+                  const SizedBox(width: AppSpacing.xs),
+                ],
+                Text(
+                  title!,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: et.primaryText,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
           ],
           child,
         ],
@@ -736,6 +1262,24 @@ String _documentTitle(String documentType) {
   return normalized.isEmpty ? 'Documento' : normalized;
 }
 
+String? _formatRepresentativePhone(String? value) {
+  final text = value?.trim();
+  if (text == null || text.isEmpty) return null;
+
+  final digits = text.replaceAll(RegExp(r'\D'), '');
+  if (digits.length == 11) {
+    return '(${digits.substring(0, 2)}) ${digits.substring(2, 3)} '
+        '${digits.substring(3, 7)}-${digits.substring(7)}';
+  }
+
+  if (digits.length == 10) {
+    return '(${digits.substring(0, 2)}) ${digits.substring(2, 6)}-'
+        '${digits.substring(6)}';
+  }
+
+  return text;
+}
+
 String _documentStatusText(AgencyDocumentStatus status) => switch (status) {
       AgencyDocumentStatus.approved => 'Aprovado',
       AgencyDocumentStatus.rejected => 'Rejeitado',
@@ -779,3 +1323,45 @@ TextStyle _cardMutedStyle(EanTrackTheme et) =>
 
 TextStyle _supportTextStyle(EanTrackTheme et) =>
     AppTextStyles.bodySmall.copyWith(color: et.secondaryText);
+
+// ---------------------------------------------------------------------------
+// Theme toggle
+// ---------------------------------------------------------------------------
+
+class _ThemeToggleButton extends ConsumerWidget {
+  const _ThemeToggleButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(themeModeProvider);
+    final isDark = mode == ThemeMode.dark;
+    final et = EanTrackTheme.of(context);
+
+    return Tooltip(
+      message: isDark ? 'Modo claro' : 'Modo escuro',
+      child: Material(
+        color: et.surface.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            ref.read(themeModeProvider.notifier).state =
+                isDark ? ThemeMode.light : ThemeMode.dark;
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                key: ValueKey(isDark),
+                size: 20,
+                color: et.secondaryText,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
