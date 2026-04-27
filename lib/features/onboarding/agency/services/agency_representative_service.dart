@@ -162,6 +162,7 @@ class AgencyRepresentativeService {
         'legal_representative_id': legalRepresentativeId,
         'document_type': submission.documentType.databaseValue,
         'attempt_number': nextAttempt,
+        'status': 'pending',
         'front_url': frontUrl,
         'back_url': backUrl,
       });
@@ -201,9 +202,11 @@ class AgencyRepresentativeService {
     required AgencyRepresentativePickedFile file,
     required AgencyRepresentativeAttachmentSlot slot,
   }) async {
-    final storageFileName = slot == AgencyRepresentativeAttachmentSlot.back
-        ? 'back.webp'
-        : 'front.webp';
+    final extension = _storageExtension(file.fileName);
+    final storageFileName =
+        slot == AgencyRepresentativeAttachmentSlot.back
+            ? 'back.$extension'
+            : 'front.$extension';
     final path =
         '${agencyId.trim()}/${representativeId.trim()}/attempt_$attemptNumber/$storageFileName';
     final bucket = _supabaseClient.storage.from(_bucketName);
@@ -269,6 +272,11 @@ class AgencyRepresentativeService {
       return '';
     }
     return fileName.substring(dotIndex + 1).toLowerCase();
+  }
+
+  String _storageExtension(String fileName) {
+    final extension = _extractExtension(fileName);
+    return extension == 'jpeg' ? 'jpg' : extension;
   }
 
   String _contentTypeFromExtension(String extension) {

@@ -7,7 +7,6 @@ class UserFlowState {
     this.userMode,
     this.nome,
     this.agencyId,
-    this.agencyStatus,
     this.hasLegalRepresentative,
     this.subscriptionStatus,
   });
@@ -17,7 +16,6 @@ class UserFlowState {
   final String? userMode; // 'individual' | 'agencia' | null (not yet chosen)
   final String? nome;
   final String? agencyId;
-  final String? agencyStatus;
   final bool? hasLegalRepresentative;
   final String? subscriptionStatus;
 
@@ -28,7 +26,6 @@ class UserFlowState {
       userMode: json['user_mode'] as String?,
       nome: json['nome'] as String?,
       agencyId: json['agency_id'] as String?,
-      agencyStatus: json['agency_status'] as String?,
       hasLegalRepresentative: json['has_legal_representative'] as bool?,
       subscriptionStatus: json['subscription_status'] as String?,
     );
@@ -39,18 +36,5 @@ class UserFlowState {
     if (normalized == null || normalized.isEmpty) return null;
     if (normalized == 'agencia') return 'agency';
     return normalized;
-  }
-
-  /// True when the user has completed the full onboarding flow.
-  bool get isOnboardingComplete {
-    final mode = normalizedUserMode;
-    if (mode == null) return false;
-    if (mode == 'agency') {
-      final normalizedAgencyStatus = agencyStatus?.trim().toLowerCase();
-      return agencyId != null &&
-          (normalizedAgencyStatus == 'aprovada' ||
-              normalizedAgencyStatus == 'approved');
-    }
-    return hasProfile;
   }
 }

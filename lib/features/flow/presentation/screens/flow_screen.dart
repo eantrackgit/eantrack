@@ -95,10 +95,6 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
   String _routeFromUserFlowState(UserFlowState? flowState) {
     if (flowState == null) return AppRoutes.onboarding;
 
-    if (flowState.isOnboardingComplete) {
-      return AppRoutes.hub;
-    }
-
     switch (flowState.normalizedUserMode) {
       case null:
         return AppRoutes.onboarding;
@@ -110,11 +106,6 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
         final agencyId = flowState.agencyId?.trim();
         if (agencyId == null || agencyId.isEmpty) {
           return AppRoutes.onboardingAgencyCnpj;
-        }
-
-        final agencyStatus = flowState.agencyStatus?.trim().toLowerCase();
-        if (agencyStatus == 'aprovada' || agencyStatus == 'approved') {
-          return AppRoutes.hub;
         }
 
         if (flowState.hasLegalRepresentative == true) {

@@ -28,9 +28,14 @@ class AgencyStatusData {
     required this.documentType,
     required this.consolidatedDocumentStatus,
     this.rejectionReason,
+    this.totalDocuments = 0,
+    this.approvedDocuments = 0,
+    this.pendingDocuments = 0,
+    this.rejectedDocuments = 0,
     this.termsAccepted = false,
     this.termsAcceptedAt,
     this.termsVersion,
+    this.lastSubmittedAt,
   });
 
   final String agencyId;
@@ -48,9 +53,14 @@ class AgencyStatusData {
   final String documentType;
   final AgencyDocumentStatus consolidatedDocumentStatus;
   final String? rejectionReason;
+  final int totalDocuments;
+  final int approvedDocuments;
+  final int pendingDocuments;
+  final int rejectedDocuments;
   final bool termsAccepted;
   final DateTime? termsAcceptedAt;
   final String? termsVersion;
+  final DateTime? lastSubmittedAt;
 
   AgencyStatusData copyWith({
     String? agencyId,
@@ -68,9 +78,14 @@ class AgencyStatusData {
     String? documentBackUrl,
     AgencyDocumentStatus? consolidatedDocumentStatus,
     String? rejectionReason,
+    int? totalDocuments,
+    int? approvedDocuments,
+    int? pendingDocuments,
+    int? rejectedDocuments,
     bool? termsAccepted,
     DateTime? termsAcceptedAt,
     String? termsVersion,
+    DateTime? lastSubmittedAt,
   }) {
     return AgencyStatusData(
       agencyId: agencyId ?? this.agencyId,
@@ -89,9 +104,14 @@ class AgencyStatusData {
       consolidatedDocumentStatus:
           consolidatedDocumentStatus ?? this.consolidatedDocumentStatus,
       rejectionReason: rejectionReason ?? this.rejectionReason,
+      totalDocuments: totalDocuments ?? this.totalDocuments,
+      approvedDocuments: approvedDocuments ?? this.approvedDocuments,
+      pendingDocuments: pendingDocuments ?? this.pendingDocuments,
+      rejectedDocuments: rejectedDocuments ?? this.rejectedDocuments,
       termsAccepted: termsAccepted ?? this.termsAccepted,
       termsAcceptedAt: termsAcceptedAt ?? this.termsAcceptedAt,
       termsVersion: termsVersion ?? this.termsVersion,
+      lastSubmittedAt: lastSubmittedAt ?? this.lastSubmittedAt,
     );
   }
 
@@ -113,11 +133,11 @@ class AgencyStatusData {
         'legal_representative_id',
         'representative_id',
       ]),
-      representativePhone: json['representative_phone'] as String?,
-      representativeCpf: json['representative_cpf'] as String?,
+      representativePhone: _readNullableString(json, 'representative_phone'),
+      representativeCpf: _readNullableString(json, 'representative_cpf'),
       representativeRole: _readNullableString(json, 'representative_role'),
-      documentFrontUrl: json['document_front_url'] as String?,
-      documentBackUrl: json['document_back_url'] as String?,
+      documentFrontUrl: _readNullableString(json, 'document_front_url'),
+      documentBackUrl: _readNullableString(json, 'document_back_url'),
       agencyLegalName: _readString(json, 'agency_legal_name'),
       statusAgency: agencyStatus,
       agencyUpdatedAt: _readDateFromAny(json, const [
@@ -133,9 +153,14 @@ class AgencyStatusData {
       rejectionReason: latestStatus == AgencyDocumentStatus.rejected
           ? _readNullableString(json, 'rejection_reason')
           : null,
+      totalDocuments: _readInt(json, 'total_documents'),
+      approvedDocuments: _readInt(json, 'approved_documents'),
+      pendingDocuments: _readInt(json, 'pending_documents'),
+      rejectedDocuments: _readInt(json, 'rejected_documents'),
       termsAccepted: _readBool(json, 'terms_accepted'),
       termsAcceptedAt: _readNullableDate(json, 'terms_accepted_at'),
       termsVersion: _readNullableString(json, 'terms_version'),
+      lastSubmittedAt: _readNullableDate(json, 'last_submitted_at'),
     );
   }
 
@@ -163,6 +188,15 @@ class AgencyStatusData {
 
     final text = value.toString().trim();
     return text.isEmpty ? null : text;
+  }
+
+  static int _readInt(Map<String, dynamic> json, String key) {
+    final value = json[key] ?? json[_toCamelCase(key)];
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value == null) return 0;
+
+    return int.tryParse(value.toString()) ?? 0;
   }
 
   static String? _readNullableStringFromAny(
@@ -328,29 +362,13 @@ class AgencyStatusNotifier extends StateNotifier<AgencyStatusState> {
         return;
       }
 
-      final response = await _supabase
-          .from('v_user_agency_onboarding_context')
-          .select()
-          .eq('user_id', userId)
-          .single();
+      final response = await _repository.getAgencyStatusFull();
       final agencyId = AgencyStatusData._readString(response, 'agency_id');
       if (agencyId.isEmpty) {
         throw StateError('AgencyStatusData sem agency_id.');
       }
 
-      final latestDocumentStatus = await _supabase
-          .from('v_agency_latest_document_status')
-          .select()
-          .eq('agency_id', agencyId)
-          .maybeSingle();
-      final data = AgencyStatusData.fromJson({
-        ...response,
-        ...(latestDocumentStatus ??
-            const <String, dynamic>{
-              'consolidated_document_status': 'pending',
-              'rejection_reason': null,
-            }),
-      });
+      final data = AgencyStatusData.fromJson(response);
 
       if (requestId != _loadRequestId) return;
       state = state.copyWith(

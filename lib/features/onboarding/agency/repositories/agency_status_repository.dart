@@ -59,6 +59,34 @@ class AgencyStatusRepository {
 
   final SupabaseClient _supabase;
 
+  Future<Map<String, dynamic>> getAgencyStatusFull() async {
+    try {
+      final response = await _supabase.rpc('get_agency_status_full');
+
+      if (response == null) {
+        throw const AgencyStatusRepositoryException(
+          'Nao foi possivel carregar o status da agencia.',
+        );
+      }
+
+      if (response is Map<String, dynamic>) {
+        return response;
+      }
+
+      if (response is Map) {
+        return Map<String, dynamic>.from(response);
+      }
+
+      throw const AgencyStatusRepositoryException(
+        'Nao foi possivel carregar o status da agencia.',
+      );
+    } on PostgrestException {
+      throw const AgencyStatusRepositoryException(
+        'Nao foi possivel carregar o status da agencia.',
+      );
+    }
+  }
+
   Future<AgencyTermsAcceptance> fetchAgencyTerms(String agencyId) async {
     final userId = _currentUserId();
 

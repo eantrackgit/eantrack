@@ -146,9 +146,7 @@ String? _redirect(Ref ref, BuildContext context, GoRouterState state) {
     }
 
     if (authFlowState == AuthFlowState.onboardingRequired) {
-      return authState is AuthAuthenticated
-          ? AppRoutes.onboardingAgencyStatus
-          : null;
+      return isAgencyUser ? AppRoutes.onboardingAgencyStatus : AppRoutes.flow;
     }
 
     return AppRoutes.flow;

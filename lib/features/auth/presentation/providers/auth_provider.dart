@@ -45,16 +45,6 @@ final authUserStreamProvider = StreamProvider<User?>((ref) {
   return ref.read(authRepositoryProvider).authStateStream;
 });
 
-/// Placeholder for a future dedicated onboarding source.
-/// For now, it derives the current completion status from [AuthAuthenticated].
-final authOnboardingCompleteProvider = Provider<bool>((ref) {
-  final authState = ref.watch(authNotifierProvider);
-  if (authState is AuthAuthenticated) {
-    return authState.flowState?.isOnboardingComplete ?? false;
-  }
-  return false;
-});
-
 final authFlowStateProvider = Provider<AuthFlowState>((ref) {
   final isRecovery = ref.watch(authRecoveryContextProvider);
   final authState = ref.watch(authNotifierProvider);
@@ -65,7 +55,7 @@ final authFlowStateProvider = Provider<AuthFlowState>((ref) {
     return AuthFlowState.recovery;
   }
   if (authState is AuthAuthenticated) {
-    return authState.flowState?.isOnboardingComplete ?? false
+    return _hasIndividualHubAccess(authState)
         ? AuthFlowState.authenticated
         : AuthFlowState.onboardingRequired;
   }
@@ -74,6 +64,12 @@ final authFlowStateProvider = Provider<AuthFlowState>((ref) {
   }
   return AuthFlowState.onboardingRequired;
 });
+
+bool _hasIndividualHubAccess(AuthAuthenticated authState) {
+  final flowState = authState.flowState;
+  return flowState?.normalizedUserMode == 'individual' &&
+      flowState?.hasProfile == true;
+}
 
 // ---------------------------------------------------------------------------
 // Auth notifier

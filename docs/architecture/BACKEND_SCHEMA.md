@@ -57,7 +57,7 @@
 
 ## Modelo de Documentos Legais Versionados
 
-As tabelas `legal_representatives` e `legal_documents` formam o núcleo do fluxo de aprovação de agências. O modelo é **não-destrutivo**: cada envio cria novos registros, nenhum documento é apagado ou sobrescrito.
+As tabelas `legal_representatives` e `legal_documents` formam o núcleo do fluxo de aprovação de agências. O modelo é **não-destrutivo para documentos**: cada envio cria nova tentativa em `legal_documents`, nenhum documento é apagado ou sobrescrito. `legal_representatives` é cadastro mutável e pode receber `UPDATE` no fluxo de correção.
 
 **Documentação completa:** [LEGAL_DOCUMENTS_VERSIONING.md](LEGAL_DOCUMENTS_VERSIONING.md)
 
@@ -65,7 +65,7 @@ As tabelas `legal_representatives` e `legal_documents` formam o núcleo do fluxo
 
 | Tabela | Papel |
 |--------|-------|
-| `legal_representatives` | Dados cadastrais do representante — novo registro por tentativa |
+| `legal_representatives` | Dados cadastrais atuais do representante — `UPDATE` permitido quando já existe |
 | `legal_documents` | Arquivos e status — insert-only, `attempt_number` incremental |
 
 | View | Papel |
