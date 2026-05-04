@@ -249,11 +249,11 @@ void main() {
     expect(notifier.fullNameController.text, 'Joao Legal');
     expect(notifier.emailController.text, 'joao@empresa.com.br');
     expect(notifier.phoneController.text, '(11) 9 1111-2222');
-    expect(notifier.cpfController.text, '52998224725');
+    expect(notifier.cpfController.text, '529.982.247-25');
     expect(state.fullNameText, 'Joao Legal');
     expect(state.emailText, 'joao@empresa.com.br');
     expect(state.phoneText, '(11) 9 1111-2222');
-    expect(state.cpfText, '52998224725');
+    expect(state.cpfText, '529.982.247-25');
     expect(state.selectedDocumentType, AgencyRepresentativeDocumentType.cnh);
     expect(state.error, isNull);
   });

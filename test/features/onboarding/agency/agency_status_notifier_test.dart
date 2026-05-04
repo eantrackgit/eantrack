@@ -10,102 +10,21 @@ class MockSupabaseClient extends Mock implements SupabaseClient {}
 
 class MockGoTrueClient extends Mock implements GoTrueClient {}
 
-class _FakeStatusQueryBuilder extends Fake implements SupabaseQueryBuilder {
-  _FakeStatusQueryBuilder(this._filterBuilder);
+class _FakeStatusRpcBuilder extends Fake
+    implements PostgrestFilterBuilder<dynamic> {
+  _FakeStatusRpcBuilder(this._value);
 
-  final _FakeStatusFilterBuilder _filterBuilder;
-
-  @override
-  PostgrestFilterBuilder<PostgrestList> select([String columns = '*']) {
-    return _filterBuilder;
-  }
-}
-
-class _FakeStatusFilterBuilder extends Fake
-    implements PostgrestFilterBuilder<PostgrestList> {
-  _FakeStatusFilterBuilder({
-    Map<String, dynamic>? data,
-    Object? error,
-  })  : _data = data,
-        _error = error;
-
-  final Map<String, dynamic>? _data;
-  final Object? _error;
-
-  @override
-  PostgrestFilterBuilder<PostgrestList> eq(String column, Object value) {
-    return this;
-  }
-
-  @override
-  PostgrestTransformBuilder<PostgrestMap> single() {
-    return _FakeStatusTransformBuilder(data: _data, error: _error);
-  }
-
-  @override
-  PostgrestTransformBuilder<PostgrestMap?> maybeSingle() {
-    return _FakeStatusMaybeTransformBuilder(data: _data, error: _error);
-  }
-}
-
-class _FakeStatusTransformBuilder extends Fake
-    implements PostgrestTransformBuilder<PostgrestMap> {
-  _FakeStatusTransformBuilder({
-    Map<String, dynamic>? data,
-    Object? error,
-  })  : _data = data,
-        _error = error;
-
-  final Map<String, dynamic>? _data;
-  final Object? _error;
+  final dynamic _value;
 
   @override
   Future<S> then<S>(
-    FutureOr<S> Function(PostgrestMap value) onValue, {
+    FutureOr<S> Function(dynamic value) onValue, {
     Function? onError,
   }) {
-    final error = _error;
-    if (error != null) {
-      return Future<PostgrestMap>.error(error).then<S>(
-        onValue,
-        onError: onError,
-      );
-    }
-
-    return Future<PostgrestMap>.value(
-      Map<String, dynamic>.from(_data ?? {}),
-    ).then<S>(onValue, onError: onError);
-  }
-}
-
-class _FakeStatusMaybeTransformBuilder extends Fake
-    implements PostgrestTransformBuilder<PostgrestMap?> {
-  _FakeStatusMaybeTransformBuilder({
-    Map<String, dynamic>? data,
-    Object? error,
-  })  : _data = data,
-        _error = error;
-
-  final Map<String, dynamic>? _data;
-  final Object? _error;
-
-  @override
-  Future<S> then<S>(
-    FutureOr<S> Function(PostgrestMap? value) onValue, {
-    Function? onError,
-  }) {
-    final error = _error;
-    if (error != null) {
-      return Future<PostgrestMap?>.error(error).then<S>(
-        onValue,
-        onError: onError,
-      );
-    }
-
-    final data = _data;
-    return Future<PostgrestMap?>.value(
-      data == null ? null : Map<String, dynamic>.from(data),
-    ).then<S>(onValue, onError: onError);
+    return Future<dynamic>.value(_value).then<S>(
+      onValue,
+      onError: onError,
+    );
   }
 }
 
@@ -201,20 +120,8 @@ void main() {
 
   test('load bem-sucedido define estado loaded com dados da view', () async {
     when(() => auth.currentUser).thenAnswer((_) => _user('user-1'));
-    final onboardingQueryBuilder = _FakeStatusQueryBuilder(
-      _FakeStatusFilterBuilder(data: _statusJson()),
-    );
-    final latestDocumentQueryBuilder = _FakeStatusQueryBuilder(
-      _FakeStatusFilterBuilder(data: {
-        'agency_id': 'agency-1',
-        'consolidated_document_status': 'pending',
-        'rejection_reason': null,
-      }),
-    );
-    when(() => client.from('v_user_agency_onboarding_context'))
-        .thenAnswer((_) => onboardingQueryBuilder);
-    when(() => client.from('v_agency_latest_document_status'))
-        .thenAnswer((_) => latestDocumentQueryBuilder);
+    when(() => client.rpc('get_agency_status_full'))
+        .thenAnswer((_) => _FakeStatusRpcBuilder(_statusJson()));
 
     final container = _makeContainer(client: client);
     addTearDown(container.dispose);
@@ -230,17 +137,13 @@ void main() {
     expect(state.data!.representativePhone, '11987654321');
     expect(state.data!.representativeCpf, '52998224725');
     expect(state.data!.documentType, 'RG');
-    verify(() => client.from('v_user_agency_onboarding_context')).called(1);
-    verify(() => client.from('v_agency_latest_document_status')).called(1);
+    verify(() => client.rpc('get_agency_status_full')).called(1);
   });
 
   test('erro na query define estado error com load error message', () async {
     when(() => auth.currentUser).thenAnswer((_) => _user('user-1'));
-    final queryBuilder = _FakeStatusQueryBuilder(
-      _FakeStatusFilterBuilder(error: Exception('network')),
-    );
-    when(() => client.from('v_user_agency_onboarding_context'))
-        .thenAnswer((_) => queryBuilder);
+    when(() => client.rpc('get_agency_status_full'))
+        .thenThrow(Exception('network'));
 
     final container = _makeContainer(client: client);
     addTearDown(container.dispose);
