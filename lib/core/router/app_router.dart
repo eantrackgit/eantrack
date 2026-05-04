@@ -166,7 +166,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final guard = RouterRedirectGuard(ref);
   ref.read(authRecoveryContextProvider);
   final agencyStatusProviderInstance = agencyStatusProvider(null);
-  ref.listen(agencyStatusProviderInstance, (_, __) => guard.notifyListeners());
+  ref.listen(agencyStatusProviderInstance, (_, __) => guard.refresh());
   ref.listen(authFlowStateProvider, (_, next) {
     final authState = ref.read(authNotifierProvider);
     final isAgencyUser = authState is AuthAuthenticated &&

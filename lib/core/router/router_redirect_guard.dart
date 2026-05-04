@@ -20,6 +20,8 @@ class RouterRedirectGuard extends ChangeNotifier {
 
   final Ref _ref;
 
+  void refresh() => notifyListeners();
+
   String? redirect(BuildContext context, GoRouterState state) {
     final authFlowState = _ref.read(authFlowStateProvider);
     final path = state.matchedLocation;
