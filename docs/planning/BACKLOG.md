@@ -1,9 +1,9 @@
 # BACKLOG.md - EANTrack
 
 > Proximos passos apos ajustes de status, aceite, documentos versionados,
-> router, UI desktop e RLS.
+> router, UI desktop, RegionListScreen desktop e RLS.
 > Este backlog direciona produto, tecnica e compliance para auditoria global.
-> Ultima atualizacao: 2026-04-26.
+> Ultima atualizacao: 2026-05-04.
 
 ---
 
@@ -102,16 +102,12 @@ Objetivo:
 
 ### TECH-002 - Revisao global light/dark
 
-Auditar telas internas:
+Concluido em HubScreen, AgencyStatusScreen, RegionListScreen e MenuHubSidebar.
 
-- Hub;
-- Regioes;
-- Flow;
-- sidebar;
-- cards de status;
-- modais.
+Pendente:
 
-Migrar hardcoded colors restantes para tokens semanticos quando aplicavel.
+- FlowScreen (cor hardcoded remanescente);
+- modais internos que ainda nao usam EanTrackTheme.
 
 ### TECH-003 - Separar status operacional da agencia
 

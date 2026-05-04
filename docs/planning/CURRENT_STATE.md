@@ -2,8 +2,8 @@
 
 > Leia este arquivo primeiro ao retomar o projeto.
 > Estado real do produto apos os ajustes de status, aceite, documentos versionados,
-> representante legal, router, HubScreen, UI desktop e RLS.
-> Ultima atualizacao: 2026-04-27.
+> representante legal, router, HubScreen, RegionListScreen desktop e RLS.
+> Ultima atualizacao: 2026-05-04.
 
 ---
 
@@ -19,6 +19,8 @@ O fluxo de agencia esta funcional no nucleo de onboarding:
 - aceite obrigatorio de termos apos aprovacao;
 - gate de acesso ao hub baseado em agencia aprovada, documento aprovado e termos aceitos.
 - HubScreen sem dados mockados: usuario e agencia vêm de providers reais.
+- RegionListScreen com sidebar desktop, dark mode via EanTrackTheme e layout responsivo.
+- Card "Status do documento" reestruturado com secoes rotuladas: REPRESENTANTE LEGAL, CONTATO e STATUS DA SOLICITAÇÃO.
 
 `/flow` nao e estado final. Ele atua apenas como decisor/transicao. O usuario nao deve ficar preso em `/flow`.
 
@@ -149,15 +151,14 @@ O cargo aparece no dropdown quando a view retorna valor compativel com as opcoes
 - A `HubScreen` consome `authNotifierProvider` para nome do usuario e `agencyStatusProvider(null)` para dados/status da agencia.
 - A `HubScreen` nao usa mais `userName`, `agencyName` ou status aprovados hardcoded.
 - A `AgencyStatusScreen` foi adaptada para o layout web/desktop.
+- A `RegionListScreen` possui sidebar desktop via `MenuHubSidebar`, layout responsivo desktop/mobile e dark mode via `EanTrackTheme`. Mesma integracao com `authNotifierProvider` e `agencyStatusProvider(null)` que o HubScreen.
 - A tela de status usa grid com cards alinhados, incluindo `Dados da agencia` e `Status do documento`.
-- O card de status do documento mostra:
-  - tipo de documento;
-  - nome do representante;
-  - cargo, se disponivel;
-  - e-mail;
-  - telefone;
-  - badge de status.
-- Light/dark mode foi refinado nas superficies do status/sidebar.
+- O card "Status do documento" exibe secoes rotuladas em sequencia:
+  - tag do tipo de documento (CONTRATO SOCIAL etc);
+  - REPRESENTANTE LEGAL: nome + cargo;
+  - CONTATO: e-mail + telefone lado a lado;
+  - STATUS DA SOLICITAÇÃO: badge de status.
+- Light/dark mode aplicado em HubScreen, AgencyStatusScreen, RegionListScreen e MenuHubSidebar.
 
 ### Mobile
 
@@ -190,6 +191,7 @@ Enquanto uma dessas condicoes nao estiver satisfeita, o usuario permanece no flu
 - `pageKey` e aplicado nas paginas do `GoRouter` para evitar reuso incorreto de tela/estado.
 - `/flow` atua como tela de decisao e possui protecoes contra estado vazio/preso.
 - Checks antigos baseados em `UserFlowState.isOnboardingComplete` e string de `agencyStatus` foram removidos.
+- `RouterRedirectGuard` expoe metodo `refresh()` como alias semantico de `notifyListeners()`; `appRouterProvider` usa `guard.refresh()` ao reagir a mudancas do `agencyStatusProvider`.
 
 ### Regra de liberacao
 
