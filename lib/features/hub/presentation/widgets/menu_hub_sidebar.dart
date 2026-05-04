@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../shared/shared.dart';
 import '../../../onboarding/agency/controllers/agency_status_notifier.dart';
+import 'user_settings_dialog.dart';
 
 part 'sidebar_footer.dart';
 part 'sidebar_header.dart';

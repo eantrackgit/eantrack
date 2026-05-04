@@ -120,6 +120,9 @@ String? _redirect(Ref ref, BuildContext context, GoRouterState state) {
   if (isAgencyStatusRoute &&
       (authFlowState == AuthFlowState.onboardingRequired ||
           authFlowState == AuthFlowState.authenticated)) {
+    if (isAgencyUser && agencyData != null && _hasAgencyHubAccess(agencyData)) {
+      return AppRoutes.hub;
+    }
     return null;
   }
 

@@ -3,13 +3,46 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/connectivity/connectivity_provider.dart';
 import '../core/router/app_router.dart';
+import '../features/auth/presentation/providers/auth_provider.dart';
 import '../shared/shared.dart';
 
-class EanTrackApp extends ConsumerWidget {
+class EanTrackApp extends ConsumerStatefulWidget {
   const EanTrackApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<EanTrackApp> createState() => _EanTrackAppState();
+}
+
+class _EanTrackAppState extends ConsumerState<EanTrackApp> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      if (!mounted) return;
+      ref.read(userThemeControllerProvider.notifier).loadForCurrentUser();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(authUserStreamProvider, (previous, next) {
+      next.whenData((user) {
+        final controller = ref.read(userThemeControllerProvider.notifier);
+        if (user == null) {
+          controller.clearSessionState();
+          return;
+        }
+
+        controller.loadForCurrentUser();
+      });
+    });
+    ref.listen(themeModeProvider, (previous, next) {
+      if (previous == null || previous == next) return;
+      ref
+          .read(userThemeControllerProvider.notifier)
+          .persistThemeChange(next);
+    });
+
     final router = ref.watch(appRouterProvider);
     final themeMode = ref.watch(themeModeProvider);
 

@@ -183,6 +183,12 @@ class _MenuHubAccountSection extends StatelessWidget {
       title: 'Minha Conta',
       children: [
         _MenuHubSectionItem(
+          icon: Icons.settings_outlined,
+          label: 'Configura\u00e7\u00f5es',
+          enabled: enabled,
+          onTap: enabled ? () => showUserSettingsDialog(context) : null,
+        ),
+        _MenuHubSectionItem(
           icon: Icons.delete_outline_rounded,
           label: 'Excluir conta',
           enabled: enabled,
