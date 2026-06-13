@@ -159,6 +159,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _keepConnectedController.load(userId: user.id);
     }
 
+    // Logout always ends the session. The locally saved email (UX-only,
+    // never a credential) is preserved when keep_connected = true so the
+    // next login shows the saved-account card; otherwise it is cleared.
     if (_keepConnectedController.state.keepConnected) {
       await _keepConnectedController.saveSavedLoginEmail(user?.email);
     } else {
