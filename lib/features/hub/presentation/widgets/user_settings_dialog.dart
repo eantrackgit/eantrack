@@ -20,6 +20,15 @@ class UserSettingsDialog extends ConsumerStatefulWidget {
 
 class _UserSettingsDialogState extends ConsumerState<UserSettingsDialog> {
   @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      if (!mounted) return;
+      ref.read(keepConnectedControllerProvider.notifier).load();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     ref.listen(userThemeControllerProvider, (previous, next) {
       if (next.error == null || previous?.error == next.error) return;
@@ -32,10 +41,22 @@ class _UserSettingsDialogState extends ConsumerState<UserSettingsDialog> {
       );
       ref.read(userThemeControllerProvider.notifier).clearError();
     });
+    ref.listen(keepConnectedControllerProvider, (previous, next) {
+      if (next.error == null || previous?.error == next.error) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(next.error!),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      ref.read(keepConnectedControllerProvider.notifier).clearError();
+    });
 
     final et = EanTrackTheme.of(context);
     final selectedMode = ref.watch(themeModeProvider);
     final themeState = ref.watch(userThemeControllerProvider);
+    final keepConnectedState = ref.watch(keepConnectedControllerProvider);
 
     return Dialog(
       insetPadding: const EdgeInsets.all(AppSpacing.lg),
@@ -114,6 +135,25 @@ class _UserSettingsDialogState extends ConsumerState<UserSettingsDialog> {
                   },
                 ),
                 const SizedBox(height: AppSpacing.lg),
+                Text(
+                  'Sess\u00e3o',
+                  style: AppTextStyles.labelLarge.copyWith(
+                    color: et.secondaryText,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _KeepConnectedTile(
+                  value: keepConnectedState.keepConnected,
+                  isLoading: keepConnectedState.isLoading,
+                  isSaving: keepConnectedState.isSaving,
+                  onChanged: (value) {
+                    ref
+                        .read(keepConnectedControllerProvider.notifier)
+                        .setKeepConnected(value);
+                  },
+                ),
+                const SizedBox(height: AppSpacing.lg),
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
@@ -131,6 +171,88 @@ class _UserSettingsDialogState extends ConsumerState<UserSettingsDialog> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _KeepConnectedTile extends StatelessWidget {
+  const _KeepConnectedTile({
+    required this.value,
+    required this.isLoading,
+    required this.isSaving,
+    required this.onChanged,
+  });
+
+  final bool value;
+  final bool isLoading;
+  final bool isSaving;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
+    final isBusy = isLoading || isSaving;
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: 74),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: et.surface,
+        borderRadius: AppRadius.smAll,
+        border: Border.all(color: et.inputBorder),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.lock_clock_outlined,
+            size: 20,
+            color: et.secondaryText,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Manter conectado',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: et.primaryText,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Mantenha sua sess\u00e3o ativa neste dispositivo para '
+                  'entrar mais r\u00e1pido nas pr\u00f3ximas vezes.',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: et.secondaryText,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          if (isLoading)
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: et.ctaBackground,
+              ),
+            )
+          else
+            Switch.adaptive(
+              value: value,
+              onChanged: isSaving ? null : onChanged,
+            ),
+        ],
       ),
     );
   }

@@ -20,6 +20,12 @@ class _EanTrackAppState extends ConsumerState<EanTrackApp> {
     Future.microtask(() {
       if (!mounted) return;
       ref.read(userThemeControllerProvider.notifier).loadForCurrentUser();
+      final user = ref.read(supabaseClientProvider).auth.currentUser;
+      if (user != null) {
+        ref
+            .read(keepConnectedControllerProvider.notifier)
+            .load(userId: user.id);
+      }
     });
   }
 
@@ -27,13 +33,17 @@ class _EanTrackAppState extends ConsumerState<EanTrackApp> {
   Widget build(BuildContext context) {
     ref.listen(authUserStreamProvider, (previous, next) {
       next.whenData((user) {
-        final controller = ref.read(userThemeControllerProvider.notifier);
+        final themeController = ref.read(userThemeControllerProvider.notifier);
+        final keepConnectedController =
+            ref.read(keepConnectedControllerProvider.notifier);
         if (user == null) {
-          controller.clearSessionState();
+          themeController.clearSessionState();
+          keepConnectedController.clearSessionState();
           return;
         }
 
-        controller.loadForCurrentUser();
+        themeController.loadForCurrentUser();
+        keepConnectedController.load(userId: user.id);
       });
     });
     ref.listen(themeModeProvider, (previous, next) {

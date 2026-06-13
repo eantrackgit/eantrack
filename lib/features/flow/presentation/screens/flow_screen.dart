@@ -11,6 +11,7 @@ import '../../../../features/auth/domain/auth_state.dart';
 import '../../../../features/auth/domain/auth_flow_state.dart';
 import '../../../../features/auth/domain/user_flow_state.dart';
 import '../../../../features/auth/presentation/providers/auth_provider.dart';
+import '../../../../features/auth/presentation/widgets/keep_connected_prompt_dialog.dart';
 import '../../../../shared/shared.dart';
 
 /// Tela transitória central de decisão do fluxo de auth.
@@ -29,6 +30,8 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
 
   bool _isNavigating = false;
   bool _isResolvingOnboardingRoute = false;
+  bool _isPromptingKeepConnected = false;
+  final Set<String> _promptCheckedUserIds = <String>{};
 
   @override
   void initState() {
@@ -38,7 +41,12 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
       (_, next) => _scheduleDecision(next),
     );
     _safetyTimer = Timer(_safetyTimeout, () {
-      if (!mounted || _isNavigating) return;
+      if (!mounted ||
+          _isNavigating ||
+          _isResolvingOnboardingRoute ||
+          _isPromptingKeepConnected) {
+        return;
+      }
       _isNavigating = true;
       context.go(AppRoutes.login);
     });
@@ -87,8 +95,47 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
         _resolveOnboardingRouteFromState();
         return;
       case AuthFlowState.authenticated:
-        _go(AppRoutes.hub);
+        _goAfterKeepConnectedPrompt(AppRoutes.hub);
         return;
+    }
+  }
+
+  Future<void> _goAfterKeepConnectedPrompt(String route) async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      _go(AppRoutes.login);
+      return;
+    }
+
+    final canContinue = await _ensureKeepConnectedPromptAnswered(user);
+    if (!mounted || !canContinue || _isNavigating) return;
+    _go(route);
+  }
+
+  Future<bool> _ensureKeepConnectedPromptAnswered(User user) async {
+    if (_promptCheckedUserIds.contains(user.id)) return true;
+    if (_isPromptingKeepConnected) return false;
+
+    _isPromptingKeepConnected = true;
+    try {
+      final controller = ref.read(keepConnectedControllerProvider.notifier);
+      final shouldShowPrompt = await controller.shouldShowPrompt(user.id);
+      if (!mounted) return false;
+
+      if (shouldShowPrompt) {
+        // "Agora nao" only records the preference for future app starts; it
+        // must not interrupt the session that was just authenticated.
+        final answered = await showKeepConnectedPromptDialog(
+          context: context,
+          userId: user.id,
+        );
+        if (!mounted || !answered) return false;
+      }
+
+      _promptCheckedUserIds.add(user.id);
+      return true;
+    } finally {
+      _isPromptingKeepConnected = false;
     }
   }
 
@@ -125,6 +172,9 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
     try {
       final authState = ref.read(authNotifierProvider);
       if (authState is AuthAuthenticated) {
+        final canContinue =
+            await _ensureKeepConnectedPromptAnswered(authState.user);
+        if (!mounted || !canContinue || _isNavigating) return;
         _go(_routeFromUserFlowState(authState.flowState));
         return;
       }
@@ -134,6 +184,9 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
         _go(AppRoutes.login);
         return;
       }
+
+      final canContinue = await _ensureKeepConnectedPromptAnswered(user);
+      if (!mounted || !canContinue || _isNavigating) return;
 
       final flowState = await ref
           .read(authRepositoryProvider)

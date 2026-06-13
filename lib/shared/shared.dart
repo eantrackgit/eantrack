@@ -6,8 +6,10 @@ export 'theme/app_text_styles.dart';
 export 'theme/app_theme.dart';
 
 export 'data/local_theme_storage.dart';
+export 'data/keep_connected_prompt_storage.dart';
 export 'data/user_settings_repository.dart';
 
+export 'providers/keep_connected_provider.dart';
 export 'providers/theme_provider.dart';
 
 export 'widgets/app_button.dart';

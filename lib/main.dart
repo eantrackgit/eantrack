@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app/app.dart';
 import 'core/config/app_config.dart';
 import 'core/config/app_version.dart';
+import 'features/auth/data/auth_callback_detector.dart';
 import 'shared/shared.dart';
 
 void main() async {
@@ -32,6 +33,7 @@ void main() async {
     ),
   );
 
+  await _applyKeepConnectedPreferenceToRestoredSession();
   setInitialThemeMode(await _loadInitialThemeMode());
 
   await SentryFlutter.init(
@@ -44,6 +46,26 @@ void main() async {
       const ProviderScope(child: EanTrackApp()),
     ),
   );
+}
+
+Future<void> _applyKeepConnectedPreferenceToRestoredSession() async {
+  if (hasAuthCallbackParams(Uri.base)) return;
+
+  final supabase = Supabase.instance.client;
+  final user = supabase.auth.currentUser;
+  if (user == null) return;
+
+  try {
+    final keepConnected =
+        await UserSettingsRepository().getKeepConnected(user.id);
+    if (keepConnected) return;
+
+    // Supabase Auth remains the source of session tokens. This preference only
+    // tells the app to discard an automatically restored local session.
+    await supabase.auth.signOut(scope: SignOutScope.local);
+  } on Exception catch (e) {
+    debugPrint('[UserSettings] Erro ao aplicar manter conectado: $e');
+  }
 }
 
 Future<ThemeMode> _loadInitialThemeMode() async {

@@ -6,6 +6,7 @@ import '../../../core/connectivity/connectivity_provider.dart';
 import '../../../core/connectivity/connectivity_state.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/router/app_routes.dart';
+import '../../auth/data/auth_callback_detector.dart';
 import 'splash_animation_controller.dart';
 import 'splash_connectivity_handler.dart';
 
@@ -58,6 +59,11 @@ class SplashNotifier extends ChangeNotifier {
 
     if (session == null) {
       _ref.read(appRouterProvider).go(AppRoutes.login);
+      return;
+    }
+
+    if (hasAuthCallbackParams(Uri.base)) {
+      _ref.read(appRouterProvider).go(AppRoutes.flow);
       return;
     }
 
