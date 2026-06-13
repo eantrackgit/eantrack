@@ -332,6 +332,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             if (hasSavedLoginEmail)
               _SavedLoginEmailCard(
                 email: savedLoginEmail!,
+                displayName: keepConnectedState.savedDisplayName,
                 enabled: !isBusy,
                 onTap: () => _passwordFocus.requestFocus(),
                 onSwitch: isBusy ? null : _switchSavedLoginEmail,
@@ -481,105 +482,160 @@ class _BrandHeader extends StatelessWidget {
   }
 }
 
-class _SavedLoginEmailCard extends StatelessWidget {
+// Identity card for the "Conta salva" (saved-account) UX: tells the user
+// "the EANTrack recognized your account" instead of showing a pre-filled
+// email field. Hover state only matters on web/desktop (mouse input).
+class _SavedLoginEmailCard extends StatefulWidget {
   const _SavedLoginEmailCard({
     required this.email,
+    required this.displayName,
     required this.enabled,
     required this.onTap,
     required this.onSwitch,
   });
 
   final String email;
+  final String? displayName;
   final bool enabled;
   final VoidCallback onTap;
   final VoidCallback? onSwitch;
 
   @override
+  State<_SavedLoginEmailCard> createState() => _SavedLoginEmailCardState();
+}
+
+class _SavedLoginEmailCardState extends State<_SavedLoginEmailCard> {
+  bool _isHovered = false;
+
+  void _setHovered(bool value) {
+    if (_isHovered == value) return;
+    setState(() => _isHovered = value);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final et = EanTrackTheme.of(context);
-    final borderRadius = BorderRadius.circular(14);
+    final borderRadius = AppRadius.mdAll;
+    final initials = _resolveInitials(
+      displayName: widget.displayName,
+      email: widget.email,
+    );
 
-    return Material(
-      color: et.surface,
-      borderRadius: borderRadius,
-      child: InkWell(
-        onTap: enabled ? onTap : null,
+    return MouseRegion(
+      onEnter: (_) => _setHovered(true),
+      onExit: (_) => _setHovered(false),
+      child: Material(
+        color: et.surface,
         borderRadius: borderRadius,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 72),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          decoration: BoxDecoration(
-            borderRadius: borderRadius,
-            border: Border.all(color: et.surfaceBorder),
-          ),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 21,
-                backgroundColor: et.ctaBackground,
-                child: Text(
-                  _initialsFromEmail(email),
-                  style: AppTextStyles.labelLarge.copyWith(
-                    color: et.ctaForeground,
-                    fontWeight: FontWeight.w700,
+        child: InkWell(
+          onTap: widget.enabled ? widget.onTap : null,
+          borderRadius: borderRadius,
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              borderRadius: borderRadius,
+              border: Border.all(
+                color: _isHovered ? et.inputBorderFocused : et.surfaceBorder,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: et.ctaBackground,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    initials,
+                    style: AppTextStyles.titleMedium.copyWith(
+                      color: et.ctaForeground,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Conta salva',
-                      style: AppTextStyles.labelSmall.copyWith(
-                        color: et.secondaryText,
-                        fontWeight: FontWeight.w600,
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'Conta salva',
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: et.secondaryText,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  widget.email,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: et.primaryText,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: widget.onSwitch,
+                    style: TextButton.styleFrom(
+                      foregroundColor: et.accentLink,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: AppSpacing.xs,
                       ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      email,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: et.primaryText,
+                    child: Text(
+                      'Trocar',
+                      style: AppTextStyles.labelMedium.copyWith(
+                        color: et.accentLink,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              TextButton(
-                onPressed: onSwitch,
-                style: TextButton.styleFrom(
-                  foregroundColor: et.accentLink,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: AppSpacing.xs,
-                  ),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(
-                  'Trocar',
-                  style: AppTextStyles.labelMedium.copyWith(
-                    color: et.accentLink,
-                    fontWeight: FontWeight.w700,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+// Initials for the saved-account avatar, in priority order: the locally
+// saved display name (savedDisplayName), falling back to letters derived
+// from the e-mail. The authenticated user's name takes precedence over both
+// when available (see hub/region screens), but this card is shown before
+// authentication, so only the local cache and the e-mail are usable here.
+String _resolveInitials({required String? displayName, required String email}) {
+  final name = displayName?.trim();
+  if (name != null && name.isNotEmpty) {
+    return _initialsFromName(name);
+  }
+  return _initialsFromEmail(email);
+}
+
+String _initialsFromName(String name) {
+  final parts = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .toList();
+  if (parts.isEmpty) return '?';
+
+  if (parts.length == 1) {
+    final part = parts.first;
+    return part.length >= 2
+        ? part.substring(0, 2).toUpperCase()
+        : part.substring(0, 1).toUpperCase();
+  }
+
+  return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
 }
 
 String _initialsFromEmail(String email) {
@@ -594,7 +650,10 @@ String _initialsFromEmail(String email) {
     return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
 
-  return localPart.substring(0, 1).toUpperCase();
+  final single = parts.isNotEmpty ? parts[0] : localPart;
+  return single.length >= 2
+      ? single.substring(0, 2).toUpperCase()
+      : single.substring(0, 1).toUpperCase();
 }
 
 class _TopBarActions extends StatelessWidget {

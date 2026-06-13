@@ -1,6 +1,8 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 const keepConnectedSavedEmailStorageKey = 'eantrack_keep_connected_email';
+const keepConnectedSavedDisplayNameStorageKey =
+    'eantrack_keep_connected_display_name';
 
 class KeepConnectedPromptStorage {
   const KeepConnectedPromptStorage();
@@ -41,6 +43,38 @@ class KeepConnectedPromptStorage {
   Future<void> clearSavedLoginEmail() async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.remove(keepConnectedSavedEmailStorageKey);
+    // The saved display name is only meaningful alongside a saved email, so
+    // both are cleared together as a single "saved account" cache.
+    await preferences.remove(keepConnectedSavedDisplayNameStorageKey);
+  }
+
+  // savedDisplayName exists only to improve the saved-account card UX (e.g.
+  // initials in the identity avatar). It is never persisted in
+  // user_settings and is never used for authentication.
+  Future<String?> loadSavedDisplayName() async {
+    final preferences = await SharedPreferences.getInstance();
+    final name =
+        preferences.getString(keepConnectedSavedDisplayNameStorageKey)?.trim();
+    return name == null || name.isEmpty ? null : name;
+  }
+
+  Future<void> saveSavedDisplayName(String name) async {
+    final normalizedName = name.trim();
+    if (normalizedName.isEmpty) {
+      await clearSavedDisplayName();
+      return;
+    }
+
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(
+      keepConnectedSavedDisplayNameStorageKey,
+      normalizedName,
+    );
+  }
+
+  Future<void> clearSavedDisplayName() async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.remove(keepConnectedSavedDisplayNameStorageKey);
   }
 
   // The prompt-answered flag is controlled purely by userId, locally, so the

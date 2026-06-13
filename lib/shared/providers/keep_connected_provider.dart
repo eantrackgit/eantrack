@@ -25,6 +25,7 @@ class KeepConnectedState {
   const KeepConnectedState({
     this.keepConnected = false,
     this.savedLoginEmail,
+    this.savedDisplayName,
     this.isLoading = false,
     this.isLoadingSavedLoginEmail = false,
     this.isSaving = false,
@@ -33,6 +34,11 @@ class KeepConnectedState {
 
   final bool keepConnected;
   final String? savedLoginEmail;
+
+  // savedDisplayName exists only to improve the saved-account card UX (the
+  // identity avatar initials). It is never persisted in user_settings and is
+  // never used for authentication.
+  final String? savedDisplayName;
   final bool isLoading;
   final bool isLoadingSavedLoginEmail;
   final bool isSaving;
@@ -44,6 +50,7 @@ class KeepConnectedState {
   KeepConnectedState copyWith({
     bool? keepConnected,
     Object? savedLoginEmail = _keepConnectedUnset,
+    Object? savedDisplayName = _keepConnectedUnset,
     bool? isLoading,
     bool? isLoadingSavedLoginEmail,
     bool? isSaving,
@@ -54,6 +61,9 @@ class KeepConnectedState {
       savedLoginEmail: identical(savedLoginEmail, _keepConnectedUnset)
           ? this.savedLoginEmail
           : savedLoginEmail as String?,
+      savedDisplayName: identical(savedDisplayName, _keepConnectedUnset)
+          ? this.savedDisplayName
+          : savedDisplayName as String?,
       isLoading: isLoading ?? this.isLoading,
       isLoadingSavedLoginEmail:
           isLoadingSavedLoginEmail ?? this.isLoadingSavedLoginEmail,
@@ -111,24 +121,32 @@ class KeepConnectedController extends StateNotifier<KeepConnectedState> {
     if (state.keepConnected) {
       if (!state.hasSavedLoginEmail) {
         await saveSavedLoginEmail(loginEmail);
+        await saveSavedDisplayName(
+          _displayNameFromUser(Supabase.instance.client.auth.currentUser),
+        );
       }
     } else {
       await clearSavedLoginEmail();
     }
   }
 
+  // Loads the full saved-account cache (email + display name) for the
+  // saved-account card — local storage only, no Supabase read.
   Future<void> loadSavedLoginEmail() async {
     state = state.copyWith(isLoadingSavedLoginEmail: true);
     try {
       final email = await _promptStorage.loadSavedLoginEmail();
+      final displayName = await _promptStorage.loadSavedDisplayName();
       state = state.copyWith(
         savedLoginEmail: email,
+        savedDisplayName: displayName,
         isLoadingSavedLoginEmail: false,
       );
     } on Exception catch (e) {
       debugPrint('[UserSettings] Erro ao carregar e-mail local: $e');
       state = state.copyWith(
         savedLoginEmail: null,
+        savedDisplayName: null,
         isLoadingSavedLoginEmail: false,
       );
     }
@@ -149,13 +167,37 @@ class KeepConnectedController extends StateNotifier<KeepConnectedState> {
     }
   }
 
+  // savedDisplayName exists only to improve the saved-account card UX (the
+  // identity avatar initials). It is never persisted in user_settings and is
+  // never used for authentication.
+  Future<void> saveSavedDisplayName(String? name) async {
+    final normalizedName = name?.trim();
+    if (normalizedName == null || normalizedName.isEmpty) {
+      try {
+        await _promptStorage.clearSavedDisplayName();
+      } on Exception catch (e) {
+        debugPrint('[UserSettings] Erro ao limpar nome local: $e');
+      } finally {
+        state = state.copyWith(savedDisplayName: null);
+      }
+      return;
+    }
+
+    try {
+      await _promptStorage.saveSavedDisplayName(normalizedName);
+      state = state.copyWith(savedDisplayName: normalizedName);
+    } on Exception catch (e) {
+      debugPrint('[UserSettings] Erro ao salvar nome local: $e');
+    }
+  }
+
   Future<void> clearSavedLoginEmail() async {
     try {
       await _promptStorage.clearSavedLoginEmail();
     } on Exception catch (e) {
       debugPrint('[UserSettings] Erro ao limpar e-mail local: $e');
     } finally {
-      state = state.copyWith(savedLoginEmail: null);
+      state = state.copyWith(savedLoginEmail: null, savedDisplayName: null);
     }
   }
 
@@ -163,6 +205,7 @@ class KeepConnectedController extends StateNotifier<KeepConnectedState> {
     bool value, {
     String? userId,
     String? savedLoginEmail,
+    String? savedDisplayName,
   }) async {
     final resolvedUserId = _resolveUserId(userId);
     if (resolvedUserId == null) {
@@ -170,13 +213,17 @@ class KeepConnectedController extends StateNotifier<KeepConnectedState> {
       return false;
     }
 
+    final currentUser = Supabase.instance.client.auth.currentUser;
+    final resolvedEmail = savedLoginEmail ?? currentUser?.email;
+    final resolvedDisplayName =
+        savedDisplayName ?? _displayNameFromUser(currentUser);
+
     // Already in sync with the requested value: skip the database round
     // trip entirely (no read, no write) and only sync the local cache.
     if (state.keepConnected == value && !state.isLoading) {
       if (value) {
-        await saveSavedLoginEmail(
-          savedLoginEmail ?? Supabase.instance.client.auth.currentUser?.email,
-        );
+        await saveSavedLoginEmail(resolvedEmail);
+        await saveSavedDisplayName(resolvedDisplayName);
       } else {
         await clearSavedLoginEmail();
       }
@@ -200,9 +247,8 @@ class KeepConnectedController extends StateNotifier<KeepConnectedState> {
         isSaving: false,
       );
       if (savedValue) {
-        await saveSavedLoginEmail(
-          savedLoginEmail ?? Supabase.instance.client.auth.currentUser?.email,
-        );
+        await saveSavedLoginEmail(resolvedEmail);
+        await saveSavedDisplayName(resolvedDisplayName);
       } else {
         await clearSavedLoginEmail();
       }
@@ -243,7 +289,10 @@ class KeepConnectedController extends StateNotifier<KeepConnectedState> {
   }
 
   void clearSessionState() {
-    state = KeepConnectedState(savedLoginEmail: state.savedLoginEmail);
+    state = KeepConnectedState(
+      savedLoginEmail: state.savedLoginEmail,
+      savedDisplayName: state.savedDisplayName,
+    );
   }
 
   void clearError() {
@@ -263,4 +312,19 @@ class KeepConnectedController extends StateNotifier<KeepConnectedState> {
         ? null
         : currentUserId;
   }
+}
+
+// Same metadata-key priority used across the app (hub, regions, agency
+// status screens) to resolve a human-friendly display name for the
+// authenticated user. Used here only to seed savedDisplayName.
+String? _displayNameFromUser(User? user) {
+  final metadata = user?.userMetadata;
+  if (metadata == null) return null;
+
+  for (final key in const ['nome', 'name', 'full_name', 'display_name']) {
+    final value = metadata[key]?.toString().trim();
+    if (value != null && value.isNotEmpty) return value;
+  }
+
+  return null;
 }
