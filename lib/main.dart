@@ -62,6 +62,7 @@ Future<void> _applyKeepConnectedPreferenceToRestoredSession() async {
 
     // Supabase Auth remains the source of session tokens. This preference only
     // tells the app to discard an automatically restored local session.
+    await const KeepConnectedPromptStorage().clearSavedLoginEmail();
     await supabase.auth.signOut(scope: SignOutScope.local);
   } on Exception catch (e) {
     debugPrint('[UserSettings] Erro ao aplicar manter conectado: $e');

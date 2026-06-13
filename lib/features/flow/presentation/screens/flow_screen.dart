@@ -128,6 +128,7 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
         final answered = await showKeepConnectedPromptDialog(
           context: context,
           userId: user.id,
+          loginEmail: user.email,
         );
         if (!mounted || !answered) return false;
       }

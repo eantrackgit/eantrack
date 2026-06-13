@@ -37,6 +37,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   ProviderSubscription<AuthState>? _authStateSubscription;
   AsyncAction<void> _action = const ActionIdle();
   AsyncAction<void> _googleAction = const ActionIdle();
+  bool _savedEmailLoaded = false;
 
   @override
   void initState() {
@@ -46,6 +47,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       authNotifierProvider,
       (_, next) => _handleAuthStateChange(next),
     );
+    Future.microtask(_loadSavedLoginEmail);
 
     if (widget.consumeRecoveryQueryParam) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -88,6 +90,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     return normalized;
   }
 
+  Future<void> _loadSavedLoginEmail() async {
+    await ref
+        .read(keepConnectedControllerProvider.notifier)
+        .loadSavedLoginEmail();
+    if (!mounted) return;
+
+    final savedEmail =
+        ref.read(keepConnectedControllerProvider).savedLoginEmail;
+    if (savedEmail != null && savedEmail.isNotEmpty) {
+      _emailController.text = savedEmail;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _passwordFocus.requestFocus();
+      });
+    }
+
+    setState(() => _savedEmailLoaded = true);
+  }
+
+  Future<void> _switchSavedLoginEmail() async {
+    await ref
+        .read(keepConnectedControllerProvider.notifier)
+        .clearSavedLoginEmail();
+    if (!mounted) return;
+
+    setState(() {
+      submitted = false;
+      _emailController.clear();
+      _passwordController.clear();
+    });
+  }
+
+  bool get _isUsingSavedLoginEmail {
+    final savedEmail =
+        ref.read(keepConnectedControllerProvider).savedLoginEmail;
+    final normalizedSavedEmail = _normalizeEmail(savedEmail);
+    if (normalizedSavedEmail == null) return false;
+    return normalizedSavedEmail == _normalizeEmail(_emailController.text);
+  }
+
   void _navigateAfterFrame(String route) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -114,6 +155,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         _navigateAfterFrame(AppRoutes.emailVerification);
         return;
       case AuthError(:final message):
+        final shouldClearSavedEmail =
+            _action.isLoading && _isUsingSavedLoginEmail;
+        if (shouldClearSavedEmail) {
+          await ref
+              .read(keepConnectedControllerProvider.notifier)
+              .clearSavedLoginEmail();
+          _emailController.clear();
+        }
         await _showActionErrorDialog(
           title: _googleAction.isLoading
               ? 'Falha no login com Google'
@@ -147,6 +196,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }
 
   Future<void> _submit() async {
+    final savedEmail =
+        ref.read(keepConnectedControllerProvider).savedLoginEmail;
+    if (_normalizeEmail(savedEmail) != null &&
+        _normalizeEmail(_emailController.text) == null) {
+      _emailController.text = savedEmail!;
+    }
+
     if (!validateAndSubmit()) return;
     final isOnline =
         await ensureOnlineOrShowNoConnectionModal(context: context, ref: ref);
@@ -187,6 +243,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   @override
   Widget build(BuildContext context) {
     final et = EanTrackTheme.of(context);
+    final keepConnectedState = ref.watch(keepConnectedControllerProvider);
+    final savedLoginEmail = keepConnectedState.savedLoginEmail;
+    final hasSavedLoginEmail =
+        _savedEmailLoaded && keepConnectedState.hasSavedLoginEmail;
 
     final isBusy = _action.isLoading || _googleAction.isLoading;
     final recoveryEmail = _normalizeEmail(
@@ -198,6 +258,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         recoveryEmail != null &&
         recoveryEmail == currentEmail;
 
+    if (!_savedEmailLoaded) {
+      return AuthScaffold(
+        action: const _TopBarActions(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _BrandHeader(),
+            const SizedBox(height: AppSpacing.lg),
+            Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: et.ctaBackground,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return AuthScaffold(
       action: const _TopBarActions(),
       child: Form(
@@ -205,23 +284,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(
-              child: SvgPicture.asset(
-                'assets/images/eantrack.svg',
-                width: 180,
-                height: 60,
-                fit: BoxFit.contain,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Center(
-              child: Text(
-                'Smart Tracking',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: et.secondaryText,
-                ),
-              ),
-            ),
+            const _BrandHeader(),
             if (showRecoveryEmailSentMessage) ...[
               const SizedBox(height: AppSpacing.md),
               Container(
@@ -262,17 +325,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               ),
             ],
             const SizedBox(height: AppSpacing.lg),
-            AppTextField(
-              label: 'E-mail',
-              hint: 'usuario@email.com',
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.next,
-              autofillHints: const [AutofillHints.email],
-              validator: emailValidator,
-              onFieldSubmitted: (_) =>
-                  FocusScope.of(context).requestFocus(_passwordFocus),
-            ),
+            if (hasSavedLoginEmail)
+              _SavedLoginEmailCard(
+                email: savedLoginEmail!,
+                enabled: !isBusy,
+                onTap: () => _passwordFocus.requestFocus(),
+                onSwitch: isBusy ? null : _switchSavedLoginEmail,
+              )
+            else
+              AppTextField(
+                label: 'E-mail',
+                hint: 'usuario@email.com',
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.email],
+                validator: emailValidator,
+                onFieldSubmitted: (_) =>
+                    FocusScope.of(context).requestFocus(_passwordFocus),
+              ),
             const SizedBox(height: 12),
             AppTextField(
               label: 'Senha',
@@ -376,6 +447,151 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 // ---------------------------------------------------------------------------
 // Barra superior direita: ícone de conectividade + toggle de tema
 // ---------------------------------------------------------------------------
+
+class _BrandHeader extends StatelessWidget {
+  const _BrandHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
+
+    return Column(
+      children: [
+        Center(
+          child: SvgPicture.asset(
+            'assets/images/eantrack.svg',
+            width: 180,
+            height: 60,
+            fit: BoxFit.contain,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          'Smart Tracking',
+          style: AppTextStyles.bodySmall.copyWith(
+            color: et.secondaryText,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SavedLoginEmailCard extends StatelessWidget {
+  const _SavedLoginEmailCard({
+    required this.email,
+    required this.enabled,
+    required this.onTap,
+    required this.onSwitch,
+  });
+
+  final String email;
+  final bool enabled;
+  final VoidCallback onTap;
+  final VoidCallback? onSwitch;
+
+  @override
+  Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
+    final borderRadius = BorderRadius.circular(14);
+
+    return Material(
+      color: et.surface,
+      borderRadius: borderRadius,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: borderRadius,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 72),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: borderRadius,
+            border: Border.all(color: et.surfaceBorder),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 21,
+                backgroundColor: et.ctaBackground,
+                child: Text(
+                  _initialsFromEmail(email),
+                  style: AppTextStyles.labelLarge.copyWith(
+                    color: et.ctaForeground,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Conta salva',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: et.secondaryText,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      email,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: et.primaryText,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              TextButton(
+                onPressed: onSwitch,
+                style: TextButton.styleFrom(
+                  foregroundColor: et.accentLink,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  'Trocar',
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: et.accentLink,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _initialsFromEmail(String email) {
+  final localPart = email.split('@').first.trim();
+  if (localPart.isEmpty) return '?';
+
+  final parts = localPart
+      .split(RegExp(r'[._-]+'))
+      .where((part) => part.trim().isNotEmpty)
+      .toList();
+  if (parts.length >= 2) {
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+
+  return localPart.substring(0, 1).toUpperCase();
+}
 
 class _TopBarActions extends StatelessWidget {
   const _TopBarActions();

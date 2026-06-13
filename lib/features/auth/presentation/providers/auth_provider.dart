@@ -9,6 +9,7 @@ import '../../data/password_history_service.dart';
 import '../../data/password_recovery_cooldown_storage.dart';
 import '../../domain/auth_flow_state.dart';
 import '../../domain/auth_state.dart';
+import '../../../../shared/providers/keep_connected_provider.dart';
 
 // ---------------------------------------------------------------------------
 // Infrastructure providers
@@ -77,7 +78,10 @@ bool _hasIndividualHubAccess(AuthAuthenticated authState) {
 
 final authNotifierProvider =
     StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  final notifier = AuthNotifier(ref.read(authRepositoryProvider));
+  final notifier = AuthNotifier(
+    ref.read(authRepositoryProvider),
+    ref.read(keepConnectedControllerProvider.notifier),
+  );
 
   // Escuta mudanças externas de auth (OAuth callback, sessão restaurada).
   // Quando um novo usuário aparece no stream sem que o notifier saiba,
@@ -100,9 +104,11 @@ final authNotifierProvider =
 });
 
 class AuthNotifier extends StateNotifier<AuthState> {
-  AuthNotifier(this._repo) : super(const AuthInitial());
+  AuthNotifier(this._repo, this._keepConnectedController)
+      : super(const AuthInitial());
 
   final AuthRepository _repo;
+  final KeepConnectedController _keepConnectedController;
 
   bool get isAuthenticated => state is AuthAuthenticated;
 
@@ -148,7 +154,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
   // --- Sign out ---
 
   Future<void> signOut() async {
+    final user = _repo.currentUser;
+    if (user != null) {
+      await _keepConnectedController.load(userId: user.id);
+    }
+
+    if (_keepConnectedController.state.keepConnected) {
+      await _keepConnectedController.saveSavedLoginEmail(user?.email);
+    } else {
+      await _keepConnectedController.clearSavedLoginEmail();
+    }
+
     await _repo.signOut();
+    _keepConnectedController.clearSessionState();
     state = const AuthUnauthenticated();
   }
 
@@ -225,6 +243,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   /// Chamado quando o stream detecta que o usuário saiu externamente.
   void onSignedOut() {
+    if (!_keepConnectedController.state.keepConnected) {
+      _keepConnectedController.clearSavedLoginEmail();
+    }
+    _keepConnectedController.clearSessionState();
     state = const AuthUnauthenticated();
   }
 

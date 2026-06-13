@@ -7,11 +7,15 @@ import '../../../../shared/shared.dart';
 Future<bool> showKeepConnectedPromptDialog({
   required BuildContext context,
   required String userId,
+  required String? loginEmail,
 }) async {
   final result = await showDialog<bool>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => KeepConnectedPromptDialog(userId: userId),
+    builder: (_) => KeepConnectedPromptDialog(
+      userId: userId,
+      loginEmail: loginEmail,
+    ),
   );
 
   return result ?? false;
@@ -21,9 +25,11 @@ class KeepConnectedPromptDialog extends ConsumerWidget {
   const KeepConnectedPromptDialog({
     super.key,
     required this.userId,
+    required this.loginEmail,
   });
 
   final String userId;
+  final String? loginEmail;
 
   Future<void> _answer(
     BuildContext context,
@@ -32,7 +38,11 @@ class KeepConnectedPromptDialog extends ConsumerWidget {
   ) async {
     final saved = await ref
         .read(keepConnectedControllerProvider.notifier)
-        .answerPrompt(userId, keepConnected);
+        .answerPrompt(
+          userId,
+          keepConnected,
+          loginEmail: loginEmail,
+        );
 
     if (!context.mounted) return;
     if (saved) {

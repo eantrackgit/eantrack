@@ -1,7 +1,38 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+const keepConnectedSavedEmailStorageKey = 'eantrack_keep_connected_email';
+
 class KeepConnectedPromptStorage {
   const KeepConnectedPromptStorage();
+
+  Future<String?> loadSavedLoginEmail() async {
+    final preferences = await SharedPreferences.getInstance();
+    final email = preferences.getString(keepConnectedSavedEmailStorageKey)
+        ?.trim()
+        .toLowerCase();
+    return email == null || email.isEmpty ? null : email;
+  }
+
+  Future<void> saveSavedLoginEmail(String email) async {
+    final normalizedEmail = email.trim().toLowerCase();
+    if (normalizedEmail.isEmpty) {
+      await clearSavedLoginEmail();
+      return;
+    }
+
+    final preferences = await SharedPreferences.getInstance();
+    // This is a local UX hint only. Supabase keeps credentials and tokens; the
+    // database still stores only the keep_connected boolean.
+    await preferences.setString(
+      keepConnectedSavedEmailStorageKey,
+      normalizedEmail,
+    );
+  }
+
+  Future<void> clearSavedLoginEmail() async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.remove(keepConnectedSavedEmailStorageKey);
+  }
 
   Future<bool> wasPromptAnswered(String userId) async {
     final preferences = await SharedPreferences.getInstance();
