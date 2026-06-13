@@ -482,9 +482,10 @@ class _BrandHeader extends StatelessWidget {
   }
 }
 
-// Identity card for the "Conta salva" (saved-account) UX: tells the user
-// "the EANTrack recognized your account" instead of showing a pre-filled
-// email field. Hover state only matters on web/desktop (mouse input).
+// "Conta salva" rendered as a field-sized row, matching the height, fill,
+// border and radius of AppTextField — so it reads as the equivalent of the
+// e-mail field rather than as a separate card. Hover state only matters on
+// web/desktop (mouse input).
 class _SavedLoginEmailCard extends StatefulWidget {
   const _SavedLoginEmailCard({
     required this.email,
@@ -515,7 +516,6 @@ class _SavedLoginEmailCardState extends State<_SavedLoginEmailCard> {
   @override
   Widget build(BuildContext context) {
     final et = EanTrackTheme.of(context);
-    final borderRadius = AppRadius.mdAll;
     final initials = _resolveInitials(
       displayName: widget.displayName,
       email: widget.email,
@@ -525,25 +525,28 @@ class _SavedLoginEmailCardState extends State<_SavedLoginEmailCard> {
       onEnter: (_) => _setHovered(true),
       onExit: (_) => _setHovered(false),
       child: Material(
-        color: et.surface,
-        borderRadius: borderRadius,
+        color: et.inputFill,
+        borderRadius: AppRadius.smAll,
         child: InkWell(
           onTap: widget.enabled ? widget.onTap : null,
-          borderRadius: borderRadius,
+          borderRadius: AppRadius.smAll,
           child: Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
             decoration: BoxDecoration(
-              borderRadius: borderRadius,
+              borderRadius: AppRadius.smAll,
               border: Border.all(
-                color: _isHovered ? et.inputBorderFocused : et.surfaceBorder,
+                color: _isHovered ? et.inputBorderFocused : et.inputBorder,
+                width: _isHovered ? 1.5 : 1,
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
                 Container(
-                  width: 52,
-                  height: 52,
+                  width: 38,
+                  height: 38,
                   decoration: BoxDecoration(
                     color: et.ctaBackground,
                     shape: BoxShape.circle,
@@ -551,50 +554,40 @@ class _SavedLoginEmailCardState extends State<_SavedLoginEmailCard> {
                   alignment: Alignment.center,
                   child: Text(
                     initials,
-                    style: AppTextStyles.titleMedium.copyWith(
+                    style: AppTextStyles.labelMedium.copyWith(
                       color: et.ctaForeground,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  'Conta salva',
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: et.secondaryText,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  widget.email,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: et.primaryText,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: widget.onSwitch,
-                    style: TextButton.styleFrom(
-                      foregroundColor: et.accentLink,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm,
-                        vertical: AppSpacing.xs,
-                      ),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    widget.email,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: et.primaryText,
+                      fontWeight: FontWeight.w600,
                     ),
-                    child: Text(
-                      'Trocar',
-                      style: AppTextStyles.labelMedium.copyWith(
-                        color: et.accentLink,
-                        fontWeight: FontWeight.w700,
-                      ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                TextButton(
+                  onPressed: widget.onSwitch,
+                  style: TextButton.styleFrom(
+                    foregroundColor: et.accentLink,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    'Trocar',
+                    style: AppTextStyles.labelMedium.copyWith(
+                      color: et.accentLink,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
