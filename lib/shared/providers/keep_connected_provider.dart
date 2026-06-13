@@ -111,20 +111,19 @@ class KeepConnectedController extends StateNotifier<KeepConnectedState> {
   }
 
   /// Runs once right after a successful login: confirms keep_connected from
-  /// Supabase (single read) and syncs the local email cache accordingly.
-  /// true  -> cache the login email locally for the saved-account UX.
-  /// false -> clear any locally cached email.
+  /// Supabase (single read) and syncs the local saved-account cache
+  /// accordingly.
+  /// true  -> refresh the cached email and display name for this login.
+  /// false -> clear any locally cached email and display name.
   Future<void> syncAfterLogin(String userId, String? loginEmail) async {
     await load(userId: userId);
     if (state.error != null) return;
 
     if (state.keepConnected) {
-      if (!state.hasSavedLoginEmail) {
-        await saveSavedLoginEmail(loginEmail);
-        await saveSavedDisplayName(
-          _displayNameFromUser(Supabase.instance.client.auth.currentUser),
-        );
-      }
+      await saveSavedLoginEmail(loginEmail);
+      await saveSavedDisplayName(
+        _displayNameFromUser(Supabase.instance.client.auth.currentUser),
+      );
     } else {
       await clearSavedLoginEmail();
     }
