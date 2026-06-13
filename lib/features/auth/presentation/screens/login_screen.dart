@@ -90,6 +90,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     return normalized;
   }
 
+  // Builds the saved-account card from local storage only — never queries
+  // Supabase just to render the login screen.
   Future<void> _loadSavedLoginEmail() async {
     await ref
         .read(keepConnectedControllerProvider.notifier)
@@ -108,6 +110,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     setState(() => _savedEmailLoaded = true);
   }
 
+  // "Trocar" removes only the local saved-account cache so another email
+  // can be used; it does not change the keep_connected preference remotely.
   Future<void> _switchSavedLoginEmail() async {
     await ref
         .read(keepConnectedControllerProvider.notifier)

@@ -119,6 +119,13 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
     _isPromptingKeepConnected = true;
     try {
       final controller = ref.read(keepConnectedControllerProvider.notifier);
+
+      // Single read confirming keep_connected for this login and syncing
+      // the local saved-email cache (true -> cache email, false -> clear).
+      await controller.syncAfterLogin(user.id, user.email);
+      if (!mounted) return false;
+
+      // Local-only check: shows the dialog at most once per userId/device.
       final shouldShowPrompt = await controller.shouldShowPrompt(user.id);
       if (!mounted) return false;
 

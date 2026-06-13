@@ -5,17 +5,26 @@ const keepConnectedSavedEmailStorageKey = 'eantrack_keep_connected_email';
 class KeepConnectedPromptStorage {
   const KeepConnectedPromptStorage();
 
+  // savedLoginEmail is a local cache for the saved-account UX only — never a
+  // credential, and never the source of truth (Supabase user_settings is).
   Future<String?> loadSavedLoginEmail() async {
     final preferences = await SharedPreferences.getInstance();
     final email = preferences.getString(keepConnectedSavedEmailStorageKey)
         ?.trim()
         .toLowerCase();
-    return email == null || email.isEmpty ? null : email;
+    if (email == null || email.isEmpty) return null;
+
+    // Corrupted/invalid local cache must not break the saved-account UX.
+    if (!email.contains('@')) {
+      await clearSavedLoginEmail();
+      return null;
+    }
+    return email;
   }
 
   Future<void> saveSavedLoginEmail(String email) async {
     final normalizedEmail = email.trim().toLowerCase();
-    if (normalizedEmail.isEmpty) {
+    if (normalizedEmail.isEmpty || !normalizedEmail.contains('@')) {
       await clearSavedLoginEmail();
       return;
     }
@@ -34,6 +43,8 @@ class KeepConnectedPromptStorage {
     await preferences.remove(keepConnectedSavedEmailStorageKey);
   }
 
+  // The prompt-answered flag is controlled purely by userId, locally, so the
+  // "Manter conectado?" dialog is not re-shown on every F5/restart.
   Future<bool> wasPromptAnswered(String userId) async {
     final preferences = await SharedPreferences.getInstance();
     return preferences.getBool(_keyFor(userId)) ?? false;

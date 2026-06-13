@@ -8,21 +8,6 @@ class UserSettingsRepository {
 
   static const Map<String, dynamic> defaultSettings = <String, dynamic>{};
 
-  Future<void> ensureUserSettings(String userId) async {
-    final normalizedUserId = _validateUserId(userId);
-
-    await _supabase.from('user_settings').upsert(
-      {
-        'user_id': normalizedUserId,
-        'settings': defaultSettings,
-        'keep_connected': false,
-      },
-      onConflict: 'user_id',
-      ignoreDuplicates: true,
-      defaultToNull: false,
-    );
-  }
-
   Future<Map<String, dynamic>> loadSettings() async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null || userId.isEmpty) {
@@ -80,12 +65,16 @@ class UserSettingsRepository {
     return nextSettings;
   }
 
+  // keep_connected is the only preference persisted in Supabase for this
+  // feature, kept light so user_settings stays cheap at 100k+ users. Never
+  // store email, display name, avatar, tokens, or any UX/device metadata
+  // here — that all belongs to local storage.
+
+  /// Single indexed read, no writes. Missing row falls back to `false`,
+  /// matching the column default.
   Future<bool> getKeepConnected(String userId) async {
     final normalizedUserId = _validateUserId(userId);
-    await ensureUserSettings(normalizedUserId);
 
-    // keep_connected is only a boolean preference. Supabase Auth keeps owning
-    // credentials, tokens, refresh tokens, and the authenticated session.
     final response = await _supabase
         .from('user_settings')
         .select('keep_connected')
@@ -95,14 +84,28 @@ class UserSettingsRepository {
     return response?['keep_connected'] == true;
   }
 
+  /// Reads the current value and writes only if it actually changes, so
+  /// re-saving the same preference never hits the database.
+  Future<bool> setKeepConnectedIfChanged(String userId, bool value) async {
+    final normalizedUserId = _validateUserId(userId);
+    final current = await getKeepConnected(normalizedUserId);
+    if (current == value) return current;
+    return upsertKeepConnected(normalizedUserId, value);
+  }
+
+  /// Single upsert touching only `keep_connected`. On conflict, `settings`
+  /// and `created_at` are left untouched; `updated_at` is handled by the
+  /// existing trigger.
   Future<bool> upsertKeepConnected(String userId, bool value) async {
     final normalizedUserId = _validateUserId(userId);
-    await ensureUserSettings(normalizedUserId);
 
     final response = await _supabase
         .from('user_settings')
-        .update({'keep_connected': value})
-        .eq('user_id', normalizedUserId)
+        .upsert(
+          {'user_id': normalizedUserId, 'keep_connected': value},
+          onConflict: 'user_id',
+          defaultToNull: false,
+        )
         .select('keep_connected')
         .maybeSingle();
 

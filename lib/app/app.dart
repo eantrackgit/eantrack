@@ -42,6 +42,11 @@ class _EanTrackAppState extends ConsumerState<EanTrackApp> {
           return;
         }
 
+        // onAuthStateChange also fires on token refresh for the same user
+        // (every ~50min with autoRefreshToken). Skip the reload then to
+        // avoid a keep_connected read per refresh across 100k+ sessions.
+        if (previous?.valueOrNull?.id == user.id) return;
+
         themeController.loadForCurrentUser();
         keepConnectedController.load(userId: user.id);
       });

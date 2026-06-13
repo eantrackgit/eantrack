@@ -56,6 +56,8 @@ Future<void> _applyKeepConnectedPreferenceToRestoredSession() async {
   if (user == null) return;
 
   try {
+    // Single indexed read at startup (no write). If it fails, the restored
+    // session is kept as-is — a transient error must not sign the user out.
     final keepConnected =
         await UserSettingsRepository().getKeepConnected(user.id);
     if (keepConnected) return;

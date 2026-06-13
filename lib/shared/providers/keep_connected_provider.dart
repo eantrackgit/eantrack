@@ -72,6 +72,10 @@ class KeepConnectedController extends StateNotifier<KeepConnectedState> {
   final UserSettingsRepository _repository;
   final KeepConnectedPromptStorage _promptStorage;
 
+  /// Single read of keep_connected from Supabase (no writes). Does not
+  /// touch the local saved-email cache by itself — callers decide what to
+  /// do with the value (see [syncAfterLogin]), so an automatic call here
+  /// (token refresh, app restart) never silently clears the local cache.
   Future<void> load({String? userId}) async {
     final resolvedUserId = _resolveUserId(userId);
     if (resolvedUserId == null) {
@@ -87,15 +91,29 @@ class KeepConnectedController extends StateNotifier<KeepConnectedState> {
         keepConnected: keepConnected,
         isLoading: false,
       );
-      if (!keepConnected) {
-        await clearSavedLoginEmail();
-      }
     } on Exception catch (e) {
       debugPrint('[UserSettings] Erro ao carregar manter conectado: $e');
       state = state.copyWith(
         isLoading: false,
         error: 'Nao foi possivel carregar a preferencia.',
       );
+    }
+  }
+
+  /// Runs once right after a successful login: confirms keep_connected from
+  /// Supabase (single read) and syncs the local email cache accordingly.
+  /// true  -> cache the login email locally for the saved-account UX.
+  /// false -> clear any locally cached email.
+  Future<void> syncAfterLogin(String userId, String? loginEmail) async {
+    await load(userId: userId);
+    if (state.error != null) return;
+
+    if (state.keepConnected) {
+      if (!state.hasSavedLoginEmail) {
+        await saveSavedLoginEmail(loginEmail);
+      }
+    } else {
+      await clearSavedLoginEmail();
     }
   }
 
@@ -152,6 +170,19 @@ class KeepConnectedController extends StateNotifier<KeepConnectedState> {
       return false;
     }
 
+    // Already in sync with the requested value: skip the database round
+    // trip entirely (no read, no write) and only sync the local cache.
+    if (state.keepConnected == value && !state.isLoading) {
+      if (value) {
+        await saveSavedLoginEmail(
+          savedLoginEmail ?? Supabase.instance.client.auth.currentUser?.email,
+        );
+      } else {
+        await clearSavedLoginEmail();
+      }
+      return true;
+    }
+
     final previousValue = state.keepConnected;
     state = state.copyWith(
       keepConnected: value,
@@ -160,7 +191,7 @@ class KeepConnectedController extends StateNotifier<KeepConnectedState> {
     );
 
     try {
-      final savedValue = await _repository.upsertKeepConnected(
+      final savedValue = await _repository.setKeepConnectedIfChanged(
         resolvedUserId,
         value,
       );
@@ -187,13 +218,12 @@ class KeepConnectedController extends StateNotifier<KeepConnectedState> {
     }
   }
 
+  /// The prompt is controlled purely by a local per-userId flag, so it is
+  /// shown once and never reappears on F5/restart for that user/device —
+  /// no database read is needed just to decide this.
   Future<bool> shouldShowPrompt(String userId) async {
-    await load(userId: userId);
-    if (state.error != null) return false;
-    await loadSavedLoginEmail();
     final wasAnswered = await _promptStorage.wasPromptAnswered(userId);
-    if (!wasAnswered) return true;
-    return state.keepConnected && !state.hasSavedLoginEmail;
+    return !wasAnswered;
   }
 
   Future<bool> answerPrompt(
