@@ -92,7 +92,7 @@ class KeepConnectedController extends StateNotifier<KeepConnectedState> {
         isLoading: false,
       );
     } on Exception catch (e) {
-      debugPrint('[UserSettings] Erro ao carregar manter conectado: $e');
+      debugPrint('[UserSettings] Erro ao carregar preferencia lembrar-me: $e');
       state = state.copyWith(
         isLoading: false,
         error: 'Nao foi possivel carregar a preferencia.',
@@ -208,7 +208,7 @@ class KeepConnectedController extends StateNotifier<KeepConnectedState> {
       }
       return true;
     } on Exception catch (e) {
-      debugPrint('[UserSettings] Erro ao salvar manter conectado: $e');
+      debugPrint('[UserSettings] Erro ao salvar preferencia lembrar-me: $e');
       state = state.copyWith(
         keepConnected: previousValue,
         isSaving: false,

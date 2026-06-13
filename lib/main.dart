@@ -67,7 +67,7 @@ Future<void> _applyKeepConnectedPreferenceToRestoredSession() async {
     await const KeepConnectedPromptStorage().clearSavedLoginEmail();
     await supabase.auth.signOut(scope: SignOutScope.local);
   } on Exception catch (e) {
-    debugPrint('[UserSettings] Erro ao aplicar manter conectado: $e');
+    debugPrint('[UserSettings] Erro ao aplicar preferencia lembrar-me: $e');
   }
 }
 

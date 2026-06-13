@@ -104,7 +104,7 @@ class KeepConnectedPromptDialog extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    'Manter conectado?',
+                    'Lembrar-me?',
                     textAlign: TextAlign.center,
                     style: AppTextStyles.titleLarge.copyWith(
                       color: et.primaryText,
@@ -113,9 +113,9 @@ class KeepConnectedPromptDialog extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    'Voc\u00ea deseja manter sua sess\u00e3o ativa neste '
-                    'dispositivo para acessar o EANTrack mais rapidamente nas '
-                    'pr\u00f3ximas vezes?',
+                    'Deseja lembrar esta conta neste dispositivo para '
+                    'acessar o EANTrack mais rapidamente nas pr\u00f3ximas '
+                    'vezes?',
                     textAlign: TextAlign.center,
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: et.secondaryText,
@@ -127,7 +127,7 @@ class KeepConnectedPromptDialog extends ConsumerWidget {
                     builder: (context, constraints) {
                       final stackButtons = constraints.maxWidth < 360;
                       final primary = AppButton(
-                        label: 'Sim, manter conectado',
+                        label: 'Sim, lembrar-me',
                         isLoading: isSaving,
                         onPressed: isSaving
                             ? null

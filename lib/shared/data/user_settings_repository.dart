@@ -65,10 +65,13 @@ class UserSettingsRepository {
     return nextSettings;
   }
 
-  // keep_connected is the only preference persisted in Supabase for this
-  // feature, kept light so user_settings stays cheap at 100k+ users. Never
-  // store email, display name, avatar, tokens, or any UX/device metadata
-  // here — that all belongs to local storage.
+  // keep_connected is treated in the app as the "remember me" preference: it
+  // does not extend or alter tokens/refresh tokens and does not replace
+  // Supabase Auth. It only controls the local saved-account UX and the
+  // local cache/logout behavior. It is the only preference persisted in
+  // Supabase for this feature, kept light so user_settings stays cheap at
+  // 100k+ users. Never store email, display name, avatar, tokens, or any
+  // UX/device metadata here — that all belongs to local storage.
 
   /// Single indexed read, no writes. Missing row falls back to `false`,
   /// matching the column default.

@@ -219,7 +219,7 @@ class _KeepConnectedTile extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  'Manter conectado',
+                  'Lembrar-me',
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: et.primaryText,
                     fontWeight: FontWeight.w700,
@@ -227,8 +227,8 @@ class _KeepConnectedTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Mantenha sua sess\u00e3o ativa neste dispositivo para '
-                  'entrar mais r\u00e1pido nas pr\u00f3ximas vezes.',
+                  'Lembre esta conta neste dispositivo para facilitar o '
+                  'pr\u00f3ximo acesso.',
                   style: AppTextStyles.bodySmall.copyWith(
                     color: et.secondaryText,
                     height: 1.35,

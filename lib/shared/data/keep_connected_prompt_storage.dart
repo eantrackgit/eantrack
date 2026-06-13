@@ -44,7 +44,7 @@ class KeepConnectedPromptStorage {
   }
 
   // The prompt-answered flag is controlled purely by userId, locally, so the
-  // "Manter conectado?" dialog is not re-shown on every F5/restart.
+  // "Lembrar-me?" dialog is not re-shown on every F5/restart.
   Future<bool> wasPromptAnswered(String userId) async {
     final preferences = await SharedPreferences.getInstance();
     return preferences.getBool(_keyFor(userId)) ?? false;
