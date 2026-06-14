@@ -110,6 +110,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final AuthRepository _repo;
   final KeepConnectedController _keepConnectedController;
 
+  // Set for the duration of signOut() so onSignedOut() (triggered by the
+  // auth stream's signedOut event, which may be processed while signOut()
+  // is still awaiting _repo.signOut()) does not repeat the same cache/state
+  // transition.
+  bool _isSigningOut = false;
+
   bool get isAuthenticated => state is AuthAuthenticated;
 
   bool get shouldHandleExternalSignOut =>
@@ -154,23 +160,32 @@ class AuthNotifier extends StateNotifier<AuthState> {
   // --- Sign out ---
 
   Future<void> signOut() async {
-    final user = _repo.currentUser;
-    if (user != null) {
-      await _keepConnectedController.load(userId: user.id);
-    }
+    _isSigningOut = true;
+    try {
+      final user = _repo.currentUser;
+      if (user != null) {
+        await _keepConnectedController.load(userId: user.id);
+      }
 
-    // Logout always ends the session. The locally saved email (UX-only,
-    // never a credential) is preserved when keep_connected = true so the
-    // next login shows the saved-account card; otherwise it is cleared.
-    if (_keepConnectedController.state.keepConnected) {
-      await _keepConnectedController.saveSavedLoginEmail(user?.email);
-    } else {
-      await _keepConnectedController.clearSavedLoginEmail();
-    }
+      // Logout always ends the session. The locally saved email and display
+      // name (UX-only, never credentials) are preserved when
+      // keep_connected = true so the next login shows the saved-account
+      // card with an up-to-date name; otherwise both are cleared.
+      if (_keepConnectedController.state.keepConnected) {
+        await _keepConnectedController.saveSavedLoginEmail(user?.email);
+        await _keepConnectedController.saveSavedDisplayName(
+          resolveDisplayNameFromUser(user),
+        );
+      } else {
+        await _keepConnectedController.clearSavedLoginEmail();
+      }
 
-    await _repo.signOut();
-    _keepConnectedController.clearSessionState();
-    state = const AuthUnauthenticated();
+      await _repo.signOut();
+      _keepConnectedController.clearSessionState();
+      state = const AuthUnauthenticated();
+    } finally {
+      _isSigningOut = false;
+    }
   }
 
   // --- Password reset ---
@@ -246,6 +261,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   /// Chamado quando o stream detecta que o usuário saiu externamente.
   void onSignedOut() {
+    // signOut() já tratou o cache local e a transição de estado para este
+    // logout; evita repetir a mesma lógica quando o evento signedOut do
+    // stream é processado durante o await de _repo.signOut().
+    if (_isSigningOut) return;
+
     if (!_keepConnectedController.state.keepConnected) {
       _keepConnectedController.clearSavedLoginEmail();
     }

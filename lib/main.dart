@@ -58,8 +58,18 @@ Future<void> _applyKeepConnectedPreferenceToRestoredSession() async {
   try {
     // Single indexed read at startup (no write). If it fails, the restored
     // session is kept as-is — a transient error must not sign the user out.
+    // This is an intentional fail-open: a user with keep_connected = false
+    // who hits a transient read error stays logged in for this boot instead
+    // of being signed out by a network blip; the preference is re-checked
+    // on the next boot/login.
     final keepConnected =
         await UserSettingsRepository().getKeepConnected(user.id);
+
+    // Hand the value off to KeepConnectedController.load() so app.dart's
+    // startup load for the same userId reuses it instead of repeating the
+    // SELECT.
+    KeepConnectedBootCache.set(user.id, keepConnected);
+
     if (keepConnected) return;
 
     // Supabase Auth remains the source of session tokens. This preference only

@@ -79,6 +79,11 @@ class KeepConnectedPromptStorage {
 
   // The prompt-answered flag is controlled purely by userId, locally, so the
   // "Lembrar-me?" dialog is not re-shown on every F5/restart.
+  //
+  // On long-lived shared devices these keys accumulate (one per user that
+  // ever logged in). Low-impact (a few bytes per user, no sensitive data),
+  // but if this becomes worth cleaning up, prune entries for userIds no
+  // longer present in the local "Conta salva" cache.
   Future<bool> wasPromptAnswered(String userId) async {
     final preferences = await SharedPreferences.getInstance();
     return preferences.getBool(_keyFor(userId)) ?? false;

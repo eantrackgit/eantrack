@@ -19,6 +19,32 @@ final keepConnectedControllerProvider =
   );
 });
 
+/// Single-use handoff for the keep_connected value already read once in
+/// main.dart (before runApp). KeepConnectedController.load() consumes it on
+/// its first call for the same userId, avoiding a second SELECT for the same
+/// boot session.
+class KeepConnectedBootCache {
+  KeepConnectedBootCache._();
+
+  static String? _userId;
+  static bool? _keepConnected;
+
+  static void set(String userId, bool keepConnected) {
+    _userId = userId;
+    _keepConnected = keepConnected;
+  }
+
+  /// Returns the cached value for [userId] and clears it (single use).
+  /// Returns null if nothing was cached for this userId.
+  static bool? consume(String userId) {
+    if (_userId != userId) return null;
+    final value = _keepConnected;
+    _userId = null;
+    _keepConnected = null;
+    return value;
+  }
+}
+
 const _keepConnectedUnset = Object();
 
 class KeepConnectedState {
@@ -82,14 +108,38 @@ class KeepConnectedController extends StateNotifier<KeepConnectedState> {
   final UserSettingsRepository _repository;
   final KeepConnectedPromptStorage _promptStorage;
 
+  // Tracks the userId already confirmed via getKeepConnected during this
+  // session, so the boot/login sequence (main.dart + app.dart +
+  // syncAfterLogin all call load() for the same user) issues a single
+  // SELECT. Reset by clearSessionState() when the user changes.
+  String? _loadedUserId;
+
   /// Single read of keep_connected from Supabase (no writes). Does not
   /// touch the local saved-email cache by itself — callers decide what to
   /// do with the value (see [syncAfterLogin]), so an automatic call here
   /// (token refresh, app restart) never silently clears the local cache.
-  Future<void> load({String? userId}) async {
+  ///
+  /// Subsequent calls for the same userId during this session are no-ops
+  /// (the cached value in [state] is reused) unless [forceRefresh] is set —
+  /// used by Preferencias to always reflect the database on open.
+  Future<void> load({String? userId, bool forceRefresh = false}) async {
     final resolvedUserId = _resolveUserId(userId);
     if (resolvedUserId == null) {
+      _loadedUserId = null;
       state = const KeepConnectedState();
+      return;
+    }
+
+    if (!forceRefresh &&
+        _loadedUserId == resolvedUserId &&
+        state.error == null) {
+      return;
+    }
+
+    final cached = KeepConnectedBootCache.consume(resolvedUserId);
+    if (cached != null) {
+      _loadedUserId = resolvedUserId;
+      state = state.copyWith(keepConnected: cached, isLoading: false, error: null);
       return;
     }
 
@@ -97,6 +147,7 @@ class KeepConnectedController extends StateNotifier<KeepConnectedState> {
     try {
       final keepConnected =
           await _repository.getKeepConnected(resolvedUserId);
+      _loadedUserId = resolvedUserId;
       state = state.copyWith(
         keepConnected: keepConnected,
         isLoading: false,
@@ -122,7 +173,7 @@ class KeepConnectedController extends StateNotifier<KeepConnectedState> {
     if (state.keepConnected) {
       await saveSavedLoginEmail(loginEmail);
       await saveSavedDisplayName(
-        _displayNameFromUser(Supabase.instance.client.auth.currentUser),
+        resolveDisplayNameFromUser(Supabase.instance.client.auth.currentUser),
       );
     } else {
       await clearSavedLoginEmail();
@@ -215,7 +266,7 @@ class KeepConnectedController extends StateNotifier<KeepConnectedState> {
     final currentUser = Supabase.instance.client.auth.currentUser;
     final resolvedEmail = savedLoginEmail ?? currentUser?.email;
     final resolvedDisplayName =
-        savedDisplayName ?? _displayNameFromUser(currentUser);
+        savedDisplayName ?? resolveDisplayNameFromUser(currentUser);
 
     // Already in sync with the requested value: skip the database round
     // trip entirely (no read, no write) and only sync the local cache.
@@ -241,6 +292,9 @@ class KeepConnectedController extends StateNotifier<KeepConnectedState> {
         resolvedUserId,
         value,
       );
+      // The write above confirms keep_connected for this userId, so a
+      // later load() for the same user can reuse it without a new SELECT.
+      _loadedUserId = resolvedUserId;
       state = state.copyWith(
         keepConnected: savedValue,
         isSaving: false,
@@ -288,6 +342,7 @@ class KeepConnectedController extends StateNotifier<KeepConnectedState> {
   }
 
   void clearSessionState() {
+    _loadedUserId = null;
     state = KeepConnectedState(
       savedLoginEmail: state.savedLoginEmail,
       savedDisplayName: state.savedDisplayName,
@@ -315,8 +370,9 @@ class KeepConnectedController extends StateNotifier<KeepConnectedState> {
 
 // Same metadata-key priority used across the app (hub, regions, agency
 // status screens) to resolve a human-friendly display name for the
-// authenticated user. Used here only to seed savedDisplayName.
-String? _displayNameFromUser(User? user) {
+// authenticated user. Used to seed savedDisplayName (here and from
+// AuthNotifier.signOut, which preserves it on logout for keep_connected = true).
+String? resolveDisplayNameFromUser(User? user) {
   final metadata = user?.userMetadata;
   if (metadata == null) return null;
 

@@ -24,7 +24,10 @@ class _UserSettingsDialogState extends ConsumerState<UserSettingsDialog> {
     super.initState();
     Future.microtask(() {
       if (!mounted) return;
-      ref.read(keepConnectedControllerProvider.notifier).load();
+      // forceRefresh: Preferencias deve sempre refletir o valor atual do
+      // banco ao abrir, mesmo que o boot/login já tenha carregado este
+      // userId nesta sessão.
+      ref.read(keepConnectedControllerProvider.notifier).load(forceRefresh: true);
     });
   }
 

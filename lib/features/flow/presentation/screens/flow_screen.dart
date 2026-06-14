@@ -175,34 +175,26 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
 
   Future<void> _resolveOnboardingRouteFromState() async {
     if (_isResolvingOnboardingRoute || _isNavigating) return;
+
+    final authState = ref.read(authNotifierProvider);
+    if (authState is! AuthAuthenticated) {
+      // AuthNotifier ainda não resolveu o login (ex.: onExternalAuthChange
+      // em andamento após callback OAuth do Google). Não chamar
+      // _ensureKeepConnectedPromptAnswered/syncAfterLogin com base num
+      // user_id ainda não confirmado — isso poderia limpar o cache local
+      // de "Conta salva" de outro usuário antes do auth/onboarding estar
+      // decidido. Apenas aguardar: quando o AuthNotifier chegar a
+      // AuthAuthenticated (ou AuthError/Unauthenticated, cobertos pelo
+      // _safetyTimer), authFlowStateProvider re-emite e _decide roda de novo.
+      return;
+    }
+
     _isResolvingOnboardingRoute = true;
-
     try {
-      final authState = ref.read(authNotifierProvider);
-      if (authState is AuthAuthenticated) {
-        final canContinue =
-            await _ensureKeepConnectedPromptAnswered(authState.user);
-        if (!mounted || !canContinue || _isNavigating) return;
-        _go(_routeFromUserFlowState(authState.flowState));
-        return;
-      }
-
-      final user = Supabase.instance.client.auth.currentUser;
-      if (user == null) {
-        _go(AppRoutes.login);
-        return;
-      }
-
-      final canContinue = await _ensureKeepConnectedPromptAnswered(user);
+      final canContinue =
+          await _ensureKeepConnectedPromptAnswered(authState.user);
       if (!mounted || !canContinue || _isNavigating) return;
-
-      final flowState = await ref
-          .read(authRepositoryProvider)
-          .getUserFlowState(user.id)
-          .timeout(const Duration(seconds: 8), onTimeout: () => null);
-
-      if (!mounted || _isNavigating) return;
-      _go(_routeFromUserFlowState(flowState));
+      _go(_routeFromUserFlowState(authState.flowState));
     } on Exception catch (e) {
       debugPrint('[FlowScreen] Erro ao resolver fluxo: $e');
       if (mounted && !_isNavigating) {
