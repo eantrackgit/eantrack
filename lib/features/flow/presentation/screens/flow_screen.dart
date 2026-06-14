@@ -13,6 +13,7 @@ import '../../../../features/auth/domain/user_flow_state.dart';
 import '../../../../features/auth/presentation/providers/auth_provider.dart';
 import '../../../../features/auth/presentation/widgets/keep_connected_prompt_dialog.dart';
 import '../../../../shared/shared.dart';
+import '../widgets/auth_fallback_screen.dart';
 
 /// Tela transitória central de decisão do fluxo de auth.
 /// Lê [AuthFlowState] e encaminha automaticamente o usuário.
@@ -26,11 +27,20 @@ class FlowScreen extends ConsumerStatefulWidget {
 class _FlowScreenState extends ConsumerState<FlowScreen> {
   ProviderSubscription<AuthFlowState>? _authFlowSubscription;
   Timer? _safetyTimer;
-  static const Duration _safetyTimeout = Duration(seconds: 8);
+
+  // /flow é a única rota que o GoRouter nunca redireciona (ver app_router.dart
+  // -- `if (path == AppRoutes.flow) return null`). Ela é o gateway de auth de
+  // toda rota protegida: se a auth não resolver dentro deste prazo (loading
+  // travado, callback OAuth sem resposta, erro silencioso), o usuário não
+  // pode ficar preso numa tela só com animação -- mostramos o fallback
+  // seguro com saída para login.
+  static const Duration _authTimeout = Duration(seconds: 10);
 
   bool _isNavigating = false;
   bool _isResolvingOnboardingRoute = false;
   bool _isPromptingKeepConnected = false;
+  bool _showFallback = false;
+  bool _isRetrying = false;
   final Set<String> _promptCheckedUserIds = <String>{};
 
   @override
@@ -40,16 +50,7 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
       authFlowStateProvider,
       (_, next) => _scheduleDecision(next),
     );
-    _safetyTimer = Timer(_safetyTimeout, () {
-      if (!mounted ||
-          _isNavigating ||
-          _isResolvingOnboardingRoute ||
-          _isPromptingKeepConnected) {
-        return;
-      }
-      _isNavigating = true;
-      context.go(AppRoutes.login);
-    });
+    _startSafetyTimer();
     _scheduleDecision(ref.read(authFlowStateProvider));
   }
 
@@ -58,6 +59,30 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
     _safetyTimer?.cancel();
     _authFlowSubscription?.close();
     super.dispose();
+  }
+
+  void _startSafetyTimer() {
+    _safetyTimer?.cancel();
+    _safetyTimer = Timer(_authTimeout, () {
+      if (!mounted ||
+          _isNavigating ||
+          _showFallback ||
+          _isResolvingOnboardingRoute ||
+          _isPromptingKeepConnected) {
+        return;
+      }
+      debugPrint('[FlowScreen] Timeout aguardando confirmacao de autenticacao.');
+      setState(() => _showFallback = true);
+    });
+  }
+
+  // Mostra o fallback seguro (título + mensagem + "Tentar novamente"/"Voltar
+  // para login"). Chamado tanto pelo timeout de _startSafetyTimer quanto por
+  // AuthError confirmado em _resolveOnboardingRouteFromState.
+  void _showSafeFallback() {
+    if (!mounted || _showFallback) return;
+    debugPrint('[FlowScreen] Exibindo fallback seguro de autenticacao.');
+    setState(() => _showFallback = true);
   }
 
   void _scheduleDecision(AuthFlowState flowState) {
@@ -70,6 +95,7 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
   void _go(String route) {
     if (!mounted || _isNavigating) return;
     _isNavigating = true;
+    _showFallback = false;
     context.go(route);
     // Se o router redirecionar de volta para /flow, a instância permanece
     // montada. Nesse caso, resetar e re-tentar com o estado atual.
@@ -77,8 +103,39 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
       if (!mounted) return;
       _isNavigating = false;
       _isResolvingOnboardingRoute = false;
+      _startSafetyTimer();
       _scheduleDecision(ref.read(authFlowStateProvider));
     });
+  }
+
+  // "Tentar novamente": reexecuta a verificação de auth (AuthNotifier.
+  // retryAuthCheck) e reavalia o fluxo. Reabre a janela de timeout para a
+  // nova tentativa.
+  Future<void> _retryAuthCheck() async {
+    if (_isRetrying) return;
+    setState(() => _isRetrying = true);
+    try {
+      await ref.read(authNotifierProvider.notifier).retryAuthCheck();
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isRetrying = false;
+        _showFallback = false;
+      });
+      _startSafetyTimer();
+      _scheduleDecision(ref.read(authFlowStateProvider));
+    }
+  }
+
+  // "Voltar para login": encerra apenas a sessão local (ver
+  // AuthNotifier.abandonToLogin). O cache local do Lembrar-me não é tocado
+  // aqui de propósito -- o keep_connected real nunca foi confirmado neste
+  // fluxo, então limpar o cache por suposição poderia apagar uma conta salva
+  // válida.
+  Future<void> _backToLogin() async {
+    await ref.read(authNotifierProvider.notifier).abandonToLogin();
+    if (!mounted) return;
+    _go(AppRoutes.login);
   }
 
   void _decide(AuthFlowState flowState) {
@@ -177,6 +234,15 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
     if (_isResolvingOnboardingRoute || _isNavigating) return;
 
     final authState = ref.read(authNotifierProvider);
+
+    // onExternalAuthChange já concluiu com falha definitiva (ex.:
+    // getUserFlowState sem resposta). Não há nada a aguardar -- mostra o
+    // fallback seguro imediatamente em vez de esperar _authTimeout.
+    if (authState is AuthError) {
+      _showSafeFallback();
+      return;
+    }
+
     if (authState is! AuthAuthenticated) {
       // AuthNotifier ainda não resolveu o login (ex.: onExternalAuthChange
       // em andamento após callback OAuth do Google). Não chamar
@@ -209,6 +275,14 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_showFallback) {
+      return AuthFallbackScreen(
+        isRetrying: _isRetrying,
+        onRetry: _retryAuthCheck,
+        onBackToLogin: _backToLogin,
+      );
+    }
+
     final et = EanTrackTheme.of(context);
     return Scaffold(
       backgroundColor: et.scaffoldOuter,

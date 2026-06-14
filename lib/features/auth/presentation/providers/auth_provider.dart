@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
@@ -253,10 +254,50 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   /// Chamado quando o stream detecta um novo usuário autenticado
   /// sem ação explícita do notifier (ex: OAuth callback, deep link).
+  ///
+  /// Sempre resolve para AuthAuthenticated ou AuthError -- nunca deixa o
+  /// state preso em AuthLoading. Uma falha aqui (ex.: getUserFlowState sem
+  /// resposta do backend) viraria loading infinito em /flow se não fosse
+  /// capturada.
   Future<void> onExternalAuthChange(User user) async {
     state = const AuthLoading('Verificando...');
-    final flowState = await _repo.getUserFlowState(user.id);
-    state = AuthAuthenticated(user: user, flowState: flowState);
+    try {
+      final flowState = await _repo.getUserFlowState(user.id);
+      state = AuthAuthenticated(user: user, flowState: flowState);
+    } on Exception catch (e) {
+      debugPrint('[Auth] Erro ao verificar sessao apos login externo: $e');
+      state = const AuthError('Nao foi possivel confirmar sua sessao.');
+    }
+  }
+
+  /// Reexecuta a verificação pós-login (mesma chamada de
+  /// [onExternalAuthChange]) para o usuário atualmente válido no Supabase.
+  /// Usado pelo botão "Tentar novamente" do fallback seguro de /flow quando
+  /// AuthLoading expira ou AuthError é alcançado.
+  Future<void> retryAuthCheck() async {
+    final user = _repo.currentUser;
+    if (user == null) {
+      state = const AuthUnauthenticated();
+      return;
+    }
+    await onExternalAuthChange(user);
+  }
+
+  /// Chamado pelo botão "Voltar para login" do fallback seguro de /flow
+  /// quando a auth não pôde ser confirmada (erro ou timeout). Encerra apenas
+  /// a sessão local do Supabase -- o cache local do Lembrar-me
+  /// (savedLoginEmail/savedDisplayName) NÃO é tocado aqui de propósito: a
+  /// preferência real keep_connected nunca foi confirmada neste fluxo, e
+  /// limpá-la por suposição poderia apagar uma conta salva válida.
+  Future<void> abandonToLogin() async {
+    _isSigningOut = true;
+    try {
+      await Supabase.instance.client.auth.signOut(scope: SignOutScope.local);
+      _keepConnectedController.clearSessionState();
+      state = const AuthUnauthenticated();
+    } finally {
+      _isSigningOut = false;
+    }
   }
 
   /// Chamado quando o stream detecta que o usuário saiu externamente.
