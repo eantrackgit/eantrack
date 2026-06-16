@@ -12,7 +12,8 @@ import '../widgets/menu_hub_sidebar.dart';
 /// Tela principal do app pós-login.
 ///
 /// Desktop: MenuHubSidebar fixa à esquerda + conteúdo à direita.
-/// Mobile: conteúdo no topo + AppBottomNav na parte inferior.
+/// Mobile: cabeçalho com botão de menu + MobileHubDrawer lateral +
+/// AppBottomNav na parte inferior.
 class HubScreen extends ConsumerStatefulWidget {
   const HubScreen({super.key});
 
@@ -109,6 +110,7 @@ class _HubScreenState extends ConsumerState<HubScreen> {
                 modules: _modules,
                 userName: userName,
                 agencyName: agencyName,
+                isDesktop: true,
               ),
             ),
           ],
@@ -117,10 +119,24 @@ class _HubScreenState extends ConsumerState<HubScreen> {
     }
 
     return Scaffold(
+      drawer: MobileHubDrawer(
+        userName: userName,
+        userRole: userRole,
+        agencyName: agencyName,
+        agencyHandle: _agencyHandleFromName(agencyName),
+        agencyStatus: agencyStatus,
+        planName: '',
+        onSignOut: () async {
+          await ref.read(authNotifierProvider.notifier).signOut();
+          if (!context.mounted) return;
+          context.go(AppRoutes.login);
+        },
+      ),
       body: _Content(
         modules: _modules,
         userName: userName,
         agencyName: agencyName,
+        isDesktop: false,
       ),
       bottomNavigationBar: AppBottomNav(
         currentIndex: _selectedIndex,
@@ -135,11 +151,13 @@ class _Content extends StatelessWidget {
     required this.modules,
     required this.userName,
     required this.agencyName,
+    required this.isDesktop,
   });
 
   final List<_ModuleCard> modules;
   final String userName;
   final String agencyName;
+  final bool isDesktop;
 
   @override
   Widget build(BuildContext context) {
@@ -147,28 +165,35 @@ class _Content extends StatelessWidget {
       child: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
-            child: _Header(userName: userName, agencyName: agencyName),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              0,
-              AppSpacing.md,
-              AppSpacing.xl,
-            ),
-            sliver: SliverGrid(
-              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 280,
-                crossAxisSpacing: AppSpacing.md,
-                mainAxisSpacing: AppSpacing.md,
-                childAspectRatio: 1.5,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (context, i) => _ModuleCardWidget(card: modules[i]),
-                childCount: modules.length,
-              ),
+            child: _Header(
+              userName: userName,
+              agencyName: agencyName,
+              showMenuButton: !isDesktop,
             ),
           ),
+          if (isDesktop)
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                0,
+                AppSpacing.md,
+                AppSpacing.xl,
+              ),
+              sliver: SliverGrid(
+                gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 280,
+                  crossAxisSpacing: AppSpacing.md,
+                  mainAxisSpacing: AppSpacing.md,
+                  childAspectRatio: 1.5,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, i) => _ModuleCardWidget(card: modules[i]),
+                  childCount: modules.length,
+                ),
+              ),
+            )
+          else
+            const SliverToBoxAdapter(child: _MobileSummaryCard()),
           const SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.fromLTRB(
@@ -188,11 +213,67 @@ class _Content extends StatelessWidget {
   }
 }
 
+class _MobileSummaryCard extends StatelessWidget {
+  const _MobileSummaryCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final et = EanTrackTheme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        0,
+        AppSpacing.md,
+        AppSpacing.xl,
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: et.cardSurface,
+          borderRadius: AppRadius.mdAll,
+          border: Border.all(color: et.surfaceBorder),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: et.ctaBackground.withValues(alpha: 0.1),
+                borderRadius: AppRadius.smAll,
+              ),
+              child: Icon(
+                Icons.menu_open_rounded,
+                size: 22,
+                color: et.ctaBackground,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Text(
+                'Use o menu para acessar regiões, PDVs, redes e os demais módulos do Hub.',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: et.secondaryText,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _Header extends StatelessWidget {
-  const _Header({required this.userName, required this.agencyName});
+  const _Header({
+    required this.userName,
+    required this.agencyName,
+    this.showMenuButton = false,
+  });
 
   final String userName;
   final String agencyName;
+  final bool showMenuButton;
 
   @override
   Widget build(BuildContext context) {
@@ -207,10 +288,26 @@ class _Header extends StatelessWidget {
       ),
       child: Row(
         children: [
+          if (showMenuButton) ...[
+            IconButton(
+              onPressed: () => Scaffold.of(context).openDrawer(),
+              icon: Icon(Icons.menu_rounded, color: et.primaryText),
+              tooltip: 'Abrir menu',
+            ),
+            const SizedBox(width: AppSpacing.xs),
+          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (showMenuButton)
+                  Text(
+                    'EANTrack',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.actionBlue,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 Text(
                   agencyName,
                   style: AppTextStyles.bodyMedium.copyWith(

@@ -7,6 +7,7 @@ import '../../../../shared/shared.dart';
 import '../../../onboarding/agency/controllers/agency_status_notifier.dart';
 import 'user_settings_dialog.dart';
 
+part 'mobile_hub_drawer.dart';
 part 'sidebar_footer.dart';
 part 'sidebar_header.dart';
 part 'sidebar_item.dart';
@@ -84,42 +85,105 @@ class MenuHubSidebar extends ConsumerWidget {
         border: Border(right: BorderSide(color: et.inputBorder)),
       ),
       child: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _MenuHubUserHeader(
-                      userName: userName,
-                      userRole: userRole,
-                      agencyName: agencyName,
-                      avatarUrl: userAvatarUrl,
-                    ),
-                    _MenuHubSections(
-                      isBlocked: isBlocked,
-                      agencyName: agencyName,
-                      agencyHandle: agencyHandle,
-                      agencyLogoUrl: agencyLogoUrl,
-                      onEditAgency: onEditAgency,
-                      activesCount: activesCount,
-                      sentInvitesCount: sentInvitesCount,
-                      pendingInvitesCount: pendingInvitesCount,
-                      onManageInvites: onManageInvites,
-                      planName: planName,
-                      nextBillingText: nextBillingText,
-                      onManagePlan: onManagePlan,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            _MenuHubFooter(onSignOut: onSignOut),
-          ],
+        child: _MenuHubSidebarBody(
+          userName: userName,
+          userRole: userRole,
+          agencyName: agencyName,
+          agencyHandle: agencyHandle,
+          userAvatarUrl: userAvatarUrl,
+          agencyLogoUrl: agencyLogoUrl,
+          isBlocked: isBlocked,
+          onEditAgency: onEditAgency,
+          onSignOut: onSignOut,
+          onManageInvites: onManageInvites,
+          onManagePlan: onManagePlan,
+          activesCount: activesCount,
+          sentInvitesCount: sentInvitesCount,
+          pendingInvitesCount: pendingInvitesCount,
+          planName: planName,
+          nextBillingText: nextBillingText,
         ),
       ),
+    );
+  }
+}
+
+/// Conteúdo (header + seções + rodapé) compartilhado entre a sidebar fixa
+/// de desktop e o [MobileHubDrawer], para manter uma única fonte dos itens
+/// de menu do Hub.
+class _MenuHubSidebarBody extends StatelessWidget {
+  const _MenuHubSidebarBody({
+    required this.userName,
+    required this.userRole,
+    required this.agencyName,
+    required this.agencyHandle,
+    this.userAvatarUrl,
+    this.agencyLogoUrl,
+    required this.isBlocked,
+    this.onEditAgency,
+    required this.onSignOut,
+    this.onManageInvites,
+    this.onManagePlan,
+    required this.activesCount,
+    required this.sentInvitesCount,
+    required this.pendingInvitesCount,
+    required this.planName,
+    required this.nextBillingText,
+  });
+
+  final String userName;
+  final String userRole;
+  final String agencyName;
+  final String agencyHandle;
+  final String? userAvatarUrl;
+  final String? agencyLogoUrl;
+  final bool isBlocked;
+  final VoidCallback? onEditAgency;
+  final VoidCallback onSignOut;
+  final VoidCallback? onManageInvites;
+  final VoidCallback? onManagePlan;
+  final int activesCount;
+  final int sentInvitesCount;
+  final int pendingInvitesCount;
+  final String planName;
+  final String nextBillingText;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _MenuHubUserHeader(
+                  userName: userName,
+                  userRole: userRole,
+                  agencyName: agencyName,
+                  avatarUrl: userAvatarUrl,
+                ),
+                _MenuHubSections(
+                  isBlocked: isBlocked,
+                  agencyName: agencyName,
+                  agencyHandle: agencyHandle,
+                  agencyLogoUrl: agencyLogoUrl,
+                  onEditAgency: onEditAgency,
+                  activesCount: activesCount,
+                  sentInvitesCount: sentInvitesCount,
+                  pendingInvitesCount: pendingInvitesCount,
+                  onManageInvites: onManageInvites,
+                  planName: planName,
+                  nextBillingText: nextBillingText,
+                  onManagePlan: onManagePlan,
+                ),
+              ],
+            ),
+          ),
+        ),
+        _MenuHubFooter(onSignOut: onSignOut),
+      ],
     );
   }
 }
