@@ -32,8 +32,10 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
   // -- `if (path == AppRoutes.flow) return null`). Ela é o gateway de auth de
   // toda rota protegida: se a auth não resolver dentro deste prazo (loading
   // travado, callback OAuth sem resposta, erro silencioso), o usuário não
-  // pode ficar preso numa tela só com animação -- mostramos o fallback
-  // seguro com saída para login.
+  // pode ficar preso numa tela só com animação. O desfecho do timeout NÃO é
+  // sempre o fallback -- ver _handleAuthTimeout: sem sessão é login direto,
+  // fallback é reservado para quando existe sessão mas o contexto não
+  // confirmou a tempo.
   static const Duration _authTimeout = Duration(seconds: 10);
 
   bool _isNavigating = false;
@@ -63,26 +65,82 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
 
   void _startSafetyTimer() {
     _safetyTimer?.cancel();
-    _safetyTimer = Timer(_authTimeout, () {
-      if (!mounted ||
-          _isNavigating ||
-          _showFallback ||
-          _isResolvingOnboardingRoute ||
-          _isPromptingKeepConnected) {
-        return;
-      }
-      debugPrint('[FlowScreen] Timeout aguardando confirmacao de autenticacao.');
-      setState(() => _showFallback = true);
-    });
+    _safetyTimer = Timer(_authTimeout, _handleAuthTimeout);
+  }
+
+  // Estourou _authTimeout sem o fluxo se resolver (nem login, nem hub/
+  // onboarding, nem fallback). A causa raiz do fallback indevido em produção
+  // era tratar esse timeout sempre como erro: usuário sem sessão alguma
+  // também caía aqui e via a tela de erro em vez de ir pro login.
+  //
+  // Regra: login é o caminho comum para "sem sessão"; fallback é exceção,
+  // reservada para quando existe sessão (currentUser != null) mas o
+  // contexto (getUserFlowState) não confirmou a tempo -- mesmo após uma
+  // revalidação (cobre o caso de o listener de auth ter perdido a emissão
+  // original do stream).
+  Future<void> _handleAuthTimeout() async {
+    if (!mounted ||
+        _isNavigating ||
+        _showFallback ||
+        _isResolvingOnboardingRoute ||
+        _isPromptingKeepConnected) {
+      return;
+    }
+
+    final user = Supabase.instance.client.auth.currentUser;
+    var authState = ref.read(authNotifierProvider);
+    _logAuthDecision('timeout', user: user, authState: authState);
+
+    if (user == null || authState is AuthUnauthenticated) {
+      _go(AppRoutes.login);
+      return;
+    }
+
+    if (authState is AuthError) {
+      _showSafeFallback();
+      return;
+    }
+
+    // Existe usuário mas o AuthState ainda não chegou a Authenticated/Error
+    // -- tenta revalidar uma vez antes de desistir.
+    await ref.read(authNotifierProvider.notifier).retryAuthCheck();
+    if (!mounted || _isNavigating || _showFallback) return;
+
+    authState = ref.read(authNotifierProvider);
+    _logAuthDecision('timeout-revalidated', user: user, authState: authState);
+
+    if (authState is AuthUnauthenticated) {
+      _go(AppRoutes.login);
+      return;
+    }
+
+    if (authState is AuthAuthenticated) {
+      // Reabre a janela de segurança: se _decide ainda assim ficar "aguardando"
+      // (ex.: flowState ambíguo), o usuário não pode perder a rede de segurança.
+      _startSafetyTimer();
+      _scheduleDecision(ref.read(authFlowStateProvider));
+      return;
+    }
+
+    _showSafeFallback();
   }
 
   // Mostra o fallback seguro (título + mensagem + "Tentar novamente"/"Voltar
-  // para login"). Chamado tanto pelo timeout de _startSafetyTimer quanto por
-  // AuthError confirmado em _resolveOnboardingRouteFromState.
+  // para login"). Chamado tanto por _handleAuthTimeout quanto por AuthError
+  // confirmado em _resolveOnboardingRouteFromState.
   void _showSafeFallback() {
     if (!mounted || _showFallback) return;
     debugPrint('[FlowScreen] Exibindo fallback seguro de autenticacao.');
     setState(() => _showFallback = true);
+  }
+
+  // Log só de diagnóstico (sem token/refresh token): motivo da decisão,
+  // se havia usuário no Supabase e o tipo de AuthState no momento.
+  void _logAuthDecision(String reason, {required User? user, required AuthState authState}) {
+    debugPrint(
+      '[FlowScreen] decisao=$reason currentUser=${user != null ? "presente" : "ausente"} '
+      'authState=${authState.runtimeType}',
+    );
   }
 
   void _scheduleDecision(AuthFlowState flowState) {
@@ -114,7 +172,15 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
   Future<void> _retryAuthCheck() async {
     if (_isRetrying) return;
     setState(() => _isRetrying = true);
+    _logAuthDecision(
+      'retry-tap',
+      user: Supabase.instance.client.auth.currentUser,
+      authState: ref.read(authNotifierProvider),
+    );
     try {
+      // AuthNotifier.retryAuthCheck() já decide internamente: sem
+      // currentUser vira AuthUnauthenticated (login, via _decide abaixo);
+      // com currentUser, refaz a verificação de contexto.
       await ref.read(authNotifierProvider.notifier).retryAuthCheck();
     } finally {
       if (!mounted) return;
@@ -133,6 +199,11 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
   // fluxo, então limpar o cache por suposição poderia apagar uma conta salva
   // válida.
   Future<void> _backToLogin() async {
+    _logAuthDecision(
+      'back-to-login-tap',
+      user: Supabase.instance.client.auth.currentUser,
+      authState: ref.read(authNotifierProvider),
+    );
     await ref.read(authNotifierProvider.notifier).abandonToLogin();
     if (!mounted) return;
     _go(AppRoutes.login);
@@ -239,7 +310,24 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
     // getUserFlowState sem resposta). Não há nada a aguardar -- mostra o
     // fallback seguro imediatamente em vez de esperar _authTimeout.
     if (authState is AuthError) {
+      _logAuthDecision(
+        'auth-error',
+        user: Supabase.instance.client.auth.currentUser,
+        authState: authState,
+      );
       _showSafeFallback();
+      return;
+    }
+
+    // Sem sessão confirmada (ex.: sessão restaurada foi descartada por
+    // keep_connected=false): login direto, nunca fallback.
+    if (authState is AuthUnauthenticated) {
+      _logAuthDecision(
+        'unauthenticated',
+        user: Supabase.instance.client.auth.currentUser,
+        authState: authState,
+      );
+      _go(AppRoutes.login);
       return;
     }
 
