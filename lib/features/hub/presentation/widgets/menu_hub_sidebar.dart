@@ -129,6 +129,7 @@ class _MenuHubSidebarBody extends StatelessWidget {
     required this.pendingInvitesCount,
     required this.planName,
     required this.nextBillingText,
+    this.showMobileProfileHeader = false,
   });
 
   final String userName;
@@ -148,6 +149,11 @@ class _MenuHubSidebarBody extends StatelessWidget {
   final String planName;
   final String nextBillingText;
 
+  // Desktop (MenuHubSidebar) não passa essa flag -- mantém o
+  // _MenuHubUserHeader original, sem mudança visual. Só o MobileHubDrawer
+  // pede a barra de perfil nova, no lugar do header padrão.
+  final bool showMobileProfileHeader;
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -158,12 +164,20 @@ class _MenuHubSidebarBody extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _MenuHubUserHeader(
-                  userName: userName,
-                  userRole: userRole,
-                  agencyName: agencyName,
-                  avatarUrl: userAvatarUrl,
-                ),
+                if (showMobileProfileHeader)
+                  _MobileDrawerTopBar(
+                    userName: userName,
+                    userRole: userRole,
+                    agencyName: agencyName,
+                    avatarUrl: userAvatarUrl,
+                  )
+                else
+                  _MenuHubUserHeader(
+                    userName: userName,
+                    userRole: userRole,
+                    agencyName: agencyName,
+                    avatarUrl: userAvatarUrl,
+                  ),
                 _MenuHubSections(
                   isBlocked: isBlocked,
                   agencyName: agencyName,

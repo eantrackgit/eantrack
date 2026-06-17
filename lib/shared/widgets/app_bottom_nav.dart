@@ -30,6 +30,26 @@ const double _kBarElevation = 6;
 const double _kBeepElevationActive = 5;
 const double _kBeepElevationInactive = 3;
 
+// Os ícones dos itens laterais usam exclusivamente o bloco clássico do
+// Material Icons (codepoints baixos, ex.: Icons.home = 0xe318), em vez das
+// variantes "_outlined"/"_rounded" (codepoints altos, ex.: 0xf0xx+). Essas
+// variantes mais novas dependem do tree-shaking de ícones do build web
+// reconhecer corretamente o uso indireto (ternário ativo/inativo) — quando
+// isso falha, o glifo sai em branco no build de produção. Por isso também
+// não alternamos o glifo entre ativo/inativo: só a cor muda.
+class _NavItemSpec {
+  const _NavItemSpec({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+}
+
+const _navItems = [
+  _NavItemSpec(icon: Icons.home, label: 'Início'),
+  _NavItemSpec(icon: Icons.support_agent, label: 'Chamados'),
+  _NavItemSpec(icon: Icons.help_outline, label: 'Ajuda'),
+  _NavItemSpec(icon: Icons.person, label: 'Você'),
+];
+
 /// Barra de navegação inferior para mobile, com o item central "BEEP"
 /// flutuante sobre um recorte no container principal.
 ///
@@ -86,18 +106,14 @@ class AppBottomNav extends StatelessWidget {
                       children: [
                         Expanded(
                           child: _NavItem(
-                            icon: Icons.home_outlined,
-                            activeIcon: Icons.home_rounded,
-                            label: 'Início',
+                            spec: _navItems[0],
                             selected: currentIndex == 0,
                             onTap: () => onTap(0),
                           ),
                         ),
                         Expanded(
                           child: _NavItem(
-                            icon: Icons.support_agent_outlined,
-                            activeIcon: Icons.support_agent_rounded,
-                            label: 'Chamados',
+                            spec: _navItems[1],
                             selected: currentIndex == 1,
                             onTap: () => onTap(1),
                           ),
@@ -107,18 +123,14 @@ class AppBottomNav extends StatelessWidget {
                         const Expanded(child: SizedBox.shrink()),
                         Expanded(
                           child: _NavItem(
-                            icon: Icons.help_outline_rounded,
-                            activeIcon: Icons.help_rounded,
-                            label: 'Ajuda',
+                            spec: _navItems[2],
                             selected: currentIndex == 3,
                             onTap: () => onTap(3),
                           ),
                         ),
                         Expanded(
                           child: _NavItem(
-                            icon: Icons.person_outline_rounded,
-                            activeIcon: Icons.person_rounded,
-                            label: 'Você',
+                            spec: _navItems[3],
                             selected: currentIndex == 4,
                             onTap: () => onTap(4),
                           ),
@@ -188,22 +200,20 @@ class _BeepNotchClipper extends CustomClipper<Path> {
 
 class _NavItem extends StatelessWidget {
   const _NavItem({
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
+    required this.spec,
     required this.selected,
     required this.onTap,
   });
 
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
+  final _NavItemSpec spec;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final et = EanTrackTheme.of(context);
+    // Cores sempre sólidas e vindas de tokens do tema -- nunca opacidade
+    // reduzida o bastante para o ícone "desaparecer" no estado ativo.
     final color = selected ? et.ctaBackground : et.secondaryText;
 
     return Material(
@@ -214,14 +224,14 @@ class _NavItem extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(selected ? activeIcon : icon, size: _kSideIconSize, color: color),
+            Icon(spec.icon, size: _kSideIconSize, color: color),
             const SizedBox(height: _kLabelGap),
             // FittedBox evita overflow/corte do label em telas estreitas
             // (360–430px) sem precisar truncar o texto com ellipsis.
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
-                label,
+                spec.label,
                 maxLines: 1,
                 style: AppTextStyles.labelSmall.copyWith(
                   fontSize: _kLabelFontSize,
@@ -264,9 +274,11 @@ class _BeepButton extends StatelessWidget {
               width: _kBeepDiameter,
               height: _kBeepDiameter,
               child: Icon(
-                // Ícone provisório (placeholder); refinamento do ícone do
-                // BEEP fica para outra tarefa.
-                Icons.qr_code_scanner_rounded,
+                // Icons.qr_code (clássico, codepoint 0xe4f5) em vez de
+                // qr_code_scanner_rounded: o ícone "_rounded" pertence ao
+                // bloco estendido (codepoint alto) e saía em branco no
+                // build web de produção -- ver nota no topo do arquivo.
+                Icons.qr_code,
                 size: _kBeepDiameter * _kBeepIconSizeFactor,
                 color: et.ctaForeground,
               ),
