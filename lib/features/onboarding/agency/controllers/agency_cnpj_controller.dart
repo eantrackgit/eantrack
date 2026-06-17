@@ -109,6 +109,17 @@ class AgencyCnpjNotifier extends StateNotifier<AgencyCnpjState> {
     );
   }
 
+  /// Limpa o resultado da consulta atual (mantém o CNPJ digitado) e
+  /// devolve a tela ao estado de "pronta para nova consulta".
+  void clearResult() {
+    state = state.copyWith(
+      status: AgencyCnpjStatus.idle,
+      error: null,
+      cnpjData: null,
+    );
+    _focusNode.requestFocus();
+  }
+
   Future<void> consultCnpj() async {
     final rawCnpj = onlyDigits(_cnpjController.text);
 

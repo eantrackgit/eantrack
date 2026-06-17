@@ -91,16 +91,18 @@ class AgencyCnpjScreen extends ConsumerWidget {
               nomeFantasia: state.cnpjModel!.nomeFantasia,
               situacao: state.cnpjModel!.situacaoCadastral,
               endereco: state.cnpjModel!.fullAddress,
+              onClose: notifier.clearResult,
+            ),
+          ] else ...[
+            const SizedBox(height: AppSpacing.lg),
+            AppButton.action(
+              'Consultar CNPJ',
+              isLoading: state.status == AgencyCnpjStatus.loading,
+              onPressed: state.status == AgencyCnpjStatus.loading
+                  ? null
+                  : notifier.consultCnpj,
             ),
           ],
-          const SizedBox(height: AppSpacing.lg),
-          AppButton.action(
-            'Consultar CNPJ',
-            isLoading: state.status == AgencyCnpjStatus.loading,
-            onPressed: state.status == AgencyCnpjStatus.loading
-                ? null
-                : notifier.consultCnpj,
-          ),
           const SizedBox(height: AppSpacing.xl),
           Row(
             children: [
@@ -370,12 +372,14 @@ class _CompanyPreviewCard extends StatelessWidget {
     required this.nomeFantasia,
     required this.situacao,
     required this.endereco,
+    required this.onClose,
   });
 
   final String razaoSocial;
   final String nomeFantasia;
   final String situacao;
   final String endereco;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
@@ -390,32 +394,66 @@ class _CompanyPreviewCard extends StatelessWidget {
           color: AppColors.success.withValues(alpha: 0.25),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Text(
-            razaoSocial,
-            style: AppTextStyles.titleSmall.copyWith(color: et.primaryText),
-          ),
-          if (nomeFantasia.trim().isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              nomeFantasia,
-              style: AppTextStyles.bodySmall.copyWith(color: et.secondaryText),
+          Padding(
+            padding: const EdgeInsets.only(right: AppSpacing.xl),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  razaoSocial,
+                  style: AppTextStyles.titleSmall.copyWith(
+                    color: et.primaryText,
+                  ),
+                ),
+                if (nomeFantasia.trim().isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    nomeFantasia,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: et.secondaryText,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Situação: $situacao',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: et.primaryText,
+                  ),
+                ),
+                if (endereco.trim().isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    endereco,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: et.secondaryText,
+                    ),
+                  ),
+                ],
+              ],
             ),
-          ],
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Situação: $situacao',
-            style: AppTextStyles.bodySmall.copyWith(color: et.primaryText),
           ),
-          if (endereco.trim().isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              endereco,
-              style: AppTextStyles.bodySmall.copyWith(color: et.secondaryText),
+          Positioned(
+            top: -AppSpacing.xs,
+            right: -AppSpacing.xs,
+            child: Tooltip(
+              message: 'Consultar outro CNPJ',
+              child: IconButton(
+                onPressed: onClose,
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                splashRadius: 18,
+                icon: Icon(
+                  Icons.close,
+                  size: 18,
+                  color: et.secondaryText,
+                ),
+              ),
             ),
-          ],
+          ),
         ],
       ),
     );
