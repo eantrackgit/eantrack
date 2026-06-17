@@ -4,10 +4,40 @@ import '../theme/app_spacing.dart';
 import '../theme/app_text_styles.dart';
 import '../theme/app_theme.dart';
 
+// Dimensões/elevações da navbar, centralizadas para evitar números mágicos
+// espalhados pelos widgets abaixo. Paddings usam os tokens AppSpacing/
+// AppRadius já adotados no resto do app.
+const double _kBarHeight = 64;
+const double _kBeepDiameter = 52;
+const double _kBeepIconSizeFactor = 0.46;
+const double _kSideIconSize = 22;
+const double _kLabelFontSize = 11;
+const double _kLabelGap = 2;
+
+// O BEEP fica visualmente acima da linha dos demais ícones para reforçar
+// que é o destaque principal — sem virar um FAB grande, é só esse respiro.
+const double _kBeepLift = 4;
+
+// O recorte é um "vale" raso: o raio define a curvatura (levemente maior
+// que o BEEP, para abraçá-lo) e a profundidade controla o quanto o
+// container é de fato cortado. Profundidade pequena = recorte intencional,
+// não uma cratera do tamanho do botão.
+const double _kNotchRadius = 32;
+const double _kNotchDepth = 12;
+const double _kCornerRadius = AppRadius.lg;
+
+const double _kBarElevation = 6;
+const double _kBeepElevationActive = 5;
+const double _kBeepElevationInactive = 3;
+
 /// Barra de navegação inferior para mobile, com o item central "BEEP"
-/// flutuante e levemente elevado sobre um recorte no container principal.
+/// flutuante sobre um recorte no container principal.
 ///
-/// Uso em HubScreen (mobile layout):
+/// A API pública é só [currentIndex]/[onTap]: este widget apenas reporta
+/// qual item foi tocado. Navegação real (rotas, push/go) é decidida por
+/// quem usa o componente — hoje, a `HubScreen`.
+///
+/// Uso:
 ///   AppBottomNav(
 ///     currentIndex: _currentIndex,
 ///     onTap: (i) => setState(() => _currentIndex = i),
@@ -23,17 +53,10 @@ class AppBottomNav extends StatelessWidget {
   final ValueChanged<int> onTap;
 
   static const int beepIndex = 2;
-  static const double _barHeight = 64;
-  static const double _beepDiameter = 52;
-  static const double _beepLift = 4;
-  static const double _notchGap = 6;
 
   @override
   Widget build(BuildContext context) {
     final et = EanTrackTheme.of(context);
-    const beepRadius = _beepDiameter / 2;
-    const pocketCenterY = beepRadius - _beepLift;
-    const pocketRadius = beepRadius + _notchGap;
 
     return SafeArea(
       top: false,
@@ -45,7 +68,7 @@ class AppBottomNav extends StatelessWidget {
           AppSpacing.sm,
         ),
         child: SizedBox(
-          height: _barHeight + _beepLift,
+          height: _kBarHeight + _kBeepLift,
           child: Stack(
             clipBehavior: Clip.none,
             children: [
@@ -54,15 +77,11 @@ class AppBottomNav extends StatelessWidget {
                 right: 0,
                 bottom: 0,
                 child: PhysicalShape(
-                  clipper: const _BeepNotchClipper(
-                    cornerRadius: AppRadius.lg,
-                    pocketCenterY: pocketCenterY,
-                    pocketRadius: pocketRadius,
-                  ),
+                  clipper: const _BeepNotchClipper(),
                   color: et.sidebarSurface,
-                  elevation: 6,
+                  elevation: _kBarElevation,
                   child: SizedBox(
-                    height: _barHeight,
+                    height: _kBarHeight,
                     child: Row(
                       children: [
                         Expanded(
@@ -83,6 +102,8 @@ class AppBottomNav extends StatelessWidget {
                             onTap: () => onTap(1),
                           ),
                         ),
+                        // Espaço reservado sob o BEEP: o botão flutua acima
+                        // deste slot, fora da Row (ver Positioned abaixo).
                         const Expanded(child: SizedBox.shrink()),
                         Expanded(
                           child: _NavItem(
@@ -107,13 +128,14 @@ class AppBottomNav extends StatelessWidget {
                   ),
                 ),
               ),
+              // BEEP poking _kBeepLift acima da linha dos demais ícones —
+              // ver comentário sobre _kBeepLift no topo do arquivo.
               Positioned(
                 top: 0,
                 left: 0,
                 right: 0,
                 child: Center(
                   child: _BeepButton(
-                    diameter: _beepDiameter,
                     selected: currentIndex == beepIndex,
                     onTap: () => onTap(beepIndex),
                   ),
@@ -127,19 +149,12 @@ class AppBottomNav extends StatelessWidget {
   }
 }
 
-/// Recorta o container da navbar com um "bolso" circular no topo central,
-/// onde o botão BEEP se encaixa — apenas [AppBottomNav._beepLift] pixels
-/// do botão ficam visíveis acima da linha do container.
+/// Recorta um vale raso e largo no topo central do container, por onde o
+/// BEEP aparece. Ver constantes [_kNotchRadius]/[_kNotchDepth]: a
+/// profundidade pequena garante que o corte pareça intencional/integrado,
+/// em vez de um buraco do tamanho inteiro do botão atrás dele.
 class _BeepNotchClipper extends CustomClipper<Path> {
-  const _BeepNotchClipper({
-    required this.cornerRadius,
-    required this.pocketCenterY,
-    required this.pocketRadius,
-  });
-
-  final double cornerRadius;
-  final double pocketCenterY;
-  final double pocketRadius;
+  const _BeepNotchClipper();
 
   @override
   Path getClip(Size size) {
@@ -147,24 +162,28 @@ class _BeepNotchClipper extends CustomClipper<Path> {
       ..addRRect(
         RRect.fromRectAndRadius(
           Rect.fromLTWH(0, 0, size.width, size.height),
-          Radius.circular(cornerRadius),
+          const Radius.circular(_kCornerRadius),
         ),
       );
-    final pocketPath = Path()
+
+    // Círculo centrado acima do container: só a calota inferior dele
+    // (altura _kNotchDepth) chega a interceptar a barra.
+    const notchCenterY = _kNotchDepth - _kNotchRadius;
+    final notchPath = Path()
       ..addOval(
         Rect.fromCircle(
-          center: Offset(size.width / 2, pocketCenterY),
-          radius: pocketRadius,
+          center: Offset(size.width / 2, notchCenterY),
+          radius: _kNotchRadius,
         ),
       );
-    return Path.combine(PathOperation.difference, barPath, pocketPath);
+
+    return Path.combine(PathOperation.difference, barPath, notchPath);
   }
 
+  // Geometria é toda fixa (constantes do topo do arquivo); não há estado
+  // que justifique reclip entre frames.
   @override
-  bool shouldReclip(covariant _BeepNotchClipper oldClipper) =>
-      oldClipper.cornerRadius != cornerRadius ||
-      oldClipper.pocketCenterY != pocketCenterY ||
-      oldClipper.pocketRadius != pocketRadius;
+  bool shouldReclip(covariant _BeepNotchClipper oldClipper) => false;
 }
 
 class _NavItem extends StatelessWidget {
@@ -195,13 +214,20 @@ class _NavItem extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(selected ? activeIcon : icon, size: 22, color: color),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: AppTextStyles.labelSmall.copyWith(
-                color: color,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            Icon(selected ? activeIcon : icon, size: _kSideIconSize, color: color),
+            const SizedBox(height: _kLabelGap),
+            // FittedBox evita overflow/corte do label em telas estreitas
+            // (360–430px) sem precisar truncar o texto com ellipsis.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                style: AppTextStyles.labelSmall.copyWith(
+                  fontSize: _kLabelFontSize,
+                  color: color,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                ),
               ),
             ),
           ],
@@ -212,13 +238,8 @@ class _NavItem extends StatelessWidget {
 }
 
 class _BeepButton extends StatelessWidget {
-  const _BeepButton({
-    required this.diameter,
-    required this.selected,
-    required this.onTap,
-  });
+  const _BeepButton({required this.selected, required this.onTap});
 
-  final double diameter;
   final bool selected;
   final VoidCallback onTap;
 
@@ -235,27 +256,34 @@ class _BeepButton extends StatelessWidget {
         Material(
           color: circleColor,
           shape: const CircleBorder(),
-          elevation: selected ? 5 : 3,
+          elevation: selected ? _kBeepElevationActive : _kBeepElevationInactive,
           child: InkWell(
             customBorder: const CircleBorder(),
             onTap: onTap,
             child: SizedBox(
-              width: diameter,
-              height: diameter,
+              width: _kBeepDiameter,
+              height: _kBeepDiameter,
               child: Icon(
+                // Ícone provisório (placeholder); refinamento do ícone do
+                // BEEP fica para outra tarefa.
                 Icons.qr_code_scanner_rounded,
-                size: diameter * 0.46,
+                size: _kBeepDiameter * _kBeepIconSizeFactor,
                 color: et.ctaForeground,
               ),
             ),
           ),
         ),
-        const SizedBox(height: 2),
-        Text(
-          'BEEP',
-          style: AppTextStyles.labelSmall.copyWith(
-            color: selected ? et.ctaBackground : et.secondaryText,
-            fontWeight: FontWeight.w700,
+        const SizedBox(height: _kLabelGap),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            'BEEP',
+            maxLines: 1,
+            style: AppTextStyles.labelSmall.copyWith(
+              fontSize: _kLabelFontSize,
+              color: selected ? et.ctaBackground : et.secondaryText,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ],
