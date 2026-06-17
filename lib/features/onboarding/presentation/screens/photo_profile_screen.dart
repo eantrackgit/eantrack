@@ -151,13 +151,18 @@ class PagPhotoProfile extends ConsumerWidget {
         context,
         title: 'Erro ao salvar foto',
         message: e.message,
+        secondaryActionLabel: 'Pular por enquanto',
+        onSecondaryAction: () => _finishFlow(context, ref),
       );
     } catch (_) {
       if (!context.mounted) return;
       await AppFeedback.showError(
         context,
         title: 'Erro ao salvar foto',
-        message: 'Nao foi possivel concluir esta etapa agora.',
+        message:
+            'Não foi possível salvar sua foto agora. Você pode tentar novamente ou pular esta etapa.',
+        secondaryActionLabel: 'Pular por enquanto',
+        onSecondaryAction: () => _finishFlow(context, ref),
       );
     }
   }

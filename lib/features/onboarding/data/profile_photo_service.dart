@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -46,6 +47,8 @@ class SupabaseProfilePhotoService implements ProfilePhotoService {
   static const _thumbPath = 'thumb.webp';
   static const _originalSize = 500;
   static const _thumbSize = 120;
+  static const _maxFileSizeBytes = 8 * 1024 * 1024;
+  static const _allowedContentTypes = {'image/jpeg', 'image/png', 'image/webp'};
 
   final SupabaseClient _client;
   final ImagePicker _picker;
@@ -84,10 +87,21 @@ class SupabaseProfilePhotoService implements ProfilePhotoService {
   Future<String> uploadProfilePhoto(PickedProfilePhoto photo) async {
     final userId = _requireUserId();
     final rawBytes = await photo.readBytes();
-    final originalBytes = await _encodeWebP(rawBytes, _originalSize);
-    final thumbBytes = await _encodeWebP(rawBytes, _thumbSize);
-    final storage = _client.storage.from(_bucketName);
+    _validateFile(photo, rawBytes);
 
+    Uint8List originalBytes;
+    Uint8List thumbBytes;
+    try {
+      originalBytes = await _encodeWebP(rawBytes, _originalSize);
+      thumbBytes = await _encodeWebP(rawBytes, _thumbSize);
+    } on AppException {
+      rethrow;
+    } catch (e) {
+      _log('compress', userId: userId, error: e);
+      throw const InvalidFileException();
+    }
+
+    final storage = _client.storage.from(_bucketName);
     try {
       await storage.uploadBinary(
         _storagePathForUser(userId, _originalPath),
@@ -106,9 +120,11 @@ class SupabaseProfilePhotoService implements ProfilePhotoService {
         ),
       );
     } on StorageException catch (e) {
-      throw ServerException(
-        'Nao foi possivel salvar a foto de perfil. ${e.message}',
-      );
+      _log('upload', userId: userId, error: e.message, statusCode: e.statusCode);
+      throw _mapStorageException(e);
+    } catch (e) {
+      _log('upload', userId: userId, error: e);
+      throw const NetworkException();
     }
 
     final photoUrl =
@@ -123,12 +139,47 @@ class SupabaseProfilePhotoService implements ProfilePhotoService {
         thumbUrl: thumbUrl,
       );
     } on PostgrestException catch (e) {
-      throw ServerException(
-        'Nao foi possivel salvar a foto de perfil. (${e.code})',
-      );
+      _log('profileUpdate', userId: userId, error: e.message, statusCode: e.code);
+      throw const ProfileUpdateFailedException();
     }
 
     return photoUrl;
+  }
+
+  void _validateFile(PickedProfilePhoto photo, Uint8List bytes) {
+    if (bytes.isEmpty) {
+      throw const InvalidFileException();
+    }
+    if (bytes.length > _maxFileSizeBytes) {
+      throw const FileTooLargeException();
+    }
+    if (!_allowedContentTypes.contains(photo.contentType)) {
+      throw const InvalidFileException();
+    }
+  }
+
+  AppException _mapStorageException(StorageException e) {
+    switch (e.statusCode) {
+      case '404':
+        return const StorageBucketMissingException();
+      case '401':
+      case '403':
+        return const StoragePermissionDeniedException();
+      default:
+        return const UploadFailedException();
+    }
+  }
+
+  void _log(
+    String stage, {
+    required String userId,
+    Object? error,
+    String? statusCode,
+  }) {
+    debugPrint(
+      '[ProfilePhoto] etapa=$stage bucket=$_bucketName userIdPresente=true '
+      'statusCode=${statusCode ?? "-"} erro=$error',
+    );
   }
 
   @override
@@ -203,9 +254,7 @@ class SupabaseProfilePhotoService implements ProfilePhotoService {
       keepExif: false,
     );
     if (result.isEmpty) {
-      throw const ServerException(
-        'Nao foi possivel processar a imagem de perfil.',
-      );
+      throw const InvalidFileException();
     }
     return result;
   }
@@ -220,7 +269,8 @@ class SupabaseProfilePhotoService implements ProfilePhotoService {
   String _requireUserId() {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) {
-      throw const ServerException('Usuario nao autenticado.');
+      debugPrint('[ProfilePhoto] etapa=auth userIdPresente=false');
+      throw const NotAuthenticatedException();
     }
     return userId;
   }

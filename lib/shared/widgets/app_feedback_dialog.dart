@@ -19,6 +19,8 @@ class AppFeedback {
     BuildContext context, {
     required String title,
     required String message,
+    String? secondaryActionLabel,
+    VoidCallback? onSecondaryAction,
   }) =>
       showAppFeedbackDialog(
         context: context,
@@ -26,6 +28,8 @@ class AppFeedback {
         message: message,
         icon: Icons.error_outline_rounded,
         accentColor: AppColors.error,
+        secondaryActionLabel: secondaryActionLabel,
+        onSecondaryAction: onSecondaryAction,
       );
 
   static Future<void> showSuccess(
@@ -50,6 +54,8 @@ Future<void> showAppFeedbackDialog({
   IconData icon = Icons.info_outline_rounded,
   Color accentColor = AppColors.secondary,
   bool dismissible = true,
+  String? secondaryActionLabel,
+  VoidCallback? onSecondaryAction,
 }) {
   return showDialog<void>(
     context: context,
@@ -190,10 +196,33 @@ Future<void> showAppFeedbackDialog({
                             ),
                           ),
                           const SizedBox(height: AppSpacing.lg),
-                          AppButton(
-                            label: 'Entendi',
-                            onPressed: () => Navigator.of(dialogContext).pop(),
-                          ),
+                          if (secondaryActionLabel != null)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: AppButton.secondary(
+                                    secondaryActionLabel,
+                                    onPressed: () {
+                                      Navigator.of(dialogContext).pop();
+                                      onSecondaryAction?.call();
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                Expanded(
+                                  child: AppButton(
+                                    label: 'Entendi',
+                                    onPressed: () =>
+                                        Navigator.of(dialogContext).pop(),
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            AppButton(
+                              label: 'Entendi',
+                              onPressed: () => Navigator.of(dialogContext).pop(),
+                            ),
                         ],
                       ),
                     ),

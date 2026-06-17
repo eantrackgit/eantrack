@@ -60,3 +60,48 @@ class NetworkException extends AppException {
 class ServerException extends AppException {
   const ServerException([super.message = 'Erro no servidor. Tente novamente.']);
 }
+
+// --- Profile photo ---
+
+class ProfilePhotoException extends AppException {
+  const ProfilePhotoException(super.message);
+}
+
+class NotAuthenticatedException extends ProfilePhotoException {
+  const NotAuthenticatedException()
+      : super('Sua sessão expirou. Entre novamente para salvar sua foto.');
+}
+
+class StorageBucketMissingException extends ProfilePhotoException {
+  const StorageBucketMissingException()
+      : super('Não foi possível enviar sua foto agora. Tente novamente em instantes.');
+}
+
+class StoragePermissionDeniedException extends ProfilePhotoException {
+  const StoragePermissionDeniedException()
+      : super(
+          'Não foi possível enviar a imagem. Verifique as permissões de armazenamento.',
+        );
+}
+
+class InvalidFileException extends ProfilePhotoException {
+  const InvalidFileException()
+      : super('Não conseguimos ler esta imagem. Tente escolher outra foto.');
+}
+
+class FileTooLargeException extends ProfilePhotoException {
+  const FileTooLargeException()
+      : super('Imagem muito grande. Escolha uma foto menor.');
+}
+
+class UploadFailedException extends ProfilePhotoException {
+  const UploadFailedException()
+      : super('Não foi possível enviar sua foto agora. Tente novamente em instantes.');
+}
+
+class ProfileUpdateFailedException extends ProfilePhotoException {
+  const ProfileUpdateFailedException()
+      : super(
+          'A foto foi enviada, mas não conseguimos atualizar seu perfil agora.',
+        );
+}
