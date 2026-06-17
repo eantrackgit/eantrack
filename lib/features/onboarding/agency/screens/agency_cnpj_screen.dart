@@ -218,7 +218,7 @@ class AgencyCnpjScreen extends ConsumerWidget {
                                                   height: AppSpacing.md,
                                                 ),
                                                 Text(
-                                                  'Voltar agora?',
+                                                  'Sair da consulta de CNPJ?',
                                                   textAlign: TextAlign.center,
                                                   style: AppTextStyles
                                                       .headlineSmall
@@ -230,20 +230,7 @@ class AgencyCnpjScreen extends ConsumerWidget {
                                                   height: AppSpacing.sm,
                                                 ),
                                                 Text(
-                                                  'Recomendamos selecionar um modo antes de voltar.',
-                                                  textAlign: TextAlign.center,
-                                                  style: AppTextStyles.bodyMedium
-                                                      .copyWith(
-                                                        color:
-                                                            det.secondaryText,
-                                                        height: 1.45,
-                                                      ),
-                                                ),
-                                                const SizedBox(
-                                                  height: AppSpacing.sm,
-                                                ),
-                                                Text(
-                                                  'Se voce voltar agora, ira para o login e depois precisara fazer essa selecao novamente.',
+                                                  'Você ainda não concluiu a criação da agência. Se voltar agora, os dados consultados nesta etapa podem precisar ser informados novamente.',
                                                   textAlign: TextAlign.center,
                                                   style: AppTextStyles.bodyMedium
                                                       .copyWith(
@@ -266,7 +253,7 @@ class AgencyCnpjScreen extends ConsumerWidget {
                                                   height: AppSpacing.sm,
                                                 ),
                                                 AppButton.primary(
-                                                  'Voltar para login',
+                                                  'Voltar para o login',
                                                   onPressed: () =>
                                                       Navigator.of(
                                                         dialogContext,
