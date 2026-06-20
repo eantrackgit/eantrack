@@ -133,10 +133,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     return normalizedSavedEmail == _normalizeEmail(_emailController.text);
   }
 
+  // Usa replace (nao go) para nao deixar a URL de callback do OAuth/login no
+  // historico do navegador — evita que "voltar" reabra um estado de auth
+  // intermediario apos Google Auth ou login tradicional.
   void _navigateAfterFrame(String route) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.go(route);
+      GoRouter.of(context).replace(route);
     });
   }
 

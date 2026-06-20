@@ -60,14 +60,31 @@ String? _redirect(Ref ref, BuildContext context, GoRouterState state) {
 
   if (RecoveryLinkParser.hasExpiredParams(state.uri) ||
       RecoveryLinkParser.hasExpiredParams(Uri.base)) {
+    RecoveryLinkParser.markExpiredLinkJustified();
+    debugPrint(
+      '[Router] LinkExpired acionado a partir de path=$path '
+      '(parametros de recovery expirados detectados na URL).',
+    );
     return path == AppRoutes.passwordRecoveryLinkExpired
         ? null
         : AppRoutes.passwordRecoveryLinkExpired;
   }
 
+  if (path == AppRoutes.passwordRecoveryLinkExpired) {
+    // Sem parametros de expiracao na URL atual nem justificativa registrada
+    // nesta sessao (ex.: reload, historico antigo, URL digitada a mao) ->
+    // nao ha contexto de recovery valido. Volta para login em vez de reabrir
+    // a tela de link expirado indevidamente.
+    if (RecoveryLinkParser.isExpiredLinkJustified) return null;
+    debugPrint(
+      '[Router] Acesso a LinkExpired sem contexto de recovery valido; '
+      'redirecionando para login.',
+    );
+    return AppRoutes.login;
+  }
+
   if (path == AppRoutes.splash) return null;
   if (path == AppRoutes.flow) return null;
-  if (path == AppRoutes.passwordRecoveryLinkExpired) return null;
 
   final isGuestRoute = path == AppRoutes.login ||
       path == AppRoutes.register ||
@@ -194,6 +211,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // browser URL to catch all fragment-encoding variants.
       if (RecoveryLinkParser.hasExpiredParams(state.uri) ||
           RecoveryLinkParser.hasExpiredParams(Uri.base)) {
+        RecoveryLinkParser.markExpiredLinkJustified();
         router.go(AppRoutes.passwordRecoveryLinkExpired);
         return;
       }

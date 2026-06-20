@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
+import '../../../../core/router/recovery_link_parser.dart';
 import '../../../../shared/shared.dart';
 
 class PasswordRecoveryLinkExpiredScreen extends StatelessWidget {
@@ -68,7 +69,14 @@ class PasswordRecoveryLinkExpiredScreen extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           AppButton(
             label: 'Voltar ao login',
-            onPressed: () => context.go(AppRoutes.login),
+            // replace (nao go): tira esta tela do historico para que "voltar"
+            // no navegador nao reabra o LinkExpired em loop. Limpa tambem a
+            // justificativa de sessao para que uma URL antiga/digitada a mao
+            // para esta tela nao volte a funcionar depois do login.
+            onPressed: () {
+              RecoveryLinkParser.clearExpiredLinkJustification();
+              context.replace(AppRoutes.login);
+            },
             leadingIcon: const Icon(
               Icons.arrow_back_ios_new,
               size: 14,

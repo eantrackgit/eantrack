@@ -50,6 +50,9 @@ class SplashNotifier extends ChangeNotifier {
   bool get isRetryingConnection => _connectivity.isRetryingConnection;
   void handleConnectionStatus(ConnectionStatus status) => _connectivity.handleConnectionStatus(status);
   Future<void> retryConnection() => _connectivity.retryConnection();
+  // Splash e' um gateway transitorio: toda saida usa replace (nao go) para
+  // que o botao voltar do navegador nunca retorne a splash nem a uma URL de
+  // callback OAuth intermediaria.
   Future<void> _resolveRoute() async {
     if (_hasNavigated) return;
     _hasNavigated = true;
@@ -58,12 +61,12 @@ class SplashNotifier extends ChangeNotifier {
     final session = supabase.auth.currentSession;
 
     if (session == null) {
-      _ref.read(appRouterProvider).go(AppRoutes.login);
+      _ref.read(appRouterProvider).replace(AppRoutes.login);
       return;
     }
 
     if (hasAuthCallbackParams(Uri.base)) {
-      _ref.read(appRouterProvider).go(AppRoutes.flow);
+      _ref.read(appRouterProvider).replace(AppRoutes.flow);
       return;
     }
 
@@ -72,21 +75,21 @@ class SplashNotifier extends ChangeNotifier {
 
       switch (route) {
         case 'hub':
-          _ref.read(appRouterProvider).go(AppRoutes.hub);
+          _ref.read(appRouterProvider).replace(AppRoutes.hub);
         case 'onboarding/agency/status':
-          _ref.read(appRouterProvider).go(AppRoutes.onboardingAgencyStatus);
+          _ref.read(appRouterProvider).replace(AppRoutes.onboardingAgencyStatus);
         case 'onboarding/agency/representative':
-          _ref.read(appRouterProvider).go(AppRoutes.onboardingAgencyRepresentative);
+          _ref.read(appRouterProvider).replace(AppRoutes.onboardingAgencyRepresentative);
         case 'onboarding/agency/cnpj':
-          _ref.read(appRouterProvider).go(AppRoutes.onboardingAgencyCnpj);
+          _ref.read(appRouterProvider).replace(AppRoutes.onboardingAgencyCnpj);
         case 'onboarding/individual/profile':
-          _ref.read(appRouterProvider).go(AppRoutes.onboardingIndividualProfile);
+          _ref.read(appRouterProvider).replace(AppRoutes.onboardingIndividualProfile);
         default:
-          _ref.read(appRouterProvider).go(AppRoutes.onboarding);
+          _ref.read(appRouterProvider).replace(AppRoutes.onboarding);
       }
     } on Exception catch (e) {
       debugPrint('[Splash] Erro ao resolver rota: $e');
-      _ref.read(appRouterProvider).go(AppRoutes.login);
+      _ref.read(appRouterProvider).replace(AppRoutes.login);
     }
   }
 
