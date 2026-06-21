@@ -217,6 +217,17 @@ class AuthSigningService extends AuthDataServiceBase {
     }
   }
 
+  /// Lê o contexto de onboarding do usuário em `user_flow_state`.
+  ///
+  /// Retorno `null` significa **exclusivamente** "consulta concluída com
+  /// sucesso e nenhum contexto encontrado" (usuário ainda sem linha em
+  /// `user_flow_state`) -> o fluxo trata como onboarding necessário.
+  ///
+  /// Um erro real (rede, RPC/view, Postgrest, sessão, parsing) NUNCA é
+  /// mascarado como `null`: é convertido em [AppException] e propagado, para
+  /// que o `AuthNotifier` o transforme em `AuthError` e a `/flow` exiba o
+  /// fallback seguro -- em vez de empurrar um usuário aprovado para o
+  /// onboarding por causa de uma falha transitória.
   Future<UserFlowState?> getUserFlowState(String userId) async {
     try {
       final data = await client
@@ -225,8 +236,16 @@ class AuthSigningService extends AuthDataServiceBase {
           .eq('user_id', userId)
           .maybeSingle();
       return data == null ? null : UserFlowState.fromJson(data);
-    } catch (_) {
-      return null;
+    } on AppException {
+      rethrow;
+    } on AuthException catch (e) {
+      throw mapAuthException(e);
+    } catch (e) {
+      throw mapUnexpectedException(
+        e,
+        fallbackMessage:
+            'Nao foi possivel verificar seu cadastro. Tente novamente.',
+      );
     }
   }
 
