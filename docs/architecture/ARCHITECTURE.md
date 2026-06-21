@@ -348,18 +348,27 @@ Ação do usuário (tap no botão)
 
 ## Padrão de Navegação
 
-### GoRouter com RouterNotifier (Riverpod-compatible)
+### GoRouter com RouterRedirectGuard (Riverpod-compatible)
+
+A regra de redirecionamento tem **fonte única**: a função `_redirect` em
+`app_router.dart`, passada direto para `GoRouter(redirect: ...)`.
+`RouterRedirectGuard` é apenas o `refreshListenable` — não decide rota, só
+notifica o GoRouter para reexecutar o redirect quando o estado de auth muda.
 
 ```dart
-class RouterNotifier extends ChangeNotifier {
-  RouterNotifier(this._ref) {
-    _ref.listen(authUserStreamProvider, (_, __) => notifyListeners());
-  }
-  final Ref _ref;
+// app_router.dart — fonte única do redirect
+GoRouter(
+  refreshListenable: RouterRedirectGuard(ref), // só dispara reavaliação
+  redirect: (context, state) => _redirect(ref, context, state),
+  // ...
+);
 
-  String? redirect(BuildContext context, GoRouterState state) {
-    // Lógica completa em AUTH_FLOW.md
+// router_redirect_guard.dart — apenas a ponte de refresh
+class RouterRedirectGuard extends ChangeNotifier {
+  RouterRedirectGuard(Ref ref) {
+    ref.listen(authFlowStateProvider, (_, __) => notifyListeners());
   }
+  void refresh() => notifyListeners();
 }
 ```
 

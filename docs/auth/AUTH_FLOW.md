@@ -52,7 +52,7 @@ Usuário clica "Entrar" em `/login`.
    a. se catch → state = AuthError(message)
    b. se sucesso → Supabase emite auth event
 7. authUserStreamProvider emite novo User
-8. RouterNotifier.redirect() executa:
+8. _redirect() (app_router.dart, fonte única) executa:
    a. user == null → /login
    b. email não confirmado → /email-verification
    c. getUserFlowState() → check onboarding
@@ -113,7 +113,7 @@ Usuário clica "Avançar" em `/register` (tab Informações).
 6. AuthNotifier:
    a. se catch → state = AuthError(message)
    b. se sucesso → state = AuthEmailUnconfirmed(email: email)
-7. RouterNotifier detecta → redirect /email-verification
+7. RouterRedirectGuard (refreshListenable) dispara → _redirect /email-verification
 ```
 
 ### Mapeamento de erros
@@ -470,7 +470,7 @@ Se o usuário clicar em link de recovery expirado, a URL contém `error=access_d
 
 ---
 
-## GUARDS DE ROTA (RouterNotifier.redirect)
+## GUARDS DE ROTA (_redirect em app_router.dart — fonte única)
 
 ### Lógica resumida (em ordem de prioridade)
 

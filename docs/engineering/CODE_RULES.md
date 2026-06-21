@@ -407,7 +407,7 @@ abstract final class AppRoutes {
 // ✅ Rotas protegidas em AppRoutes.protectedRoutes como Set<String>
 static const Set<String> protectedRoutes = {hub, regions, ...};
 
-// ✅ RouterRedirectGuard usa o Set para guard declarativo
+// ✅ _redirect (app_router.dart) usa o Set para guard declarativo
 final isAppRoute = AppRoutes.protectedRoutes.contains(path);
 
 // ❌ Proibido: string literal de rota fora de AppRoutes

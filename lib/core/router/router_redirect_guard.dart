@@ -1,94 +1,23 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../features/auth/domain/auth_flow_state.dart';
-import '../../features/auth/domain/auth_state.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
-import 'app_routes.dart';
-import 'recovery_link_parser.dart';
 
-/// Bridges Riverpod auth state → GoRouter refresh + redirect.
+/// Ponte entre o estado de auth do Riverpod e o refresh do GoRouter.
 ///
-/// Listens to [authFlowStateProvider] and notifies GoRouter whenever the
-/// auth state changes. The [redirect] method maps the current [AuthFlowState]
-/// to the appropriate route.
+/// Usado **apenas** como `refreshListenable` do GoRouter: quando
+/// [authFlowStateProvider] muda — ou quando [refresh] é chamado em reação a
+/// mudanças do `agencyStatusProvider` — notifica o GoRouter para reexecutar
+/// seu `redirect`.
+///
+/// A regra de redirecionamento tem **fonte única**: a função `_redirect` em
+/// `app_router.dart`. Este guard não decide rota; só dispara a reavaliação.
 class RouterRedirectGuard extends ChangeNotifier {
-  RouterRedirectGuard(Ref ref) : _ref = ref {
+  RouterRedirectGuard(Ref ref) {
     ref.listen(authFlowStateProvider, (_, __) => notifyListeners());
   }
 
-  final Ref _ref;
-
+  /// Alias semântico de [notifyListeners], usado pelo `appRouterProvider` ao
+  /// reagir a mudanças do `agencyStatusProvider`.
   void refresh() => notifyListeners();
-
-  String? redirect(BuildContext context, GoRouterState state) {
-    final authFlowState = _ref.read(authFlowStateProvider);
-    final path = state.matchedLocation;
-
-    // With PathUrlStrategy the browser fragment (#error=...) is not part of
-    // state.uri. Fall back to Uri.base so the redirect catches both formats.
-    if (RecoveryLinkParser.hasExpiredParams(state.uri) ||
-        RecoveryLinkParser.hasExpiredParams(Uri.base)) {
-      return path == AppRoutes.passwordRecoveryLinkExpired
-          ? null
-          : AppRoutes.passwordRecoveryLinkExpired;
-    }
-
-    // Splash and flow manage their own navigation — never redirect away.
-    if (path == AppRoutes.splash) return null;
-    if (path == AppRoutes.flow) return null;
-    if (path == AppRoutes.passwordRecoveryLinkExpired) return null;
-
-    final isGuestRoute = path == AppRoutes.login ||
-        path == AppRoutes.register ||
-        path == AppRoutes.recoverPassword;
-    final isOnboardingRoute = path == AppRoutes.onboarding ||
-        path == AppRoutes.onboardingOperationalStyle ||
-        path == AppRoutes.onboardingIndividual ||
-        path == AppRoutes.onboardingIndividualProfile ||
-        path == AppRoutes.photoProfile ||
-        path == AppRoutes.onboardingCnpj ||
-        path == AppRoutes.onboardingAgency ||
-        path == AppRoutes.onboardingLegalRep ||
-        path == AppRoutes.onboardingAgencyCnpj ||
-        path == AppRoutes.onboardingAgencyConfirm ||
-        path == AppRoutes.onboardingAgencyRepresentative ||
-        path == AppRoutes.onboardingAgencyStatus;
-    final isAppRoute = AppRoutes.protectedRoutes.contains(path);
-
-    // /email-verification is only valid while the notifier is in AuthEmailUnconfirmed.
-    if (path == AppRoutes.emailVerification) {
-      final authState = _ref.read(authNotifierProvider);
-      if (authState is AuthEmailUnconfirmed) return null;
-      return AppRoutes.flow;
-    }
-
-    if (path == AppRoutes.updatePassword &&
-        authFlowState != AuthFlowState.recovery) {
-      return AppRoutes.flow;
-    }
-
-    if (isGuestRoute && authFlowState != AuthFlowState.unauthenticated) {
-      return AppRoutes.flow;
-    }
-
-    if (isOnboardingRoute &&
-        authFlowState != AuthFlowState.onboardingRequired) {
-      return AppRoutes.flow;
-    }
-
-    if (isAppRoute && authFlowState != AuthFlowState.authenticated) {
-      // Agency users with pending/rejected status must land on status screen,
-      // not on the generic /flow — prevents the "empty shell" regression bug.
-      final authState = _ref.read(authNotifierProvider);
-      if (authState is AuthAuthenticated &&
-          authState.flowState?.normalizedUserMode == 'agency') {
-        return AppRoutes.onboardingAgencyStatus;
-      }
-      return AppRoutes.flow;
-    }
-
-    return null;
-  }
 }

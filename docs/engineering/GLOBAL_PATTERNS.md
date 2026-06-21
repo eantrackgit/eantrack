@@ -182,7 +182,7 @@ CustomIcons.something          // ❌ (salvo SVG local aprovado)
 
 ### Redirect guards
 - 3 zonas: pública, email-verify, protegida
-- Lógica centralizada em `RouterNotifier.redirect()`
+- Lógica centralizada em `_redirect()` (app_router.dart) — fonte única; `RouterRedirectGuard` é só o `refreshListenable`
 - Detalhes completos: ver AUTH_FLOW.md
 
 ### Transições
