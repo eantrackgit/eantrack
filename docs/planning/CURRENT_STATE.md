@@ -3,7 +3,7 @@
 > Leia este arquivo primeiro ao retomar o projeto.
 > Estado real do produto apos os ajustes de status, aceite, documentos versionados,
 > representante legal, router, HubScreen, RegionListScreen desktop e RLS.
-> Ultima atualizacao: 2026-05-04.
+> Ultima atualizacao: 2026-06-20.
 
 ---
 
@@ -45,10 +45,11 @@ Nota atual do projeto: estado funcional e coerente para auditoria global de onbo
 
 ### Fontes de leitura
 
-- `AgencyStatusNotifier` consulta `v_user_agency_onboarding_context` para contexto da agencia e do representante.
-- `statusAgency` vem dos campos de status da agencia expostos pela view de contexto.
-- `consolidatedDocumentStatus` vem de `v_agency_latest_document_status`, que representa a tentativa documental mais recente.
-- A view de contexto deve expor os dados do representante legal usados no prefill, incluindo `legal_representative_id` e `representative_role`.
+- **Fonte real no client:** `AgencyStatusNotifier` (via `AgencyStatusRepository.getAgencyStatusFull`) consulta a RPC **`get_agency_status_full`** — uma única chamada que consolida agencia + representante + documento + aceite num só registro. O app **nao** consulta as views diretamente.
+- A RPC `get_agency_status_full` opera sobre o `auth.uid()` da sessao e deve consolidar, server-side, o contexto da agencia (`v_user_agency_onboarding_context`) e o status documental mais recente (`v_agency_latest_document_status`).
+- `statusAgency` e `consolidatedDocumentStatus` chegam ao app como campos do registro retornado pela RPC; `AgencyStatusData.fromJson` aceita variacoes de nome de coluna (ex.: `status_agency`/`agency_status`, `consolidated_document_status`/`document_status`).
+- O registro da RPC deve expor os dados do representante usados no prefill, incluindo `legal_representative_id` e `representative_role`.
+- O aceite de termos (`fetchAgencyTerms`/`acceptAgencyTerms`) le/escreve direto na tabela `agencies`, filtrando por `id` + `user_uuid`.
 - `UserFlowState.isOnboardingComplete` foi removido. O fluxo de agencia nao decide acesso por string de `agency_status`.
 
 ---
@@ -201,13 +202,38 @@ Nao existe mais gate duplicado em `UserFlowState`; usuarios de agencia passam pe
 
 ---
 
+## Auth — Remember Me, Google e Fallback de /flow
+
+### Remember Me / Lembrar-me (pronto)
+
+- Preferencia `keep_connected` controla a restauracao de sessao entre aberturas do app.
+- Card de "Conta salva" no login exibe e-mail + nome salvos localmente (somente cache de UX, **nunca** credenciais); "Trocar" limpa so o cache local.
+- No logout: com `keep_connected = true`, e-mail e nome salvos sao preservados para o proximo login; com `false`, sao limpos.
+- O prompt de "manter conectado" e mostrado no maximo uma vez por `userId`/dispositivo.
+- Documentacao detalhada: `docs/architecture/remember_me.md`.
+
+### Google OAuth (implementado, caminho feliz)
+
+- Botao "Entrar com Google" no login chama `signInWithGoogle` (Supabase OAuth).
+- A transicao para `AuthAuthenticated` apos o callback e tratada por `onExternalAuthChange` (listener do stream).
+- Pendencia conhecida: tratamento de colisao/duplicacao de conta (e-mail ja cadastrado por senha vs. Google) ainda nao implementado.
+
+### Fallback seguro em /flow (pronto)
+
+- `/flow` e a unica rota que o router nunca redireciona; e o gateway de auth de toda rota protegida.
+- Timer de seguranca de 10s: sem sessao -> login direto; com sessao mas contexto nao confirmado -> revalida 1x -> se ainda assim falhar, exibe `AuthFallbackScreen` ("Tentar novamente" / "Voltar para login").
+- `AuthError` confirmado (ex.: falha real em `getUserFlowState`, agora propagada) leva ao fallback em vez de empurrar o usuario para o onboarding.
+
+---
+
 ## Banco / Supabase
 
 ### RPC / Views
 
+- `get_agency_status_full` — **RPC efetivamente consumida pelo app** para status da agencia. Sem parametros (usa `auth.uid()`); retorna um registro consolidado (agencia + representante + documento + aceite). Ver BACKEND_SCHEMA.md.
 - `get_user_onboarding_route` considera `terms_accepted` antes de devolver rota de hub.
-- `v_user_agency_onboarding_context` expoe o contexto de onboarding da agencia e deve incluir `legal_representative_id` e `representative_role`.
-- `v_agency_latest_document_status` representa a tentativa documental mais recente/consolidada.
+- `v_user_agency_onboarding_context` expoe o contexto de onboarding da agencia e deve incluir `legal_representative_id` e `representative_role`. Usada server-side pela RPC `get_agency_status_full`.
+- `v_agency_latest_document_status` representa a tentativa documental mais recente/consolidada. Usada server-side pela RPC `get_agency_status_full`.
 
 ### RLS e seguranca
 

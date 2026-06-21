@@ -1,7 +1,7 @@
 # PROJECT_MAP.md — EANTrack
 
 > Mapa de alto nível do projeto. Para estado detalhado → CURRENT_STATE.md. Para estrutura técnica → ARCHITECTURE.md.
-> Última atualização: 2026-04-11
+> Última atualização: 2026-06-20
 
 ---
 
@@ -18,10 +18,10 @@
 | Módulo | Status | Observação |
 |--------|--------|-----------|
 | Fundação (router, tema, erros) | ✅ Completo | Dark mode, EanTrackTheme, RouterRedirectGuard |
-| Auth | ✅ Completo | Login, register, email verify, recover, update password, cooldown, history |
+| Auth | ✅ Completo | Login, register, email verify, recover, update password, cooldown, history, Google OAuth, Remember Me, fallback seguro em `/flow` |
 | Onboarding — Perfil | ✅ Funcional | choose_mode, profile (identifier + sugestões), cnpj, company_data, legal_rep |
-| Hub | 🔄 Layout ok | Responsivo desktop/mobile; sem dark mode; sem dados reais |
-| Regiões | 🔄 Layout ok | Listagem, criação, toggle ativo; sem dark mode; sem testes de UI |
+| Hub | ✅ Funcional | Responsivo desktop/mobile; **dark/light** via EanTrackTheme; **dados reais** (auth + agencyStatusProvider); drawer mobile + navbar com BEEP flutuante |
+| Regiões | 🔄 Layout ok | Listagem, criação, toggle ativo; dark/light via EanTrackTheme; tem teste de repositório (`region_repository_test.dart`), sem testes de widget |
 | Redes | ⏳ Pendente | — |
 | Categorias | ⏳ Pendente | — |
 | PDVs | ⏳ Pendente | — |
@@ -78,9 +78,8 @@ Protegidas (auth + onboarding completo)
 
 ## Referência de Código Legado (FlutterFlow)
 
-O projeto iniciou em FlutterFlow. O código gerado está em `lib/p_a_s_tpag_app_feed/` e `lib/flutter_flow/`.
+O projeto iniciou em FlutterFlow. O código gerado ficava em `lib/p_a_s_tpag_app_feed/` e `lib/flutter_flow/`.
 
-**Status:** ignorar completamente — não compila no rebuild, não é referência arquitetural.
-**Ação:** remover na Fase Hardening (futura). Até lá, manter para evitar conflito de git.
+**Status:** ✅ **removido** — os diretórios legados não existem mais em `lib/`. O rebuild code-first não depende deles.
 
 Para design visual de referência → storyboard FlutterFlow + SCREEN_SPECS.md.

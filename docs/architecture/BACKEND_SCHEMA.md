@@ -49,7 +49,7 @@
 | `v_user_agency_onboarding_representativelegal` | Dados do representante legal no contexto de onboarding |
 | `v_user_agency_session_v1` | Sessão consolidada agência + usuário |
 | `v_latest_legal_documents` | Última tentativa de documento por `(agency_id, document_type)` — ver [LEGAL_DOCUMENTS_VERSIONING.md](LEGAL_DOCUMENTS_VERSIONING.md) |
-| `v_agency_latest_document_status` | Status consolidado de documentos por agência — **única fonte de status para o app** — ver [LEGAL_DOCUMENTS_VERSIONING.md](LEGAL_DOCUMENTS_VERSIONING.md) |
+| `v_agency_latest_document_status` | Status consolidado de documentos por agência — base server-side; exposta ao app pela RPC `get_agency_status_full` — ver [LEGAL_DOCUMENTS_VERSIONING.md](LEGAL_DOCUMENTS_VERSIONING.md) |
 
 ---
 
@@ -71,9 +71,9 @@ As tabelas `legal_representatives` e `legal_documents` formam o núcleo do fluxo
 | View | Papel |
 |------|-------|
 | `v_latest_legal_documents` | Última tentativa por `(agency_id, document_type)` |
-| `v_agency_latest_document_status` | Status consolidado por agência — única fonte para o app |
+| `v_agency_latest_document_status` | Status consolidado por agência — base da RPC `get_agency_status_full` |
 
-**Regra crítica:** o app Flutter lê status exclusivamente via `v_agency_latest_document_status`. Nunca via query direta em `legal_documents`.
+**Regra crítica:** o app Flutter lê status exclusivamente via a RPC `get_agency_status_full` (que consolida `v_agency_latest_document_status` server-side). Nunca via query direta em `legal_documents`.
 
 ---
 
@@ -231,6 +231,16 @@ As tabelas `legal_representatives` e `legal_documents` formam o núcleo do fluxo
 ---
 
 ### Agência
+
+---
+
+#### `get_agency_status_full`
+- **Retorno:** `jsonb` / `record` (nullable) — registro único consolidado
+- **Parâmetros:** nenhum — opera sobre o `auth.uid()` da sessão atual
+- **Consumido por:** `AgencyStatusRepository.getAgencyStatusFull()` → `AgencyStatusNotifier` — **única RPC de status de agência usada pelo app**
+- **Consolida (server-side):** contexto da agência (`v_user_agency_onboarding_context`) + status documental mais recente (`v_agency_latest_document_status`) + aceite de termos.
+- **Campos esperados no registro** (nomes tolerados pelo parser do app, ver `AgencyStatusData.fromJson`): `agency_id`, `agency_legal_name`, `status_agency` (ou `agency_status`), `consolidated_document_status` (ou `document_status`/`status`), `representative_name`, `representative_email`, `legal_representative_id`, `representative_role`, `representative_phone`, `representative_cpf`, `document_type`, `document_front_url`, `document_back_url`, `rejection_reason`, contadores (`total/approved/pending/rejected_documents`), `terms_accepted`, `terms_accepted_at`, `terms_version`, `last_submitted_at`.
+- **Nota:** adicionada pós-dump; não consta nos dumps originais.
 
 ---
 
@@ -619,8 +629,8 @@ As tabelas `legal_representatives` e `legal_documents` formam o núcleo do fluxo
 | Tabelas | 24 |
 | Views | 7 |
 | Triggers | 17 |
-| Funções (RPCs) | 42 |
+| Funções (RPCs) | 43 |
 | — com ordinal_position confirmado (dump 2) | 20 |
 | — com params apenas do dump 1 | 13 |
 | — sem params em nenhum dump | 8 |
-| — adicionadas pós-dump (`get_user_onboarding_route`) | 1 |
+| — adicionadas pós-dump (`get_user_onboarding_route`, `get_agency_status_full`) | 2 |
