@@ -102,19 +102,42 @@ class _RegionListScreenState extends ConsumerState<RegionListScreen> {
   }
 
   Future<void> _showCreateDialog(BuildContext context) async {
-    await showDialog<void>(
+    await showGeneralDialog<void>(
       context: context,
-      builder: (_) => _CreateRegionDialog(
-        onConfirm: (name) async {
-          final ok = await ref
-              .read(regionNotifierProvider.notifier)
-              .createRegion(name);
-          return ok;
-        },
-        checkName: (name) => ref
-            .read(regionNotifierProvider.notifier)
-            .isNameAvailable(name),
+      barrierDismissible: false,
+      barrierLabel: '',
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (ctx, _, __) => _CreateRegionDialog(
+        onConfirm: (name) =>
+            ref.read(regionNotifierProvider.notifier).createRegion(name),
+        checkName: (name) =>
+            ref.read(regionNotifierProvider.notifier).isNameAvailable(name),
       ),
+      transitionBuilder: (ctx, anim, __, child) {
+        final fade = CurvedAnimation(parent: anim, curve: Curves.easeOut);
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: FadeTransition(
+                opacity: fade,
+                child: const ColoredBox(color: Color(0x80000000)),
+              ),
+            ),
+            Positioned.fill(
+              child: FadeTransition(
+                opacity: fade,
+                child: ScaleTransition(
+                  scale: Tween<double>(begin: 0.95, end: 1.0).animate(
+                    CurvedAnimation(parent: anim, curve: Curves.easeOutCubic),
+                  ),
+                  child: child,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -1108,85 +1131,130 @@ class _CreateRegionDialogState extends ConsumerState<_CreateRegionDialog> {
   @override
   Widget build(BuildContext context) {
     final et = EanTrackTheme.of(context);
-    return Dialog(
-      backgroundColor: et.cardSurface,
-      shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Nova região',
-                style: AppTextStyles.headlineSmall.copyWith(
-                  color: et.primaryText,
+    final isLoading = _action.isLoading;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final dialogWidth = screenWidth > 1024
+        ? 520.0
+        : screenWidth > 600
+            ? screenWidth * 0.9
+            : screenWidth * 0.95;
+
+    return Material(
+      color: Colors.transparent,
+      child: PopScope(
+        canPop: !isLoading,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: isLoading ? null : () => Navigator.of(context).pop(),
+          child: Center(
+            child: GestureDetector(
+              onTap: () {},
+              child: Container(
+                width: dialogWidth,
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                decoration: BoxDecoration(
+                  color: et.cardSurface,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: const [AppShadows.xl],
                 ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'Defina um nome único para identificar esta região.',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: et.secondaryText,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              if (_action.isFailure) ...[
-                AppErrorBox(_action.errorMessage!),
-                const SizedBox(height: AppSpacing.md),
-              ],
-              TextField(
-                controller: _controller,
-                autofocus: true,
-                textCapitalization: TextCapitalization.words,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: et.primaryText,
-                ),
-                decoration: InputDecoration(
-                  labelText: 'Nome da região',
-                  errorText: _submitted ? _validate(_controller.text) : null,
-                  filled: true,
-                  fillColor: et.inputFill,
-                  border: OutlineInputBorder(borderRadius: AppRadius.smAll),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: AppRadius.smAll,
-                    borderSide: BorderSide(color: et.inputBorder),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: AppRadius.smAll,
-                    borderSide:
-                        BorderSide(color: et.inputBorderFocused, width: 1.5),
-                  ),
-                ),
-                onChanged: (_) {
-                  if (_submitted) setState(() => _nameError = null);
-                },
-                onSubmitted: (_) => _submit(),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Row(
-                children: [
-                  Expanded(
-                    child: AppButton.secondary(
-                      'Cancelar',
-                      onPressed: _action.isLoading
-                          ? null
-                          : () => Navigator.of(context).pop(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Nova Região',
+                      style: AppTextStyles.headlineSmall.copyWith(
+                        color: et.primaryText,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: AppButton.primary(
-                      'Criar',
-                      onPressed: _action.isLoading ? null : _submit,
-                      isLoading: _action.isLoading,
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'Crie uma região para organizar territórios, supervisores e equipes.',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: et.secondaryText,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: AppSpacing.lg),
+                    if (_action.isFailure) ...[
+                      AppErrorBox(_action.errorMessage!),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
+                    TextField(
+                      controller: _controller,
+                      autofocus: true,
+                      textCapitalization: TextCapitalization.words,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: et.primaryText,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Nome da Região',
+                        errorText: _submitted ? _validate(_controller.text) : null,
+                        filled: true,
+                        fillColor: et.inputFill,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.md,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: et.inputBorder),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: et.inputBorderFocused,
+                            width: 1.5,
+                          ),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: AppColors.error),
+                        ),
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: AppColors.error,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                      onChanged: (_) {
+                        if (_submitted) setState(() => _nameError = null);
+                      },
+                      onSubmitted: isLoading ? null : (_) => _submit(),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        SizedBox(
+                          width: 120,
+                          child: AppButton.secondary(
+                            'Cancelar',
+                            onPressed: isLoading
+                                ? null
+                                : () => Navigator.of(context).pop(),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        SizedBox(
+                          width: 160,
+                          child: AppButton.primary(
+                            'Criar Região',
+                            onPressed: isLoading ? null : _submit,
+                            isLoading: isLoading,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ],
+            ),
           ),
         ),
       ),

@@ -69,11 +69,10 @@ class _MenuHubSectionItem extends StatelessWidget {
       child: InkWell(onTap: enabled ? onTap : null, child: row),
     );
 
-    if (!enabled) {
-      return Opacity(opacity: 0.45, child: interactive);
-    }
-
-    return interactive;
+    return Opacity(
+      opacity: enabled ? 1.0 : 0.45,
+      child: interactive,
+    );
   }
 }
 

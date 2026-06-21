@@ -362,7 +362,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
           return _fade(
             state,
-            AgencyStatusScreen(debugStatus: debugStatus),
+            _AgencyStatusGateway(debugStatus: debugStatus),
           );
         },
       ),
@@ -385,3 +385,34 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+// Intercepta a rota /onboarding/agency/status enquanto o agencyStatusProvider
+// ainda não carregou. Exibe spinner neutro no lugar da status screen real para
+// evitar flicker quando o usuário já tem acesso ao hub. Quando os dados chegam,
+// o redirect do router decide: hub (se liberado) ou AgencyStatusScreen (se não).
+class _AgencyStatusGateway extends ConsumerWidget {
+  const _AgencyStatusGateway({super.key, this.debugStatus});
+
+  final AgencyDocumentStatus? debugStatus;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final provider = agencyStatusProvider(debugStatus);
+    final agencyState = ref.watch(provider);
+
+    if (agencyState.status == AgencyStatusLoading.idle) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) ref.read(provider.notifier).load();
+      });
+    }
+
+    if (agencyState.data == null) {
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: const Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
+      );
+    }
+
+    return AgencyStatusScreen(debugStatus: debugStatus);
+  }
+}
