@@ -92,4 +92,3 @@ limpo, módulos não iniciados claramente fora de escopo.
 Condições conhecidas (não bloqueantes para produção limitada, recomendadas antes de escala):
 auditoria de RLS no Supabase; tratamento de colisão de conta no Google Auth; entrega do
 primeiro módulo operacional (Regiões — próxima task).
-</content>
