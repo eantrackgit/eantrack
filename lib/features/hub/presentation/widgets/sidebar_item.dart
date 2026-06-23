@@ -20,47 +20,56 @@ class _MenuHubSectionItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final et = EanTrackTheme.of(context);
+    final comfortable = _MenuHubLayout.comfortableOf(context);
     final iconColor = isDestructive
         ? AppColors.error
         : et.primaryText.withValues(alpha: 0.8);
     final textColor = isDestructive ? AppColors.error : et.primaryText;
 
-    final row = Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 17, color: iconColor),
-          const SizedBox(width: AppSpacing.sm),
-          if (count != null) ...[
-            Text(
-              '$count',
-              style: AppTextStyles.labelLarge.copyWith(
-                color: textColor,
-                fontWeight: FontWeight.w700,
+    final row = ConstrainedBox(
+      // Mobile ganha altura/área de toque maior (>= 54px); desktop mantém o
+      // tamanho compacto atual.
+      constraints: BoxConstraints(minHeight: comfortable ? 54 : 0),
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: comfortable ? 18 : AppSpacing.md,
+          vertical: comfortable ? 12 : AppSpacing.sm,
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: comfortable ? 21 : 17, color: iconColor),
+            SizedBox(width: comfortable ? 14 : AppSpacing.sm),
+            if (count != null) ...[
+              Text(
+                '$count',
+                style: AppTextStyles.labelLarge.copyWith(
+                  color: textColor,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 4),
+            ],
+            Expanded(
+              child: Text(
+                label,
+                style: (comfortable
+                        ? AppTextStyles.bodyMedium
+                        : AppTextStyles.bodySmall)
+                    .copyWith(
+                  color: textColor,
+                  fontWeight: FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(width: 4),
+            if (enabled)
+              Icon(
+                Icons.navigate_next,
+                size: comfortable ? 20 : 18,
+                color: et.secondaryText.withValues(alpha: 0.7),
+              ),
           ],
-          Expanded(
-            child: Text(
-              label,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: textColor,
-                fontWeight: FontWeight.w500,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          if (enabled)
-            Icon(
-              Icons.navigate_next,
-              size: 18,
-              color: et.secondaryText.withValues(alpha: 0.7),
-            ),
-        ],
+        ),
       ),
     );
 
@@ -85,16 +94,17 @@ class _MenuHubActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final et = EanTrackTheme.of(context);
+    final comfortable = _MenuHubLayout.comfortableOf(context);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
+      padding: EdgeInsets.fromLTRB(
+        comfortable ? 18 : AppSpacing.md,
         AppSpacing.xs,
-        AppSpacing.md,
+        comfortable ? 18 : AppSpacing.md,
         AppSpacing.sm,
       ),
       child: SizedBox(
-        height: 34,
+        height: comfortable ? 46 : 34,
         child: OutlinedButton(
           onPressed: onPressed,
           style: OutlinedButton.styleFrom(

@@ -14,6 +14,7 @@ class _MenuHubSections extends StatelessWidget {
     required this.planName,
     required this.nextBillingText,
     this.onManagePlan,
+    this.collapsible = false,
   });
 
   final bool isBlocked;
@@ -29,6 +30,10 @@ class _MenuHubSections extends StatelessWidget {
   final String nextBillingText;
   final VoidCallback? onManagePlan;
 
+  /// Mobile: cada grupo vira accordion (ver [_MenuHubSection]). Desktop mantém
+  /// os grupos sempre expandidos.
+  final bool collapsible;
+
   @override
   Widget build(BuildContext context) {
     final enabled = !isBlocked;
@@ -39,6 +44,8 @@ class _MenuHubSections extends StatelessWidget {
           icon: Icons.badge_rounded,
           title: 'Identidade',
           wrapInCard: false,
+          collapsible: collapsible,
+          initiallyExpanded: true,
           children: [
             _MenuHubIdentityCard(
               agencyName: agencyName,
@@ -48,9 +55,10 @@ class _MenuHubSections extends StatelessWidget {
             ),
           ],
         ),
-        _MenuHubStructureSection(enabled: enabled),
+        _MenuHubStructureSection(enabled: enabled, collapsible: collapsible),
         _MenuHubOperationalSection(
           enabled: enabled,
+          collapsible: collapsible,
           activesCount: activesCount,
           sentInvitesCount: sentInvitesCount,
           pendingInvitesCount: pendingInvitesCount,
@@ -58,26 +66,33 @@ class _MenuHubSections extends StatelessWidget {
         ),
         _MenuHubPlanSection(
           enabled: enabled,
+          collapsible: collapsible,
           planName: planName,
           nextBillingText: nextBillingText,
           onManagePlan: onManagePlan,
         ),
-        _MenuHubAccountSection(enabled: enabled),
+        _MenuHubAccountSection(enabled: enabled, collapsible: collapsible),
       ],
     );
   }
 }
 
 class _MenuHubStructureSection extends StatelessWidget {
-  const _MenuHubStructureSection({required this.enabled});
+  const _MenuHubStructureSection({
+    required this.enabled,
+    this.collapsible = false,
+  });
 
   final bool enabled;
+  final bool collapsible;
 
   @override
   Widget build(BuildContext context) {
     return _MenuHubSection(
       icon: Icons.account_tree_outlined,
       title: 'Estrutura',
+      collapsible: collapsible,
+      initiallyExpanded: true,
       children: [
         _MenuHubSectionItem(
           icon: Icons.location_on_outlined,
@@ -108,6 +123,7 @@ class _MenuHubOperationalSection extends StatelessWidget {
     required this.sentInvitesCount,
     required this.pendingInvitesCount,
     this.onManageInvites,
+    this.collapsible = false,
   });
 
   final bool enabled;
@@ -115,12 +131,15 @@ class _MenuHubOperationalSection extends StatelessWidget {
   final int sentInvitesCount;
   final int pendingInvitesCount;
   final VoidCallback? onManageInvites;
+  final bool collapsible;
 
   @override
   Widget build(BuildContext context) {
     return _MenuHubSection(
       icon: Icons.groups_2_outlined,
       title: 'Operacional',
+      collapsible: collapsible,
+      initiallyExpanded: false,
       children: [
         _MenuHubSectionItem(icon: Icons.inventory_2_outlined, label: 'Ativos', count: activesCount, enabled: enabled),
         _MenuHubSectionItem(icon: Icons.mail_outline_rounded, label: 'Convites enviados', count: sentInvitesCount, enabled: enabled),
@@ -141,18 +160,22 @@ class _MenuHubPlanSection extends StatelessWidget {
     required this.planName,
     required this.nextBillingText,
     this.onManagePlan,
+    this.collapsible = false,
   });
 
   final bool enabled;
   final String planName;
   final String nextBillingText;
   final VoidCallback? onManagePlan;
+  final bool collapsible;
 
   @override
   Widget build(BuildContext context) {
     return _MenuHubSection(
       icon: Icons.credit_card_outlined,
       title: 'Planos & Pagamentos',
+      collapsible: collapsible,
+      initiallyExpanded: false,
       children: [
         _MenuHubSectionItem(
           icon: Icons.workspace_premium_outlined,
@@ -172,15 +195,21 @@ class _MenuHubPlanSection extends StatelessWidget {
 }
 
 class _MenuHubAccountSection extends StatelessWidget {
-  const _MenuHubAccountSection({required this.enabled});
+  const _MenuHubAccountSection({
+    required this.enabled,
+    this.collapsible = false,
+  });
 
   final bool enabled;
+  final bool collapsible;
 
   @override
   Widget build(BuildContext context) {
     return _MenuHubSection(
       icon: Icons.manage_accounts_outlined,
       title: 'Minha Conta',
+      collapsible: collapsible,
+      initiallyExpanded: false,
       children: [
         _MenuHubSectionItem(
           icon: Icons.settings_outlined,
