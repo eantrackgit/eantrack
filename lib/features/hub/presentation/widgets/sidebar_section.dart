@@ -23,7 +23,15 @@ class _MenuHubLayout extends InheritedWidget {
       comfortable != oldWidget.comfortable;
 }
 
-class _MenuHubSection extends StatefulWidget {
+/// Seção do menu do Hub.
+///
+/// Desktop (default, `collapsible == false`): cabeçalho estático com o título
+/// em maiúsculas e os itens sempre visíveis — visual original, sem regressão.
+///
+/// Mobile (`collapsible == true`): delega para [_CollapsibleMenuSection], um
+/// accordion dedicado com header tocável, chevron animado e conteúdo que
+/// abre/fecha com animação.
+class _MenuHubSection extends StatelessWidget {
   const _MenuHubSection({
     required this.icon,
     required this.title,
@@ -37,38 +45,22 @@ class _MenuHubSection extends StatefulWidget {
   final String title;
   final List<Widget> children;
   final bool wrapInCard;
-
-  /// Mobile: o cabeçalho vira um header accordion clicável com chevron
-  /// animado. Desktop (default `false`): mantém o cabeçalho estático atual,
-  /// byte-a-byte, sem regressão visual.
   final bool collapsible;
-
-  /// Estado inicial aberto/fechado quando [collapsible] é `true`.
   final bool initiallyExpanded;
 
   @override
-  State<_MenuHubSection> createState() => _MenuHubSectionState();
-}
-
-class _MenuHubSectionState extends State<_MenuHubSection> {
-  static const _animDuration = Duration(milliseconds: 240);
-  static const _animCurve = Curves.easeOutCubic;
-
-  late bool _expanded = widget.initiallyExpanded;
-
-  void _toggle() => setState(() => _expanded = !_expanded);
-
-  @override
   Widget build(BuildContext context) {
-    return widget.collapsible ? _buildAccordion(context) : _buildStatic(context);
-  }
+    if (collapsible) {
+      return _CollapsibleMenuSection(
+        icon: icon,
+        title: title,
+        initiallyExpanded: initiallyExpanded,
+        children: children,
+      );
+    }
 
-  // ---------------------------------------------------------------------------
-  // Desktop: comportamento e visual originais (cabeçalho estático).
-  // ---------------------------------------------------------------------------
-  Widget _buildStatic(BuildContext context) {
     final et = EanTrackTheme.of(context);
-    final childrenWidget = widget.wrapInCard
+    final childrenWidget = wrapInCard
         ? Container(
             margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
             decoration: BoxDecoration(
@@ -81,12 +73,12 @@ class _MenuHubSectionState extends State<_MenuHubSection> {
             clipBehavior: Clip.antiAlias,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: widget.children,
+              children: children,
             ),
           )
         : Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: widget.children,
+            children: children,
           );
 
     return Column(
@@ -101,10 +93,10 @@ class _MenuHubSectionState extends State<_MenuHubSection> {
           ),
           child: Row(
             children: [
-              Icon(widget.icon, size: 13, color: et.primaryText),
+              Icon(icon, size: 13, color: et.primaryText),
               const SizedBox(width: AppSpacing.xs),
               Text(
-                widget.title.toUpperCase(),
+                title.toUpperCase(),
                 style: AppTextStyles.labelSmall.copyWith(
                   color: et.primaryText,
                   fontWeight: FontWeight.w700,
@@ -119,12 +111,41 @@ class _MenuHubSectionState extends State<_MenuHubSection> {
       ],
     );
   }
+}
 
-  // ---------------------------------------------------------------------------
-  // Mobile: accordion premium — header acionável (icone + título + chevron
-  // animado) e conteúdo que desce/sobe com AnimatedSize.
-  // ---------------------------------------------------------------------------
-  Widget _buildAccordion(BuildContext context) {
+/// Accordion premium usado apenas no drawer mobile.
+///
+/// Header acionável (ícone + título + chevron animado) e conteúdo que desce/
+/// sobe com `AnimatedSize`. O conteúdo fechado não é renderizado (altura zero
+/// real), então só o header fica visível quando colapsado.
+class _CollapsibleMenuSection extends StatefulWidget {
+  const _CollapsibleMenuSection({
+    required this.icon,
+    required this.title,
+    required this.children,
+    this.initiallyExpanded = true,
+  });
+
+  final IconData icon;
+  final String title;
+  final List<Widget> children;
+  final bool initiallyExpanded;
+
+  @override
+  State<_CollapsibleMenuSection> createState() =>
+      _CollapsibleMenuSectionState();
+}
+
+class _CollapsibleMenuSectionState extends State<_CollapsibleMenuSection> {
+  static const _animDuration = Duration(milliseconds: 240);
+  static const _animCurve = Curves.easeOutCubic;
+
+  late bool _expanded = widget.initiallyExpanded;
+
+  void _toggle() => setState(() => _expanded = !_expanded);
+
+  @override
+  Widget build(BuildContext context) {
     final et = EanTrackTheme.of(context);
 
     final header = Semantics(
@@ -185,8 +206,8 @@ class _MenuHubSectionState extends State<_MenuHubSection> {
     );
 
     // AnimatedSize anima entre o conteúdo real e uma caixa de altura zero,
-    // produzindo a sensação de "descida"/"subida" suave. ClipRect evita que o
-    // conteúdo vaze durante a transição.
+    // produzindo a sensação de descida/subida. ClipRect evita vazamento do
+    // conteúdo durante a transição.
     final content = ClipRect(
       child: AnimatedSize(
         duration: _animDuration,
