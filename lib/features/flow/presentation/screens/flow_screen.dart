@@ -26,6 +26,15 @@ class FlowScreen extends ConsumerStatefulWidget {
 
 class _FlowScreenState extends ConsumerState<FlowScreen> {
   ProviderSubscription<AuthFlowState>? _authFlowSubscription;
+  // Segunda fonte de gatilho da decisão: o estado bruto do AuthNotifier.
+  // O authFlowStateProvider deriva um enum e só notifica quando esse enum
+  // MUDA de valor. Na transição AuthLoading -> AuthAuthenticated de um usuário
+  // que ainda precisa de onboarding, o enum permanece `onboardingRequired`
+  // (sem mudança), então um listener só de authFlowStateProvider não reavalia
+  // a decisão -- e a tela ficava presa no loading até o _safetyTimer (10s).
+  // Ouvir authNotifierProvider cobre exatamente essa transição que o enum
+  // esconde.
+  ProviderSubscription<AuthState>? _authStateSubscription;
   Timer? _safetyTimer;
 
   // /flow é a única rota que o GoRouter nunca redireciona (ver app_router.dart
@@ -45,12 +54,40 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
   bool _isRetrying = false;
   final Set<String> _promptCheckedUserIds = <String>{};
 
+  // Diagnóstico opcional da linha do tempo de /flow (timestamps relativos ao
+  // mount da tela). Desligado por padrão para não poluir os logs; ligue
+  // localmente (_debugTimeline = true) para inspecionar onde o tempo é gasto.
+  static const bool _debugTimeline = false;
+  final Stopwatch _watch = Stopwatch();
+
+  void _t(String message) {
+    if (!_debugTimeline) return;
+    final ms = _watch.elapsedMilliseconds.toString().padLeft(4, '0');
+    debugPrint('[FlowDebug +${ms}ms] $message');
+  }
+
   @override
   void initState() {
     super.initState();
+    _watch.start();
+    _t('FlowScreen init authState=${ref.read(authNotifierProvider).runtimeType}');
     _authFlowSubscription = ref.listenManual<AuthFlowState>(
       authFlowStateProvider,
-      (_, next) => _scheduleDecision(next),
+      (_, next) {
+        _t('authFlowState -> $next');
+        _scheduleDecision(next);
+      },
+    );
+    // Reavalia a decisão também quando o AuthState bruto muda (ex.:
+    // AuthLoading -> AuthAuthenticated), inclusive quando o enum derivado por
+    // authFlowStateProvider permanece o mesmo (onboardingRequired). Sem isto,
+    // usuários que precisam de onboarding só destravavam pelo _safetyTimer.
+    _authStateSubscription = ref.listenManual<AuthState>(
+      authNotifierProvider,
+      (_, next) {
+        _t('authState -> ${next.runtimeType}');
+        _scheduleDecision(ref.read(authFlowStateProvider));
+      },
     );
     _startSafetyTimer();
     _scheduleDecision(ref.read(authFlowStateProvider));
@@ -60,6 +97,7 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
   void dispose() {
     _safetyTimer?.cancel();
     _authFlowSubscription?.close();
+    _authStateSubscription?.close();
     super.dispose();
   }
 
@@ -87,6 +125,7 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
       return;
     }
 
+    _t('safety timeout (10s) atingido');
     final user = Supabase.instance.client.auth.currentUser;
     var authState = ref.read(authNotifierProvider);
     _logAuthDecision('timeout', user: user, authState: authState);
@@ -152,6 +191,7 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
 
   void _go(String route) {
     if (!mounted || _isNavigating) return;
+    _t('go $route');
     _isNavigating = true;
     _showFallback = false;
     context.go(route);
@@ -212,6 +252,8 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
   void _decide(AuthFlowState flowState) {
     if (!mounted || _isNavigating) return;
 
+    _t('decide flowState=$flowState '
+        'authState=${ref.read(authNotifierProvider).runtimeType}');
     switch (flowState) {
       case AuthFlowState.unauthenticated:
         _go(AppRoutes.login);
@@ -338,8 +380,12 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
       // user_id ainda não confirmado — isso poderia limpar o cache local
       // de "Conta salva" de outro usuário antes do auth/onboarding estar
       // decidido. Apenas aguardar: quando o AuthNotifier chegar a
-      // AuthAuthenticated (ou AuthError/Unauthenticated, cobertos pelo
-      // _safetyTimer), authFlowStateProvider re-emite e _decide roda de novo.
+      // AuthAuthenticated (ou AuthError/Unauthenticated), o
+      // _authStateSubscription dispara _scheduleDecision e _decide roda de
+      // novo -- sem depender de o enum derivado mudar de valor (ele pode
+      // permanecer onboardingRequired). O _safetyTimer segue como rede de
+      // segurança final.
+      _t('aguardando authState resolver (atual=${authState.runtimeType})');
       return;
     }
 
@@ -348,7 +394,9 @@ class _FlowScreenState extends ConsumerState<FlowScreen> {
       final canContinue =
           await _ensureKeepConnectedPromptAnswered(authState.user);
       if (!mounted || !canContinue || _isNavigating) return;
-      _go(_routeFromUserFlowState(authState.flowState));
+      final route = _routeFromUserFlowState(authState.flowState);
+      _t('navigate onboarding route=$route');
+      _go(route);
     } on Exception catch (e) {
       debugPrint('[FlowScreen] Erro ao resolver fluxo: $e');
       if (mounted && !_isNavigating) {
