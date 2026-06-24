@@ -194,7 +194,7 @@ class _CollapsibleMenuSectionState extends State<_CollapsibleMenuSection> {
                   curve: _animCurve,
                   child: Icon(
                     Icons.keyboard_arrow_down_rounded,
-                    size: 24,
+                    size: 22,
                     color: et.secondaryText,
                   ),
                 ),

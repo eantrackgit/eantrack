@@ -26,10 +26,23 @@ class _MenuHubSectionItem extends StatelessWidget {
         : et.primaryText.withValues(alpha: 0.8);
     final textColor = isDestructive ? AppColors.error : et.primaryText;
 
+    // Item de submenu confortável: fonte maior (15sp / w600) e área de toque
+    // ampla, quase do tamanho do título do grupo mas mantendo hierarquia.
+    final labelStyle = comfortable
+        ? AppTextStyles.bodyMedium.copyWith(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: textColor,
+          )
+        : AppTextStyles.bodySmall.copyWith(
+            fontWeight: FontWeight.w500,
+            color: textColor,
+          );
+
     final row = ConstrainedBox(
-      // Mobile ganha altura/área de toque maior (>= 54px); desktop mantém o
-      // tamanho compacto atual.
-      constraints: BoxConstraints(minHeight: comfortable ? 54 : 0),
+      // Confortável (desktop + mobile) ganha altura/área de toque maior
+      // (>= 56px); compacto mantém o tamanho mínimo legado.
+      constraints: BoxConstraints(minHeight: comfortable ? 56 : 0),
       child: Padding(
         padding: EdgeInsets.symmetric(
           horizontal: comfortable ? 18 : AppSpacing.md,
@@ -52,13 +65,8 @@ class _MenuHubSectionItem extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: (comfortable
-                        ? AppTextStyles.bodyMedium
-                        : AppTextStyles.bodySmall)
-                    .copyWith(
-                  color: textColor,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: labelStyle,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),

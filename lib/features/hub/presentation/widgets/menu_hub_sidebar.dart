@@ -149,9 +149,11 @@ class _MenuHubSidebarBody extends StatelessWidget {
   final String planName;
   final String nextBillingText;
 
-  // Desktop (MenuHubSidebar) não passa essa flag -- mantém o
-  // _MenuHubUserHeader original, sem mudança visual. Só o MobileHubDrawer
-  // pede a barra de perfil nova, no lugar do header padrão.
+  // Controla APENAS o topo do menu: desktop (MenuHubSidebar) usa o
+  // _MenuHubUserHeader original; o MobileHubDrawer passa true e troca pela
+  // barra de perfil com rótulo "MENU" + botão de fechar. NÃO afeta mais o
+  // accordion nem o conforto dos itens -- ambos agora valem para os dois
+  // layouts (ver build()).
   final bool showMobileProfileHeader;
 
   @override
@@ -178,10 +180,11 @@ class _MenuHubSidebarBody extends StatelessWidget {
                     agencyName: agencyName,
                     avatarUrl: userAvatarUrl,
                   ),
-                // Mobile (showMobileProfileHeader) usa accordions e áreas de
-                // toque maiores; desktop permanece compacto/expandido.
+                // Desktop e mobile agora compartilham o MESMO menu: grupos em
+                // accordion (collapsible) e itens com área de toque/leitura
+                // maior (comfortable). Mesma base, sem duplicação de lógica.
                 _MenuHubLayout(
-                  comfortable: showMobileProfileHeader,
+                  comfortable: true,
                   child: _MenuHubSections(
                     isBlocked: isBlocked,
                     agencyName: agencyName,
@@ -195,7 +198,7 @@ class _MenuHubSidebarBody extends StatelessWidget {
                     planName: planName,
                     nextBillingText: nextBillingText,
                     onManagePlan: onManagePlan,
-                    collapsible: showMobileProfileHeader,
+                    collapsible: true,
                   ),
                 ),
               ],
