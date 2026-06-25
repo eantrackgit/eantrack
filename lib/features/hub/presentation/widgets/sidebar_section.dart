@@ -147,6 +147,9 @@ class _CollapsibleMenuSectionState extends State<_CollapsibleMenuSection> {
   @override
   Widget build(BuildContext context) {
     final et = EanTrackTheme.of(context);
+    // Azul temático do EANTrack, adaptativo: forte (actionBlue) no claro,
+    // suave/legível no escuro. Tints derivados por alpha -> nada hardcoded.
+    final accent = et.accentLink;
 
     final header = Semantics(
       button: true,
@@ -156,26 +159,41 @@ class _CollapsibleMenuSectionState extends State<_CollapsibleMenuSection> {
         color: Colors.transparent,
         child: InkWell(
           onTap: _toggle,
-          borderRadius: AppRadius.mdAll,
+          borderRadius: BorderRadius.circular(14),
+          hoverColor: accent.withValues(alpha: 0.06),
+          splashColor: accent.withValues(alpha: 0.10),
+          highlightColor: accent.withValues(alpha: 0.06),
           child: AnimatedContainer(
             duration: _animDuration,
             curve: _animCurve,
-            constraints: const BoxConstraints(minHeight: 54),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+            constraints: const BoxConstraints(minHeight: 56),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
             decoration: BoxDecoration(
               color: _expanded
-                  ? et.inputFill.withValues(alpha: 0.6)
+                  ? accent.withValues(alpha: 0.10)
                   : Colors.transparent,
-              borderRadius: AppRadius.mdAll,
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: _expanded
-                    ? et.surfaceBorder.withValues(alpha: 0.7)
+                    ? accent.withValues(alpha: 0.32)
                     : Colors.transparent,
               ),
             ),
             child: Row(
               children: [
-                Icon(widget.icon, size: 21, color: et.primaryText),
+                // Ícone do grupo numa pílula com tint azul -> peça de
+                // navegação premium, mais destacada quando expandido.
+                AnimatedContainer(
+                  duration: _animDuration,
+                  curve: _animCurve,
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: _expanded ? 0.18 : 0.12),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Icon(widget.icon, size: 21, color: accent),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -183,6 +201,7 @@ class _CollapsibleMenuSectionState extends State<_CollapsibleMenuSection> {
                     style: AppTextStyles.labelLarge.copyWith(
                       color: et.primaryText,
                       fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
                     ),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
@@ -195,7 +214,7 @@ class _CollapsibleMenuSectionState extends State<_CollapsibleMenuSection> {
                   child: Icon(
                     Icons.keyboard_arrow_down_rounded,
                     size: 22,
-                    color: et.secondaryText,
+                    color: _expanded ? accent : et.secondaryText,
                   ),
                 ),
               ],
