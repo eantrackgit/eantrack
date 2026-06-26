@@ -21,21 +21,23 @@ class _MenuHubSectionItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final et = EanTrackTheme.of(context);
     final comfortable = _MenuHubLayout.comfortableOf(context);
-    // Azul temático adaptativo (forte no claro, suave no escuro). Itens
-    // navegáveis ganham presença azul; destrutivo permanece em vermelho.
+    // Azul temático adaptativo (forte no claro, suave no escuro). Em camadas:
+    // o header carrega o azul forte; o subitem usa azul suave para parecer
+    // conteúdo subordinado, não uma categoria principal.
     final accent = et.accentLink;
-    final tint = isDestructive ? AppColors.error : accent;
     final iconColor = isDestructive
         ? AppColors.error
-        : (comfortable ? accent : et.primaryText.withValues(alpha: 0.8));
+        : (comfortable
+            ? accent.withValues(alpha: 0.85)
+            : et.primaryText.withValues(alpha: 0.8));
     final textColor = isDestructive ? AppColors.error : et.primaryText;
 
-    // Item de submenu confortável: fonte maior (15.5sp / w600) e área de toque
-    // ampla, quase do tamanho do título do grupo mas mantendo hierarquia.
+    // Item de submenu confortável: ainda grande/legível (15sp), mas com peso
+    // w500 -- abaixo do header (w700) -- reforçando a hierarquia visual.
     final labelStyle = comfortable
         ? AppTextStyles.bodyMedium.copyWith(
-            fontSize: 15.5,
-            fontWeight: FontWeight.w600,
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
             color: textColor,
           )
         : AppTextStyles.bodySmall.copyWith(
@@ -43,33 +45,25 @@ class _MenuHubSectionItem extends StatelessWidget {
             color: textColor,
           );
 
-    // Confortável: ícone numa mini-pílula azul, ecoando o header e dando a
-    // sensação de "lista de ações". Compacto mantém o ícone legado simples.
+    // Confortável: ícone azul flat (sem pílula). A pílula fica exclusiva do
+    // header -> o subitem lê como opção dentro da seção, não como card.
     final Widget iconWidget = comfortable
-        ? Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: tint.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, size: 20, color: iconColor),
-          )
+        ? Icon(icon, size: 20, color: iconColor)
         : Icon(icon, size: 17, color: iconColor);
 
     final row = ConstrainedBox(
-      // Confortável (desktop + mobile) ganha altura/área de toque maior
-      // (>= 58px); compacto mantém o tamanho mínimo legado.
-      constraints: BoxConstraints(minHeight: comfortable ? 58 : 0),
+      // Confortável: altura confortável (>= 52px), porém menor que o header
+      // (56px) -- subordinação também na presença física.
+      constraints: BoxConstraints(minHeight: comfortable ? 52 : 0),
       child: Padding(
         padding: EdgeInsets.symmetric(
-          horizontal: comfortable ? 12 : AppSpacing.md,
-          vertical: comfortable ? 9 : AppSpacing.sm,
+          horizontal: comfortable ? 10 : AppSpacing.md,
+          vertical: comfortable ? 8 : AppSpacing.sm,
         ),
         child: Row(
           children: [
             iconWidget,
-            SizedBox(width: comfortable ? 14 : AppSpacing.sm),
+            SizedBox(width: comfortable ? 12 : AppSpacing.sm),
             if (count != null) ...[
               Text(
                 '$count',
@@ -91,9 +85,9 @@ class _MenuHubSectionItem extends StatelessWidget {
             if (enabled)
               Icon(
                 Icons.navigate_next,
-                size: comfortable ? 20 : 18,
+                size: 18,
                 color: comfortable
-                    ? accent.withValues(alpha: 0.6)
+                    ? et.secondaryText.withValues(alpha: 0.55)
                     : et.secondaryText.withValues(alpha: 0.7),
               ),
           ],
@@ -101,24 +95,21 @@ class _MenuHubSectionItem extends StatelessWidget {
       ),
     );
 
-    // Confortável: cada item vira um bloco leve com tint azul, radius e
-    // gap -> lista moderna premium, com hover/pressed azul. Compacto
-    // (legado) permanece transparente, sem regressão.
+    // Confortável: subitem neutro/transparente dentro do painel interno da
+    // seção -- só ganha azul no hover/pressed, mantendo o azul forte para o
+    // header. Compacto (legado) permanece transparente, sem regressão.
     final Widget interactive = comfortable
         ? Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: 3,
-            ),
+            padding: const EdgeInsets.symmetric(vertical: 2),
             child: Material(
-              color: enabled ? tint.withValues(alpha: 0.05) : Colors.transparent,
-              borderRadius: BorderRadius.circular(14),
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
               clipBehavior: Clip.antiAlias,
               child: InkWell(
                 onTap: enabled ? onTap : null,
-                hoverColor: accent.withValues(alpha: 0.10),
-                splashColor: accent.withValues(alpha: 0.12),
-                highlightColor: accent.withValues(alpha: 0.08),
+                hoverColor: accent.withValues(alpha: 0.08),
+                splashColor: accent.withValues(alpha: 0.10),
+                highlightColor: accent.withValues(alpha: 0.06),
                 child: row,
               ),
             ),

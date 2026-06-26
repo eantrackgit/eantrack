@@ -55,6 +55,9 @@ class _MenuHubSection extends StatelessWidget {
         icon: icon,
         title: title,
         initiallyExpanded: initiallyExpanded,
+        // Seções que já trazem um card próprio (Identidade) não recebem o
+        // painel interno neutro -- evita "caixa dentro de caixa".
+        wrapContent: wrapInCard,
         children: children,
       );
     }
@@ -124,12 +127,18 @@ class _CollapsibleMenuSection extends StatefulWidget {
     required this.title,
     required this.children,
     this.initiallyExpanded = true,
+    this.wrapContent = true,
   });
 
   final IconData icon;
   final String title;
   final List<Widget> children;
   final bool initiallyExpanded;
+
+  /// Quando `true`, os filhos ficam dentro de um painel interno neutro
+  /// (lista de subitens). Quando `false`, os filhos sobem direto (ex.: a
+  /// Identidade, que já é um card autossuficiente).
+  final bool wrapContent;
 
   @override
   State<_CollapsibleMenuSection> createState() =>
@@ -234,25 +243,50 @@ class _CollapsibleMenuSectionState extends State<_CollapsibleMenuSection> {
         alignment: Alignment.topCenter,
         child: _expanded
             ? Padding(
-                padding: const EdgeInsets.only(
-                  top: AppSpacing.xs,
-                  bottom: AppSpacing.sm,
+                // Respiro entre header e conteúdo + indentação (Opção B):
+                // o conteúdo recua à esquerda para mostrar subordinação.
+                padding: EdgeInsets.only(
+                  top: AppSpacing.sm,
+                  left: widget.wrapContent ? AppSpacing.sm : 0,
+                  bottom: AppSpacing.xs,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: widget.children,
-                ),
+                child: widget.wrapContent
+                    ? Container(
+                        // Painel interno neutro (Opção A): mais discreto que o
+                        // header azul -> leitura em camadas, subitens
+                        // subordinados em vez de blocos iguais empilhados.
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: et.surface.withValues(alpha: 0.35),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: et.surfaceBorder.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: widget.children,
+                        ),
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: widget.children,
+                      ),
               )
             : const SizedBox(width: double.infinity, height: 0),
       ),
     );
 
     return Padding(
+      // Margem maior entre seções (~14px) -> grupos bem separados.
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.sm,
-        AppSpacing.xs,
+        6,
         AppSpacing.sm,
-        AppSpacing.xs,
+        AppSpacing.sm,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
