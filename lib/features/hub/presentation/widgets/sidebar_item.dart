@@ -97,13 +97,15 @@ class _MenuHubSectionItem extends StatelessWidget {
 
     // Confortável: subitem neutro/transparente dentro do painel interno da
     // seção -- só ganha azul no hover/pressed, mantendo o azul forte para o
-    // header. Compacto (legado) permanece transparente, sem regressão.
+    // header. Radius pequeno (8) -> lê como linha premium da lista interna, não
+    // como card solto; o arredondamento forte pertence ao painel do grupo.
+    // Compacto (legado) permanece transparente, sem regressão.
     final Widget interactive = comfortable
         ? Padding(
             padding: const EdgeInsets.symmetric(vertical: 2),
             child: Material(
               color: Colors.transparent,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               clipBehavior: Clip.antiAlias,
               child: InkWell(
                 onTap: enabled ? onTap : null,

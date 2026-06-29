@@ -243,32 +243,57 @@ class _CollapsibleMenuSectionState extends State<_CollapsibleMenuSection> {
         alignment: Alignment.topCenter,
         child: _expanded
             ? Padding(
-                // Respiro entre header e conteúdo + indentação (Opção B):
-                // o conteúdo recua à esquerda para mostrar subordinação.
+                // Respiro maior entre header e submenu (10px) + recuo leve à
+                // esquerda -> o conteúdo afunda em relação ao header de largura
+                // completa, comunicando subordinação.
                 padding: EdgeInsets.only(
-                  top: AppSpacing.sm,
-                  left: widget.wrapContent ? AppSpacing.sm : 0,
+                  top: 10,
+                  left: widget.wrapContent ? AppSpacing.xs : 0,
                   bottom: AppSpacing.xs,
                 ),
                 child: widget.wrapContent
-                    ? Container(
-                        // Painel interno neutro (Opção A): mais discreto que o
-                        // header azul -> leitura em camadas, subitens
-                        // subordinados em vez de blocos iguais empilhados.
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: et.surface.withValues(alpha: 0.35),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: et.surfaceBorder.withValues(alpha: 0.5),
-                          ),
-                        ),
-                        child: Column(
+                    // Submenu afundado: uma linha-guia azulada muito sutil à
+                    // esquerda + um painel interno recuado e mais "baixo" que a
+                    // sidebar. IntrinsicHeight dá ao Row uma altura limitada
+                    // (= altura do painel) para o stretch da guia funcionar com
+                    // segurança mesmo quando o menu recebe altura ilimitada.
+                    ? IntrinsicHeight(
+                        child: Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: widget.children,
+                          children: [
+                            Container(
+                              width: 2.5,
+                              margin: const EdgeInsets.symmetric(vertical: 6),
+                              decoration: BoxDecoration(
+                                color: accent.withValues(alpha: 0.28),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Container(
+                                // Painel interno recessado: fundo de "campo"
+                                // (inputFill) -> mais escuro que a sidebar no
+                                // claro e destacado no escuro = área encaixada.
+                                // Borda muito sutil + radius próprio (14) maior
+                                // que o dos subitens (8) -> o arredondamento
+                                // pertence ao GRUPO, não a cada filho.
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: et.inputFill,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color:
+                                        et.surfaceBorder.withValues(alpha: 0.6),
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: widget.children,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       )
                     : Column(
@@ -281,12 +306,13 @@ class _CollapsibleMenuSectionState extends State<_CollapsibleMenuSection> {
     );
 
     return Padding(
-      // Margem maior entre seções (~14px) -> grupos bem separados.
+      // Margem entre seções (~16px) -> grupos bem separados, sem alongar
+      // demais o menu.
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.sm,
         6,
         AppSpacing.sm,
-        AppSpacing.sm,
+        10,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
