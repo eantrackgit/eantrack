@@ -406,7 +406,13 @@ class _AgencyStatusGateway extends ConsumerWidget {
       });
     }
 
-    if (agencyState.data == null) {
+    final data = agencyState.data;
+    // Enquanto carrega (data == null) OU quando a agencia ja tem acesso ao hub
+    // (redirect para /hub iminente), mostra spinner neutro em vez de renderizar
+    // a AgencyStatusScreen. Sem isso, a tela de aceite pisca por 1+ frame ao
+    // entrar no dashboard, pois toda agencia passa por esta rota antes de o
+    // router confirmar o acesso e redirecionar.
+    if (data == null || _hasAgencyHubAccess(data)) {
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: const Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
