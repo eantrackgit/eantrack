@@ -25,6 +25,11 @@ class ConnectivityNotifier extends StateNotifier<ConnectionStatus> {
   bool _isChecking = false;
   bool _hasPendingCheck = false;
   bool _isDisposed = false;
+  // Vira true após a primeira checagem concluir (online/offline). A partir
+  // daí, rechecagens de fundo (poll de 3s / eventos de stream) NÃO voltam mais
+  // para "checking" -- mantêm o último estado conhecido e só atualizam quando
+  // o resultado realmente muda.
+  bool _hasResolved = false;
   Completer<ConnectionStatus>? _activeCheckCompleter;
 
   Future<ConnectionStatus> checkConnection() async {
@@ -38,15 +43,24 @@ class ConnectivityNotifier extends StateNotifier<ConnectionStatus> {
     _isChecking = true;
     final completer = Completer<ConnectionStatus>();
     _activeCheckCompleter = completer;
-    state = ConnectionStatus.checking;
+    // Exibe "Verificando" apenas no boot (antes da primeira resolução). Em
+    // rechecagens de fundo mantemos o estado atual para não piscar
+    // online -> checking -> online a cada poll. Esse flap fazia o
+    // AnimatedSwitcher do ConnectionStatusIcon reusar uma ValueKey ainda em
+    // transição e quebrar com "Duplicate keys found", derrubando a árvore.
+    if (!_hasResolved) {
+      state = ConnectionStatus.checking;
+    }
 
     try {
       final hasInternet = await _service.hasInternet();
       if (_isDisposed) return state;
+      _hasResolved = true;
       state = hasInternet ? ConnectionStatus.online : ConnectionStatus.offline;
     } catch (e) {
       debugPrint('[EANTrack] ${e.toString()}');
       if (_isDisposed) return state;
+      _hasResolved = true;
       state = ConnectionStatus.offline;
     } finally {
       if (!completer.isCompleted) {
